@@ -1,0 +1,5 @@
+.DS_Store
+*.c
+*.o
+*.h
+.vscode
