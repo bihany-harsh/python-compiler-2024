@@ -3,6 +3,7 @@
 %{
     #include <iostream>
     #include <stack>
+    #include "pyparse.tab.h"
     using namespace std;
     // implicit line joining may be a problem
     // TODO: Assert keyword?
@@ -136,13 +137,28 @@ ERROR_CHAR              [$?`]
 
 %%
 
-{INDENT_SPACE}          {cout << "found the indent space token" << endl;}
-.                       {;}
+{NEWLINE}               { return TOK_NEWLINE; }
+{SEMICOLON}             { return TOK_SEMICOLON; }
+{EQUAL}                 { return TOK_EQUAL; }
+{COLON}                 { return TOK_COLON; }
+{COMMA}                 { return TOK_COMMA; }
+{PLUS_EQUAL}            { return TOK_PLUS_EQUAL; }
+{MINUS_EQUAL}           { return TOK_MINUS_EQUAL; }
+{STAR_EQUAL}            { return TOK_STAR_EQUAL; }
+{SLASH_EQUAL}           { return TOK_SLASH_EQUAL; }
+{PERCENT_EQUAL}         { return TOK_PERCENT_EQUAL; }
+{AMPER_EQUAL}           { return TOK_AMPER_EQUAL; }
+{VBAR_EQUAL}            { return TOK_VBAR_EQUAL; }
+{CIRCUMFLEX_EQUAL}      { return TOK_CIRCUMFLEX_EQUAL; }
+{LEFT_SHIFT_EQUAL}      { return TOK_LEFT_SHIFT_EQUAL; }
+{RIGHT_SHIFT_EQUAL}     { return TOK_RIGHT_SHIFT_EQUAL; }
+{DOUBLE_STAR_EQUAL}     { return TOK_DOUBLE_STAR_EQUAL; }
+{DOUBLE_SLASH_EQUAL}    { return TOK_DOUBLE_SLASH_EQUAL; }
 
 %%
 
-int main() {
-    yylex();
+// int main() {
+//     yylex();
 
-    return 0;
-}
+//     return 0;
+// }
