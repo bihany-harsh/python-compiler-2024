@@ -56,6 +56,7 @@ STRING_LITERAL          {SHORT_STRING}|{LONG_STRING}
 
     //TODO: verify that no byte prefix is required
     //TODO: verify that no escape characters to be supported
+    //TODO: verify whether "await" has to be supported
 
     // integer literals
 OCT_DIGIT               [0-7]
@@ -80,6 +81,8 @@ FLOAT_NUMBER            {POINT_FLOAT}|{EXPONENT_FLOAT}
 
     // imaginary literals
 IMAG_NUMBER             ({FLOAT_NUMBER}|{DIGIT_PART})("j"|"J")
+
+NUMBER                  {INTEGER}|{FLOAT_NUMBER}|{IMAG_NUMBER}
 
     // operators
     //arithmetic operators
@@ -154,6 +157,37 @@ ERROR_CHAR              [$?`]
 {RIGHT_SHIFT_EQUAL}     { return TOK_RIGHT_SHIFT_EQUAL; }
 {DOUBLE_STAR_EQUAL}     { return TOK_DOUBLE_STAR_EQUAL; }
 {DOUBLE_SLASH_EQUAL}    { return TOK_DOUBLE_SLASH_EQUAL; }
+{IF}                    { return TOK_IF; }
+{ELSE}                  { return TOK_ELSE; }
+{OR}                    { return TOK_OR; }
+{AND}                   { return TOK_AND; }
+{NOT}                   { return TOK_NOT; }
+{AMPER}                 { return TOK_AMPER; }
+{VBAR}                  { return TOK_VBAR; }
+{CIRCUMFLEX}            { return TOK_CIRCUMFLEX; }
+{LESS}                  { return TOK_LESS; }
+{GREATER}               { return TOK_GREATER; }
+{EQ_EQUAL}              { return TOK_EQ_EQUAL; }
+{GREATER_EQUAL}         { return TOK_GREATER_EQUAL; }
+{LESS_EQUAL}            { return TOK_LESS_EQUAL; }
+{NOT_EQUAL}             { return TOK_NOT_EQUAL; }
+{IN}                    { return TOK_IN; }
+{IS}                    { return TOK_IS; }
+{LEFT_SHIFT}            { return TOK_LEFT_SHIFT; }
+{RIGHT_SHIFT}           { return TOK_RIGHT_SHIFT; }
+{LPAR}                  { return TOK_LPAR; }
+{RPAR}                  { return TOK_RPAR; }
+{LSQB}                  { return TOK_LSQB; }
+{RSQB}                  { return TOK_RSQB; }
+{LBRACE}                { return TOK_LBRACE; }
+{RBRACE}                { return TOK_RBRACE; }
+{IDENTIFIER}            { return TOK_IDENTIFIER; }
+{NUMBER}                { return TOK_NUMBER; }
+{STRING_LITERAL}        { return TOK_STRING_LITERAL; }
+{NONE}                  { return TOK_NONE; }
+{TRUE}                  { return TOK_TRUE; }
+{FALSE}                 { return TOK_FALSE; }
+{DOT}                   { return TOK_DOT; }
 
 %%
 
