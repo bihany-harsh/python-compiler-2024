@@ -45,14 +45,15 @@ TRY                     "try"
 WHILE                   "while"
 
     // string and byte literals
-SHORT_STRING_CHAR       [^\n\'\"\\]
+SHORT_STRING_CHAR       [^"'\n\\]
 LONG_STRING_CHAR        [^\\]
 STRING_ESCAPE_SEQ       (\\)/[.]
 SHORT_STRING_ITEM       {SHORT_STRING_CHAR}|{STRING_ESCAPE_SEQ}
 LONG_STRING_ITEM        {LONG_STRING_CHAR}|{STRING_ESCAPE_SEQ}
 SHORT_STRING            \'{SHORT_STRING_ITEM}*\'|\"{SHORT_STRING_ITEM}*\"
-LONG_STRING             \'\'\'{LONG_STRING_ITEM}*\'\'\'|\"\"\"{LONG_STRING_ITEM}*\"\"\"
+LONG_STRING             \'{3}{LONG_STRING_ITEM}*\'{3}|\"{3}{LONG_STRING_ITEM}*\"{3}
 STRING_LITERAL          {SHORT_STRING}|{LONG_STRING}
+    //FIXME: string literal not working
 
     //TODO: verify that no byte prefix is required
     //TODO: verify that no escape characters to be supported
@@ -159,6 +160,7 @@ ERROR_CHAR              [$?`]
 {DOUBLE_SLASH_EQUAL}    { return TOK_DOUBLE_SLASH_EQUAL; }
 {IF}                    { return TOK_IF; }
 {ELSE}                  { return TOK_ELSE; }
+{ELIF}                  { return TOK_ELIF; }
 {OR}                    { return TOK_OR; }
 {AND}                   { return TOK_AND; }
 {NOT}                   { return TOK_NOT; }
@@ -181,13 +183,16 @@ ERROR_CHAR              [$?`]
 {RSQB}                  { return TOK_RSQB; }
 {LBRACE}                { return TOK_LBRACE; }
 {RBRACE}                { return TOK_RBRACE; }
-{IDENTIFIER}            { return TOK_IDENTIFIER; }
-{NUMBER}                { return TOK_NUMBER; }
-{STRING_LITERAL}        { return TOK_STRING_LITERAL; }
 {NONE}                  { return TOK_NONE; }
 {TRUE}                  { return TOK_TRUE; }
 {FALSE}                 { return TOK_FALSE; }
+{NUMBER}                { return TOK_NUMBER; }
 {DOT}                   { return TOK_DOT; }
+{PASS}                  { return TOK_PASS; }
+{BREAK}                 { return TOK_BREAK; }
+{CONTINUE}              { return TOK_CONTINUE; }
+{RETURN}                { return TOK_RETURN; }
+{IDENTIFIER}            { return TOK_IDENTIFIER; }
 
 %%
 

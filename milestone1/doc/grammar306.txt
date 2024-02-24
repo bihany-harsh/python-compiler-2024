@@ -28,15 +28,15 @@ stmt: simple_stmt | compound_stmt
 simple_stmt: small_stmt (';' small_stmt)* [';'] NEWLINE
 small_stmt: (expr_stmt | pass_stmt | flow_stmt |
             | global_stmt | nonlocal_stmt | assert_stmt)
-expr_stmt: testlist_star_expr (annassign | augassign (testlist) |
+expr_stmt: testlist_star_expr (annassign | augassign testlist |
                      ('=' (testlist_star_expr))*)
 annassign: ':' test ['=' test]
-testlist_star_expr: (test|star_expr)
+testlist_star_expr: test
 augassign: ('+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' |
             '<<=' | '>>=' | '**=' | '//=')
 
 pass_stmt: 'pass'
-flow_stmt: break_stmt | continue_stmt | return_stmt | raise_stmt | yield_stmt
+flow_stmt: break_stmt | continue_stmt | return_stmt
 break_stmt: 'break'
 continue_stmt: 'continue'
 return_stmt: 'return' [testlist]
@@ -71,14 +71,14 @@ xor_expr: and_expr ('^' and_expr)*
 and_expr: shift_expr ('&' shift_expr)*
 shift_expr: arith_expr (('<<'|'>>') arith_expr)*
 arith_expr: term (('+'|'-') term)*
-term: factor (('*'|'@'|'/'|'%'|'//') factor)*
+term: factor (('*'|'/'|'%'|'//') factor)*
 factor: ('+'|'-'|'~') factor | power
 power: atom_expr ['**' factor]
 atom_expr: [AWAIT] atom trailer*
 atom: ('(' [testlist_comp] ')' |
        '[' [testlist_comp] ']' |
        NAME | NUMBER | STRING+ | '...' | 'None' | 'True' | 'False')
-testlist_comp: (test|star_expr) ( comp_for | (',' (test|star_expr))* [','] )
+testlist_comp: test ( comp_for | (',' test)* [','] )
 trailer: '(' [arglist] ')' | '[' subscriptlist ']' | '.' NAME
 subscriptlist: subscript (',' subscript)* [',']
 subscript: test
