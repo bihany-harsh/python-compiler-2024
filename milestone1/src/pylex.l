@@ -3,16 +3,26 @@
 %{
     #include <iostream>
     #include <stack>
+    #include <string>
+    #include <unistd.h>
+    #include <utility>
     #include "pyparse.tab.h"
     using namespace std;
     // implicit line joining may be a problem
     // TODO: Assert keyword?
+    stack<int> INDENT_STACK;
+
+    extern FILE* yyin;
+
+    int check_indentation();
 %}
 
 NEWLINE                 [\n]
 COMMENT                 #[.]*(\n)
 EXPLICIT_LINE_JOINER    (\\)(\n)
+
 INDENT_SPACE            "  "
+MANY_INDENTS_BEGIN      ^{INDENT_SPACE}*
 IDENTIFIER              [A-Za-z_][A-Za-z0-9_]*
 
     // keywords
@@ -141,7 +151,9 @@ ERROR_CHAR              [$?`]
 
 %%
 
-{NEWLINE}               { return TOK_NEWLINE; }
+{MANY_INDENTS_BEGIN}    {  }
+
+{NEWLINE}               { cout << "newline" << endl; /*return TOK_NEWLINE;*/ }
 {SEMICOLON}             { return TOK_SEMICOLON; }
 {EQUAL}                 { return TOK_EQUAL; }
 {COLON}                 { return TOK_COLON; }
@@ -192,12 +204,41 @@ ERROR_CHAR              [$?`]
 {BREAK}                 { return TOK_BREAK; }
 {CONTINUE}              { return TOK_CONTINUE; }
 {RETURN}                { return TOK_RETURN; }
+{GLOBAL}                { return TOK_GLOBAL; }
+{NON_LOCAL}             { return TOK_NON_LOCAL; }
 {IDENTIFIER}            { return TOK_IDENTIFIER; }
+.                       { ; }
 
 %%
 
-// int main() {
-//     yylex();
+int main(int argc, const char** argv) {
+    INDENT_STACK.push(0);
+    if (argc > 1) {
+        yyin = fopen(argv[1], "r");
+    } else {
+        yyin = stdin;
+    }
+    yylex();
 
-//     return 0;
-// }
+    return 0;
+}
+
+// <1, 0>: return TOK_INDENT, <2, n>: return TOK_DEDENT (n times)
+pair<int, int> check_indentation() {
+    int indent_spaces = strlen(yytext);
+    if (indent_spaces & 0x1) {
+        cout << "TabError" << endl;
+        exit(0);
+    }
+    if (INDENT_STACK.top() < (indent_spaces >> 1)) {
+        INDENT_STACK.push((indent_spaces >> 1));
+        return make_pair(1, 0);
+    } else if (INDENT_STACK.top() > (indent_spaces >> 1)) {
+        int n_dedent = 0;
+        while(INDENT_STACK.top() != (indent_spaces >> 1)) {
+            n_dedent++;
+            INDENT_STACK.pop();
+        }
+        return make_pair(2, n_dedent);
+    }
+}

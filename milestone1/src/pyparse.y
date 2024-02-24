@@ -12,6 +12,7 @@
 %}
 
 %token TOK_IDENTIFIER TOK_NUMBER TOK_STRING_LITERAL
+%token TOK_GLOBAL TOK_NON_LOCAL
 
 %token TOK_NEWLINE TOK_INDENT TOK_DEDENT
 
@@ -34,13 +35,15 @@
 
 %%
 
-file_input                  :   multiple_lines TOK_NEWLINE
+/* handle TOK_NEWLINE properly. Ensure every single line ends in a TOK_NEWLINE TODO: tbd in perhaps compound stmt*/
+
+file_input                  :   multiple_lines 
                             ;
 multiple_lines              :   multiple_lines single_line
                             |
                             ;
 single_line                 :   simple_stmt
-                            |   compound_stmt
+                            |   compound_stmt TOK_NEWLINE /* why is it needed here? tbchecked */
                             |   TOK_NEWLINE
                             ;
 simple_stmt                 :   small_stmt many_small_stmts optional_semicolon TOK_NEWLINE
@@ -49,8 +52,11 @@ optional_semicolon          :   TOK_SEMICOLON
                             |
                             ;
 small_stmt                  :   expr_stmt
-                            |   pass_stmt 
-                            |   flow_stmt /* TODO: many other types to be added */
+                            |   pass_stmt
+                            |   flow_stmt
+                            |   global_stmt
+                            |   nonlocal_stmt
+                             /* TODO: checking for requirement of assert stmt only */
                             ;
 many_small_stmts            :   many_small_stmts TOK_SEMICOLON small_stmt
                             |
@@ -255,6 +261,15 @@ return_stmt                 :   TOK_RETURN optional_testlist
                             ;
 optional_testlist           :   testlist
                             |
+                            ;
+
+global_stmt                 :   TOK_GLOBAL TOK_IDENTIFIER many_comma_tok_identifier
+                            ;
+many_comma_tok_identifier   :   many_comma_tok_identifier TOK_COMMA TOK_IDENTIFIER
+                            |
+                            ;
+
+nonlocal_stmt               :   TOK_NON_LOCAL TOK_IDENTIFIER many_comma_tok_identifier
                             ;
 
 compound_stmt               :   if_stmt
