@@ -215,9 +215,13 @@ optional_comp_for           :   comp_for
                             /*TODO: to support or not: ASYNC*/
 comp_for                    :   TOK_FOR exprlist TOK_IN or_test optional_comp_iter
                             ;
-                            /* to define from exprlist */
+exprlist                    :   expr many_comma_expr optional_comma
+                            ;
+many_comma_expr             :   many_comma_expr TOK_COMMA expr
+                            |
+                            ;
 
-
+/* Undefined terms: optional_comp_iter */
 %%
 
 int main(int argc, const char** argv) {

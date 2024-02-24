@@ -77,14 +77,13 @@ power: atom_expr ['**' factor]
 atom_expr: [AWAIT] atom trailer*
 atom: ('(' [testlist_comp] ')' |
        '[' [testlist_comp] ']' |
-       '{' [dictorsetmaker] '}' |
        NAME | NUMBER | STRING+ | '...' | 'None' | 'True' | 'False')
 testlist_comp: (test|star_expr) ( comp_for | (',' (test|star_expr))* [','] )
 trailer: '(' [arglist] ')' | '[' subscriptlist ']' | '.' NAME
 subscriptlist: subscript (',' subscript)* [',']
 subscript: test
 sliceop: ':' [test]
-exprlist: (expr|star_expr) (',' (expr|star_expr))* [',']
+exprlist: (expr) (',' (expr))* [',']
 testlist: test (',' test)* [',']
 
 classdef: 'class' NAME ['(' [arglist] ')'] ':' suite
