@@ -14,7 +14,10 @@
 
     extern FILE* yyin;
 
-    int check_indentation();
+    pair<int, int> check_indentation();
+    pair<int, int> indent_res;
+
+    bool line_flag = false;
 %}
 
 NEWLINE                 [\n]
@@ -151,9 +154,23 @@ ERROR_CHAR              [$?`]
 
 %%
 
-{MANY_INDENTS_BEGIN}    {  }
+{MANY_INDENTS_BEGIN}    {   if (line_flag) {
+                                indent_res = check_indentation();
+                                if (indent_res.first == 1) {
+                                    cout << "pylex: indent pushed" << endl;
+                                    return TOK_INDENT;
+                                } else if(indent_res.first == 2) {
+                                    while(indent_res.second--) {
+                                        // to make that many TOK_DEDENT
+                                        cout << "pylex: dedent pushed" << endl;
+                                        return TOK_DEDENT;
+                                    }
+                                }
+                            }
+                            /* else no return */
+                        }
 
-{NEWLINE}               { cout << "newline" << endl; /*return TOK_NEWLINE;*/ }
+{NEWLINE}               { return TOK_NEWLINE; }
 {SEMICOLON}             { return TOK_SEMICOLON; }
 {EQUAL}                 { return TOK_EQUAL; }
 {COLON}                 { return TOK_COLON; }
@@ -211,19 +228,19 @@ ERROR_CHAR              [$?`]
 
 %%
 
-int main(int argc, const char** argv) {
-    INDENT_STACK.push(0);
-    if (argc > 1) {
-        yyin = fopen(argv[1], "r");
-    } else {
-        yyin = stdin;
-    }
-    yylex();
+// int main(int argc, const char** argv) {
+//     INDENT_STACK.push(0);
+//     if (argc > 1) {
+//         yyin = fopen(argv[1], "r");
+//     } else {
+//         yyin = stdin;
+//     }
+//     yylex();
 
-    return 0;
-}
+//     return 0;
+// }
 
-// <1, 0>: return TOK_INDENT, <2, n>: return TOK_DEDENT (n times)
+// <1, 0>: return TOK_INDENT, <2, n>: return TOK_DEDENT (n times), <0, 0> else
 pair<int, int> check_indentation() {
     int indent_spaces = strlen(yytext);
     if (indent_spaces & 0x1) {
@@ -241,4 +258,5 @@ pair<int, int> check_indentation() {
         }
         return make_pair(2, n_dedent);
     }
+    return make_pair(0, 0);
 }

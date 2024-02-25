@@ -1,9 +1,14 @@
 %{
     #include <iostream>
+    #include <stack>
     using namespace std;
 
     extern FILE* yyin;
     extern int yylineno;
+
+    extern bool line_flag;
+
+    extern stack<int> INDENT_STACK;
 
     int yylex(void);
     void yyerror (char const *s) {
@@ -42,8 +47,8 @@ file_input                  :   multiple_lines
 multiple_lines              :   multiple_lines single_line
                             |
                             ;
-single_line                 :   simple_stmt
-                            |   compound_stmt TOK_NEWLINE /* why is it needed here? tbchecked */
+single_line                 :   { line_flag = true; } simple_stmt { line_flag = false; }
+                            |   { line_flag = true; } compound_stmt TOK_NEWLINE { line_flag = false; } /* why is it needed here? tbchecked */
                             |   TOK_NEWLINE
                             ;
 simple_stmt                 :   small_stmt many_small_stmts optional_semicolon TOK_NEWLINE
@@ -305,6 +310,9 @@ int main(int argc, const char** argv) {
     } else {
         yyin = stdin;
     }
+
+    INDENT_STACK.push(0);
+    
     yyparse();
 
     return 0;
