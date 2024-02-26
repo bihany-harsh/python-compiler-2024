@@ -6,13 +6,16 @@
     extern FILE* yyin;
     extern int yylineno;
 
-    bool line_flag;
+    extern stack<int> INDENT_STACK;
 
     int yylex(void);
     void yyerror (char const *s) {
         fprintf (stderr, "%s\n", s);
     }
 %}
+
+%define api.pure full
+%define api.push-pull push
 
 %token TOK_IDENTIFIER TOK_NUMBER TOK_STRING_LITERAL
 %token TOK_GLOBAL TOK_NON_LOCAL
@@ -38,9 +41,8 @@
 
 %%
 
-/* handle TOK_NEWLINE properly. Ensure every single line ends in a TOK_NEWLINE TODO: tbd in perhaps compound stmt*/
 
-file_input                  :   multiple_lines {cout << "finished parsing" << endl;}
+file_input                  :   multiple_lines
                             ;
 multiple_lines              :   multiple_lines single_line
                             |
@@ -280,7 +282,7 @@ compound_stmt               :   if_stmt
                             //TODO: many others to be added
                             ;
 
-if_stmt                     :   TOK_IF test TOK_COLON suite {cout << "if suite parsed" << endl;}many_elif_stmts optional_else_stmt
+if_stmt                     :   TOK_IF test TOK_COLON suite many_elif_stmts optional_else_stmt
                             ;
 many_elif_stmts             :   many_elif_stmts TOK_ELIF test TOK_COLON suite
                             |
@@ -297,12 +299,11 @@ at_least_one_stmt           :   at_least_one_stmt stmt
                             |   stmt
                             ;
 
-while_stmt                  :   TOK_WHILE test {cout << "while + test" << endl;} TOK_COLON suite {cout << "while suite parsed" << endl;} optional_else_suite {cout << "found while stmt" << endl;}
+while_stmt                  :   TOK_WHILE test TOK_COLON suite optional_else_suite
                             ;
 optional_else_suite         :   TOK_ELSE TOK_COLON suite
                             |   
                             ;
-//TODO: verify whether optional_else_suit is supported
 %%
 
 int main(int argc, const char** argv) {
@@ -311,6 +312,8 @@ int main(int argc, const char** argv) {
     } else {
         yyin = stdin;
     }
+
+    INDENT_STACK.push(0);
 
     yyparse();
 

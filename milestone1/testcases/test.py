@@ -1,4 +1,2 @@
-while i != 0:
-  if i == 3:
-    check = 1
-  this = works
+a = 4
+b = 2
