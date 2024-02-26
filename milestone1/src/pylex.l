@@ -8,24 +8,19 @@
     #include <utility>
     #include "pyparse.tab.h"
     using namespace std;
-    // implicit line joining may be a problem
+    // explicit line joining may be a problem
     // TODO: Assert keyword?
-    stack<int> INDENT_STACK;
 
     extern FILE* yyin;
-
-    pair<int, int> check_indentation();
-    pair<int, int> indent_res;
-
-    bool line_flag = false;
+    int indent_count = 0;
+    int pending_indent_tokens = 0, pending_dedent_tokens = 0;
 %}
 
 NEWLINE                 [\n]
 COMMENT                 #[.]*(\n)
 EXPLICIT_LINE_JOINER    (\\)(\n)
 
-INDENT_SPACE            "  "
-MANY_INDENTS_BEGIN      ^{INDENT_SPACE}*
+NEWLINE_WITH_SPACE      [\n]("  ")*
 IDENTIFIER              [A-Za-z_][A-Za-z0-9_]*
 
     // keywords
@@ -152,25 +147,44 @@ RARROW                  "->"
     //TODO: printing ASCII characters: what to do?
 ERROR_CHAR              [$?`]
 
+%x  INDENT_DEDENT_STATE
+
 %%
 
-{MANY_INDENTS_BEGIN}    {   if (line_flag) {
-                                indent_res = check_indentation();
-                                if (indent_res.first == 1) {
-                                    cout << "pylex: indent pushed" << endl;
-                                    return TOK_INDENT;
-                                } else if(indent_res.first == 2) {
-                                    while(indent_res.second--) {
-                                        // to make that many TOK_DEDENT
-                                        cout << "pylex: dedent pushed" << endl;
-                                        return TOK_DEDENT;
-                                    }
-                                }
+{NEWLINE_WITH_SPACE}    {   int len = (strlen(yytext) - 1) / 2;
+                            if(indent_count == len) {
+                                // expected amount of space, simply return
                             }
-                            /* else no return */
+                            else if(indent_count > len) {
+                                // a block has been closed, dedent must be passed
+                                pending_dedent_tokens = indent_count - len;
+                                indent_count = len;
+                                cout << "243. beginning the indent-dedent space" << endl;
+                                BEGIN(INDENT_DEDENT_STATE);
+                            }
+                            else {
+                                // a block has been opened, indent must be passed
+                                pending_indent_tokens = len - indent_count;
+                                indent_count = len;
+                                cout << "250. beginning the indent-dedent space" << endl;
+                                BEGIN(INDENT_DEDENT_STATE);
+                            }
+                            cout << "253. returning TOK_NEWLINE" << endl;
+                            return TOK_NEWLINE;
                         }
-
-{NEWLINE}               { return TOK_NEWLINE; }
+<INDENT_DEDENT_STATE>.  {   unput(yytext[0]);
+                            while(pending_dedent_tokens) {
+                                pending_dedent_tokens--;
+                                cout << "259. returning TOK_DEDENT" << endl;
+                                return TOK_DEDENT;
+                            }
+                            while(pending_indent_tokens) {
+                                pending_indent_tokens--;
+                                cout << "264. returning TOK_INDENT" << endl;
+                                return TOK_INDENT;
+                            }
+                            BEGIN(INITIAL);
+                        }
 {SEMICOLON}             { return TOK_SEMICOLON; }
 {EQUAL}                 { return TOK_EQUAL; }
 {COLON}                 { return TOK_COLON; }
@@ -190,6 +204,7 @@ ERROR_CHAR              [$?`]
 {IF}                    { return TOK_IF; }
 {ELSE}                  { return TOK_ELSE; }
 {ELIF}                  { return TOK_ELIF; }
+{WHILE}                 { return TOK_WHILE; }
 {OR}                    { return TOK_OR; }
 {AND}                   { return TOK_AND; }
 {NOT}                   { return TOK_NOT; }
@@ -223,13 +238,12 @@ ERROR_CHAR              [$?`]
 {RETURN}                { return TOK_RETURN; }
 {GLOBAL}                { return TOK_GLOBAL; }
 {NON_LOCAL}             { return TOK_NON_LOCAL; }
-{IDENTIFIER}            { return TOK_IDENTIFIER; }
+{IDENTIFIER}            { cout << "returning token " << yytext << endl; return TOK_IDENTIFIER; }
 .                       { ; }
 
 %%
 
 // int main(int argc, const char** argv) {
-//     INDENT_STACK.push(0);
 //     if (argc > 1) {
 //         yyin = fopen(argv[1], "r");
 //     } else {
@@ -239,24 +253,3 @@ ERROR_CHAR              [$?`]
 
 //     return 0;
 // }
-
-// <1, 0>: return TOK_INDENT, <2, n>: return TOK_DEDENT (n times), <0, 0> else
-pair<int, int> check_indentation() {
-    int indent_spaces = strlen(yytext);
-    if (indent_spaces & 0x1) {
-        cout << "TabError" << endl;
-        exit(0);
-    }
-    if (INDENT_STACK.top() < (indent_spaces >> 1)) {
-        INDENT_STACK.push((indent_spaces >> 1));
-        return make_pair(1, 0);
-    } else if (INDENT_STACK.top() > (indent_spaces >> 1)) {
-        int n_dedent = 0;
-        while(INDENT_STACK.top() != (indent_spaces >> 1)) {
-            n_dedent++;
-            INDENT_STACK.pop();
-        }
-        return make_pair(2, n_dedent);
-    }
-    return make_pair(0, 0);
-}

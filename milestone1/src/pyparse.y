@@ -6,9 +6,7 @@
     extern FILE* yyin;
     extern int yylineno;
 
-    extern bool line_flag;
-
-    extern stack<int> INDENT_STACK;
+    bool line_flag;
 
     int yylex(void);
     void yyerror (char const *s) {
@@ -42,14 +40,16 @@
 
 /* handle TOK_NEWLINE properly. Ensure every single line ends in a TOK_NEWLINE TODO: tbd in perhaps compound stmt*/
 
-file_input                  :   multiple_lines 
+file_input                  :   multiple_lines {cout << "finished parsing" << endl;}
                             ;
 multiple_lines              :   multiple_lines single_line
                             |
                             ;
-single_line                 :   { line_flag = true; } simple_stmt { line_flag = false; }
-                            |   { line_flag = true; } compound_stmt TOK_NEWLINE { line_flag = false; } /* why is it needed here? tbchecked */
+single_line                 :   stmt
                             |   TOK_NEWLINE
+                            ;
+stmt                        :   simple_stmt
+                            |   compound_stmt
                             ;
 simple_stmt                 :   small_stmt many_small_stmts optional_semicolon TOK_NEWLINE
                             ;
@@ -182,7 +182,6 @@ power                       :   atom_expr optional_dstar_tok_factor
 optional_dstar_tok_factor   :   TOK_DOUBLE_STAR factor
                             |
                             ;
-                            //TODO: If await is supported, to be added here
 atom_expr                   :   atom many_trailers
                             ;
 atom                        :   TOK_LPAR testlist_comp TOK_RPAR
@@ -228,7 +227,6 @@ many_comma_subscript        :   many_comma_subscript TOK_COMMA subscript
 optional_comp_for           :   comp_for
                             |   
                             ;
-                            /*TODO: to support or not: ASYNC*/
 comp_for                    :   TOK_FOR exprlist TOK_IN or_test optional_comp_iter
                             ;
 exprlist                    :   expr many_comma_expr optional_comma
@@ -278,10 +276,11 @@ nonlocal_stmt               :   TOK_NON_LOCAL TOK_IDENTIFIER many_comma_tok_iden
                             ;
 
 compound_stmt               :   if_stmt
+                            |   while_stmt
                             //TODO: many others to be added
                             ;
 
-if_stmt                     :   TOK_IF test TOK_COLON suite many_elif_stmts optional_else_stmt
+if_stmt                     :   TOK_IF test TOK_COLON suite {cout << "if suite parsed" << endl;}many_elif_stmts optional_else_stmt
                             ;
 many_elif_stmts             :   many_elif_stmts TOK_ELIF test TOK_COLON suite
                             |
@@ -294,14 +293,16 @@ else_stmt                   :   TOK_ELSE TOK_COLON suite
 suite                       :   simple_stmt
                             |   TOK_NEWLINE TOK_INDENT at_least_one_stmt TOK_DEDENT
                             ;
-at_least_one_stmt           :   at_least_one_stmt simple_stmt
-                            |   at_least_one_stmt compound_stmt
-                            |   simple_stmt
-                            |   compound_stmt
+at_least_one_stmt           :   at_least_one_stmt stmt
+                            |   stmt
                             ;
 
-
-/* Undefined terms: INDENT DEDENT */
+while_stmt                  :   TOK_WHILE test {cout << "while + test" << endl;} TOK_COLON suite {cout << "while suite parsed" << endl;} optional_else_suite {cout << "found while stmt" << endl;}
+                            ;
+optional_else_suite         :   TOK_ELSE TOK_COLON suite
+                            |   
+                            ;
+//TODO: verify whether optional_else_suit is supported
 %%
 
 int main(int argc, const char** argv) {
@@ -311,8 +312,6 @@ int main(int argc, const char** argv) {
         yyin = stdin;
     }
 
-    INDENT_STACK.push(0);
-    
     yyparse();
 
     return 0;
