@@ -1,19 +1,28 @@
 %{
     #include <iostream>
     #include <stack>
+    #include <cstring>
     using namespace std;
 
     extern FILE* yyin;
     extern int yylineno;
     extern stack<int> INDENT_STACK;
 
+    char compound_stmt_type[64];
+    char error_string[256];
+
     // bool line_flag;
-    
+    extern char* yytext;
 
     int yylex(void);
     void yyerror (char const *s) {
-        fprintf (stderr, "%s\n", s);
+        fprintf (stderr, "line number %d: \t %s\n", yylineno, s);
+        exit(-1);
     }
+
+    int join_lines_implicitly = 0;
+
+    // TODO: funcdef ")" error check
 %}
 
 %token TOK_IDENTIFIER TOK_NUMBER TOK_STRING_LITERAL
@@ -44,10 +53,11 @@
 %token TOK_SEMICOLON TOK_COLON TOK_COMMA TOK_DOT
 %token TOK_RARROW
 
+%expect 1
 
 %%
 
-file_input                  :   multiple_lines {cout << "finished parsing" << endl;}
+file_input                  :   multiple_lines 
                             ;
 multiple_lines              :   multiple_lines single_line
                             |
@@ -55,10 +65,10 @@ multiple_lines              :   multiple_lines single_line
 single_line                 :   stmt
                             |   TOK_NEWLINE
                             ;
-stmt                        :   simple_stmt {cout << "simple stmt parsed" << endl;}
-                            |   compound_stmt {cout << "compound stmt parsed" << endl;}
+stmt                        :   simple_stmt 
+                            |   compound_stmt 
                             ;
-simple_stmt                 :   small_stmt many_small_stmts optional_semicolon TOK_NEWLINE
+simple_stmt                 :   indent_check_small small_stmt many_small_stmts optional_semicolon TOK_NEWLINE
                             ;
 optional_semicolon          :   TOK_SEMICOLON
                             |
@@ -69,6 +79,11 @@ small_stmt                  :   expr_stmt
                             |   global_stmt
                             |   nonlocal_stmt
                              /* TODO: checking for requirement of assert stmt only */
+                            ;
+indent_check_small          :   TOK_INDENT  {   snprintf(error_string, sizeof(error_string), "unexpected indent");
+                                                yyerror(error_string);
+                                            }
+                            |
                             ;
 many_small_stmts            :   many_small_stmts TOK_SEMICOLON small_stmt
                             |
@@ -191,8 +206,8 @@ optional_dstar_tok_factor   :   TOK_DOUBLE_STAR factor
                             ;
 atom_expr                   :   atom many_trailers
                             ;
-atom                        :   TOK_LPAR testlist_comp TOK_RPAR
-                            |   TOK_LSQB testlist_comp TOK_RSQB
+atom                        :   TOK_LPAR { join_lines_implicitly = 1; } testlist_comp TOK_RPAR { join_lines_implicitly = 0; }
+                            |   TOK_LSQB { join_lines_implicitly = 1; } testlist_comp TOK_RSQB { join_lines_implicitly = 0; }
                             |   TOK_IDENTIFIER //TODO: identifier may nnot be required here
                             |   data_type
                             |   TOK_NUMBER
@@ -212,23 +227,20 @@ at_least_one_string         :   at_least_one_string TOK_STRING_LITERAL
 many_trailers               :   many_trailers trailer
                             |
                             ;
-trailer                     :   TOK_LPAR optional_arglist TOK_RPAR
-                            |   TOK_LSQB subscriptlist TOK_RSQB
+trailer                     :   TOK_LPAR { join_lines_implicitly = 1; } optional_arglist TOK_RPAR { join_lines_implicitly = 0; }
+                            |   TOK_LSQB { join_lines_implicitly = 1; } subscriptlist TOK_RSQB { join_lines_implicitly = 0; }
                             |   TOK_DOT TOK_IDENTIFIER
                             ;
 optional_arglist            :   arglist
                             |
                             ;
-arglist                     :   argument many_comma_argument optional_comma //optional_comma defined previously
+arglist                     :   argument many_comma_argument optional_comma 
                             ;
 many_comma_argument         :   many_comma_argument TOK_COMMA argument
                             |
                             ;
 argument                    :   test optional_comp_for
                             |   test TOK_EQUAL test
-                            //     /* most probably redudant as represents *args, **kwags*/
-                            // |   TOK_DOUBLE_STAR test
-                            // |   TOK_STAR test
                             ;
 subscriptlist               :   subscript many_comma_subscript optional_comma
                             ;
@@ -295,37 +307,43 @@ compound_stmt               :   if_stmt
                             |   classdef
                             ;
 
-if_stmt                     :   TOK_IF test TOK_COLON suite {cout << "if suite parsed" << endl;} many_elif_stmts optional_else_stmt
+if_stmt                     :   TOK_IF { strcpy(compound_stmt_type, "\'if\'"); } test TOK_COLON suite many_elif_stmts optional_else_stmt
                             ;
-many_elif_stmts             :   many_elif_stmts TOK_ELIF test TOK_COLON suite
+many_elif_stmts             :   many_elif_stmts TOK_ELIF { strcpy(compound_stmt_type, "\'elif\'"); } test TOK_COLON suite
                             |
                             ;
 optional_else_stmt          :   else_stmt
                             |
                             ;
-else_stmt                   :   TOK_ELSE TOK_COLON suite
+else_stmt                   :   TOK_ELSE { strcpy(compound_stmt_type, "\'else\'"); } TOK_COLON suite
                             ;
 suite                       :   simple_stmt
-                            |   TOK_NEWLINE TOK_INDENT at_least_one_stmt TOK_DEDENT
+                            |   TOK_NEWLINE indent_check_compound at_least_one_stmt TOK_DEDENT
+                            ;
+indent_check_compound       :   TOK_INDENT
+                            |   {
+                                    snprintf(error_string, sizeof(error_string), "IndentationFault: expected an indented block after %s", compound_stmt_type); 
+                                    yyerror(error_string); 
+                                }   
                             ;
 at_least_one_stmt           :   at_least_one_stmt stmt
                             |   stmt
                             ;
 
-while_stmt                  :   TOK_WHILE test TOK_COLON suite optional_else_suite
+while_stmt                  :   TOK_WHILE { strcpy(compound_stmt_type, "\'while\'"); } test TOK_COLON suite optional_else_suite
                             ;
 optional_else_suite         :   TOK_ELSE TOK_COLON suite
                             |   
                             ;
-for_stmt                    :   TOK_FOR exprlist TOK_IN testlist TOK_COLON suite optional_else_suite
+for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'"); } exprlist TOK_IN testlist TOK_COLON suite optional_else_suite
                             ;
 
-funcdef                     :   TOK_DEF TOK_IDENTIFIER parameters optional_tok_rarrow_test TOK_COLON suite
+funcdef                     :   TOK_DEF TOK_IDENTIFIER { strcpy(compound_stmt_type, "\'function definition\'"); } parameters optional_tok_rarrow_test TOK_COLON suite
                             ;
 optional_tok_rarrow_test    :   TOK_RARROW test
                             |
                             ;
-parameters                  :   TOK_LPAR optional_typedargslist TOK_RPAR
+parameters                  :   TOK_LPAR { join_lines_implicitly = 1; } optional_typedargslist TOK_RPAR { join_lines_implicitly = 0; }
                             ;
 optional_typedargslist      :   typedargslist
                             |
@@ -344,9 +362,9 @@ optional_tok_colon_test     :   TOK_COLON test
                             |
                             ;
 
-classdef                    :   TOK_CLASS TOK_IDENTIFIER optional_paren_arglist TOK_COLON suite
+classdef                    :   TOK_CLASS TOK_IDENTIFIER { strcpy(compound_stmt_type, "\'class definition\'"); } optional_paren_arglist TOK_COLON suite
                             ;
-optional_paren_arglist      :   TOK_LPAR optional_arglist TOK_RPAR
+optional_paren_arglist      :   TOK_LPAR { join_lines_implicitly = 1; } optional_arglist TOK_RPAR { join_lines_implicitly = 0; }
                             |   
                             ;
 %%
