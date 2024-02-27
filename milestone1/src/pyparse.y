@@ -5,8 +5,10 @@
 
     extern FILE* yyin;
     extern int yylineno;
-
     extern stack<int> INDENT_STACK;
+
+    // bool line_flag;
+    
 
     int yylex(void);
     void yyerror (char const *s) {
@@ -18,31 +20,38 @@
 %define api.push-pull push
 
 %token TOK_IDENTIFIER TOK_NUMBER TOK_STRING_LITERAL
-%token TOK_GLOBAL TOK_NON_LOCAL
 
 %token TOK_NEWLINE TOK_INDENT TOK_DEDENT
 
+
 %token TOK_FALSE TOK_NONE TOK_TRUE
 %token TOK_AND TOK_OR TOK_NOT
-%token TOK_PASS
 %token TOK_BREAK TOK_CONTINUE TOK_RETURN
+%token TOK_GLOBAL TOK_NON_LOCAL TOK_DEF TOK_CLASS
 %token TOK_IF TOK_ELSE TOK_ELIF
 %token TOK_IN TOK_IS
+%token TOK_PASS
 %token TOK_FOR TOK_WHILE
 
+%token TOK_INT TOK_FLOAT TOK_BOOL TOK_STR
+
 %token TOK_PLUS TOK_MINUS TOK_STAR TOK_SLASH TOK_PERCENT TOK_DOUBLE_SLASH TOK_DOUBLE_STAR
+
 %token TOK_EQ_EQUAL TOK_NOT_EQUAL TOK_GREATER TOK_LESS TOK_GREATER_EQUAL TOK_LESS_EQUAL
+
 %token TOK_AMPER TOK_VBAR TOK_CIRCUMFLEX TOK_TILDE TOK_LEFT_SHIFT TOK_RIGHT_SHIFT
+
 %token TOK_EQUAL TOK_PLUS_EQUAL TOK_MINUS_EQUAL TOK_STAR_EQUAL TOK_SLASH_EQUAL TOK_PERCENT_EQUAL 
 %token TOK_AMPER_EQUAL TOK_VBAR_EQUAL TOK_CIRCUMFLEX_EQUAL TOK_LEFT_SHIFT_EQUAL TOK_RIGHT_SHIFT_EQUAL TOK_DOUBLE_STAR_EQUAL TOK_DOUBLE_SLASH_EQUAL
 
 %token TOK_LPAR TOK_RPAR TOK_LSQB TOK_RSQB TOK_LBRACE TOK_RBRACE
 %token TOK_SEMICOLON TOK_COLON TOK_COMMA TOK_DOT
+%token TOK_RARROW
+
 
 %%
 
-
-file_input                  :   multiple_lines
+file_input                  :   multiple_lines {cout << "finished parsing" << endl;}
                             ;
 multiple_lines              :   multiple_lines single_line
                             |
@@ -50,8 +59,8 @@ multiple_lines              :   multiple_lines single_line
 single_line                 :   stmt
                             |   TOK_NEWLINE
                             ;
-stmt                        :   simple_stmt
-                            |   compound_stmt
+stmt                        :   simple_stmt {cout << "simple stmt parsed" << endl;}
+                            |   compound_stmt {cout << "compound stmt parsed" << endl;}
                             ;
 simple_stmt                 :   small_stmt many_small_stmts optional_semicolon TOK_NEWLINE
                             ;
@@ -75,7 +84,7 @@ expr_stmt                   :   testlist_star_expr annassign
 testlist_star_expr          :   test
                             // |   star_expr
                             ;
-many_equal_testlist_star_expr     :   many_equal_testlist_star_expr TOK_EQUAL testlist_star_expr
+many_equal_testlist_star_expr   :   many_equal_testlist_star_expr TOK_EQUAL testlist_star_expr
                             |
                             ;
 annassign                   :   TOK_COLON test optional_assign_test
@@ -188,12 +197,18 @@ atom_expr                   :   atom many_trailers
                             ;
 atom                        :   TOK_LPAR testlist_comp TOK_RPAR
                             |   TOK_LSQB testlist_comp TOK_RSQB
-                            |   TOK_IDENTIFIER
+                            |   TOK_IDENTIFIER //TODO: identifier may nnot be required here
+                            |   data_type
                             |   TOK_NUMBER
                             |   at_least_one_string
                             |   TOK_NONE
                             |   TOK_TRUE
                             |   TOK_FALSE
+                            ;
+data_type                   :   TOK_INT
+                            |   TOK_FLOAT
+                            |   TOK_STR
+                            |   TOK_BOOL
                             ;
 at_least_one_string         :   at_least_one_string TOK_STRING_LITERAL
                             |   TOK_STRING_LITERAL
@@ -279,10 +294,12 @@ nonlocal_stmt               :   TOK_NON_LOCAL TOK_IDENTIFIER many_comma_tok_iden
 
 compound_stmt               :   if_stmt
                             |   while_stmt
-                            //TODO: many others to be added
+                            |   for_stmt
+                            |   funcdef
+                            |   classdef
                             ;
 
-if_stmt                     :   TOK_IF test TOK_COLON suite many_elif_stmts optional_else_stmt
+if_stmt                     :   TOK_IF test TOK_COLON suite {cout << "if suite parsed" << endl;} many_elif_stmts optional_else_stmt
                             ;
 many_elif_stmts             :   many_elif_stmts TOK_ELIF test TOK_COLON suite
                             |
@@ -304,6 +321,38 @@ while_stmt                  :   TOK_WHILE test TOK_COLON suite optional_else_sui
 optional_else_suite         :   TOK_ELSE TOK_COLON suite
                             |   
                             ;
+for_stmt                    :   TOK_FOR exprlist TOK_IN testlist TOK_COLON suite optional_else_suite
+                            ;
+
+funcdef                     :   TOK_DEF TOK_IDENTIFIER parameters optional_tok_rarrow_test TOK_COLON suite
+                            ;
+optional_tok_rarrow_test    :   TOK_RARROW test
+                            |
+                            ;
+parameters                  :   TOK_LPAR optional_typedargslist TOK_RPAR
+                            ;
+optional_typedargslist      :   typedargslist
+                            |
+                            ;
+typedargslist               :   tfpdef optional_equal_test many_comma_tfpdef_optional_equal_test
+                            ;
+optional_equal_test         :   TOK_EQUAL test
+                            |
+                            ;
+many_comma_tfpdef_optional_equal_test   :   many_comma_tfpdef_optional_equal_test TOK_COMMA tfpdef optional_equal_test
+                                        |   
+                                        ;
+tfpdef                      :   TOK_IDENTIFIER optional_tok_colon_test
+                            ;
+optional_tok_colon_test     :   TOK_COLON test
+                            |
+                            ;
+
+classdef                    :   TOK_CLASS TOK_IDENTIFIER optional_paren_arglist TOK_COLON suite
+                            ;
+optional_paren_arglist      :   TOK_LPAR optional_arglist TOK_RPAR
+                            |   
+                            ;
 %%
 
 int main(int argc, const char** argv) {
@@ -312,9 +361,7 @@ int main(int argc, const char** argv) {
     } else {
         yyin = stdin;
     }
-
     INDENT_STACK.push(0);
-
     yyparse();
 
     return 0;
