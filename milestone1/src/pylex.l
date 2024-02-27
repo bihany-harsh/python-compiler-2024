@@ -8,7 +8,7 @@
     #include <utility>
     #include "pyparse.tab.h"
     using namespace std;
-    // explicit line joining may be a problem
+    // TODO: verify explicit line joining is being done correctly
     // TODO: Assert keyword?
 
     stack<int> INDENT_STACK;
@@ -19,19 +19,22 @@
     // bool line_flag = false;
 
     extern FILE* yyin;
-
-    void handle_indentation();
-    void handle_eof();
-    void token_handler();
-    // int indent_count = 0;
-    // int pending_indent_tokens = 0, pending_dedent_tokens = 0;
+    stack<int> INDENT_STACK;
+    int indent_level = 0;
+    int indent_space = 0, dedent_space = 0;
+    int pending_dedent_flag = 0, pending_indent_flag = 0;
 %}
 
 NEWLINE                 [\n]
-COMMENT                 #[.]*(\n)
+WHITE_SPACE             [ \t\r]*
+NEWLINE_WITH_SPACE      {NEWLINE}(" ")*
+EMPTY_LINES             ({NEWLINE}{WHITE_SPACE})*{NEWLINE}
+
+PART_OF_LINE_COMMENT    #(.)*
+ENTIRE_LINE_COMMENT     (\n){WHITE_SPACE}#(.)*
+COMMENT                 {PART_OF_LINE_COMMENT}|{ENTIRE_LINE_COMMENT}
 EXPLICIT_LINE_JOINER    (\\)(\n)
 
-INDENT_SPACE            ^(" ")+
 IDENTIFIER              [A-Za-z_][A-Za-z0-9_]*
 
     // keywords
@@ -39,7 +42,7 @@ FALSE                   "False"
 NONE                    "None"
 TRUE                    "True"
 AND                     "and"
-AS                      "as"
+    // AS                      "as"
 ASSERT                  "assert"
 BREAK                   "break"
 CLASS                   "class"
@@ -47,10 +50,8 @@ CONTINUE                "continue"
 DEF                     "def"
 ELIF                    "elif"
 ELSE                    "else"
-EXCEPT                  "except"
-FINALLY                 "finally"
 FOR                     "for"
-FROM                    "from"
+    // FROM                    "from"
 GLOBAL                  "global"
 IF                      "if"
 IN                      "in"
@@ -60,23 +61,28 @@ NOT                     "not"
 OR                      "or"
 PASS                    "pass"
 RETURN                  "return"
-TRY                     "try"
 WHILE                   "while"
+
+    // datatype
+INT                     "int"
+FLOAT                   "float"
+STR                     "str"
+BOOL                    "bool"
 
     // string and byte literals
 SHORT_STRING_CHAR       [^"'\n\\]
 LONG_STRING_CHAR        [^\\]
-STRING_ESCAPE_SEQ       (\\)/[.]
-SHORT_STRING_ITEM       {SHORT_STRING_CHAR}|{STRING_ESCAPE_SEQ}
-LONG_STRING_ITEM        {LONG_STRING_CHAR}|{STRING_ESCAPE_SEQ}
+    // STRING_ESCAPE_SEQ       (\\)/(.)
+SHORT_STRING_ITEM       {SHORT_STRING_CHAR}
+    // |{STRING_ESCAPE_SEQ}
+LONG_STRING_ITEM        {LONG_STRING_CHAR}
+    // |{STRING_ESCAPE_SEQ}
 SHORT_STRING            \'{SHORT_STRING_ITEM}*\'|\"{SHORT_STRING_ITEM}*\"
 LONG_STRING             \'{3}{LONG_STRING_ITEM}*\'{3}|\"{3}{LONG_STRING_ITEM}*\"{3}
 STRING_LITERAL          {SHORT_STRING}|{LONG_STRING}
     //FIXME: string literal not working
 
-    //TODO: verify that no byte prefix is required
     //TODO: verify that no escape characters to be supported
-    //TODO: verify whether "await" has to be supported
 
     // integer literals
 OCT_DIGIT               [0-7]
@@ -154,73 +160,155 @@ COLON                   ":"
 DOT                     "."
 SEMICOLON               ";"
 RARROW                  "->"
-    //TODO: Find out whether to include ellipsis literals or not
     //TODO: printing ASCII characters: what to do?
 ERROR_CHAR              [$?`]
-
-    // %x  INDENT_DEDENT_STATE
+    //The following patterns have no rule matching them:
+    //assert, from, 
 
 %%
-    /* Initialize a parser state object */
-    yypstate* pstate = yypstate_new();
+    {   // handling indent-dedent tokens
+        if(pending_dedent_flag) {
+            while(INDENT_STACK.top() > dedent_space) {
+                INDENT_STACK.pop();
+                cout << "pylex: returning TOK_DEDENT" << endl;
+                return TOK_DEDENT;
+            }
+            if(INDENT_STACK.top() < dedent_space) {
+                //TODO: Throw error, unexpected dedent
+            }
+            dedent_space = 0;
+            pending_dedent_flag = 0;
+        }
+        if(pending_indent_flag) {
+            INDENT_STACK.push(indent_space);
+            cout << "pylex: returning TOK_INDENT" << endl;
+            indent_space = 0;
+            pending_indent_flag = 0;
+            return TOK_INDENT;
+        }
+    }
 
-{INDENT_SPACE}          { handle_indentation(); }
-{NEWLINE}               { token_handler(TOK_NEWLINE); }
-{SEMICOLON}             { token_handler(TOK_SEMICOLON);  }
-{EQUAL}                 { token_handler(TOK_EQUAL); }
-{COLON}                 { token_handler(TOK_COLON); }
-{COMMA}                 { token_handler(TOK_COMMA); }
-{PLUS_EQUAL}            { token_handler(TOK_PLUS_EQUAL); }
-{MINUS_EQUAL}           { token_handler(TOK_MINUS_EQUAL); }
-{STAR_EQUAL}            { token_handler(TOK_STAR_EQUAL); }
-{SLASH_EQUAL}           { token_handler(TOK_SLASH_EQUAL); }
-{PERCENT_EQUAL}         { token_handler(TOK_PERCENT_EQUAL); }
-{AMPER_EQUAL}           { token_handler(TOK_AMPER_EQUAL); }
-{VBAR_EQUAL}            { token_handler(TOK_VBAR_EQUAL); }
-{CIRCUMFLEX_EQUAL}      { token_handler(TOK_CIRCUMFLEX_EQUAL); }
-{LEFT_SHIFT_EQUAL}      { token_handler(TOK_LEFT_SHIFT_EQUAL); }
-{RIGHT_SHIFT_EQUAL}     { token_handler(TOK_RIGHT_SHIFT_EQUAL); }
-{DOUBLE_STAR_EQUAL}     { token_handler(TOK_DOUBLE_STAR_EQUAL); }
-{DOUBLE_SLASH_EQUAL}    { token_handler(TOK_DOUBLE_SLASH_EQUAL); }
-{IF}                    { token_handler(TOK_IF); }
-{ELSE}                  { token_handler(TOK_ELSE); }
-{ELIF}                  { token_handler(TOK_ELIF); }
-{WHILE}                 { token_handler(TOK_WHILE); }
-{OR}                    { token_handler(TOK_OR); }
-{AND}                   { token_handler(TOK_AND); }
-{NOT}                   { token_handler(TOK_NOT); }
-{AMPER}                 { token_handler(TOK_AMPER); }
-{VBAR}                  { token_handler(TOK_VBAR); }
-{CIRCUMFLEX}            { token_handler(TOK_CIRCUMFLEX); }
-{LESS}                  { token_handler(TOK_LESS); }
-{GREATER}               { token_handler(TOK_GREATER); }
-{EQ_EQUAL}              { token_handler(TOK_EQ_EQUAL); }
-{GREATER_EQUAL}         { token_handler(TOK_GREATER_EQUAL); }
-{LESS_EQUAL}            { token_handler(TOK_LESS_EQUAL); }
-{NOT_EQUAL}             { token_handler(TOK_NOT_EQUAL); }
-{IN}                    { token_handler(TOK_IN); }
-{IS}                    { token_handler(TOK_IS); }
-{LEFT_SHIFT}            { token_handler(TOK_LEFT_SHIFT); }
-{RIGHT_SHIFT}           { token_handler(TOK_RIGHT_SHIFT); }
-{LPAR}                  { token_handler(TOK_LPAR); }
-{RPAR}                  { token_handler(TOK_RPAR); }
-{LSQB}                  { token_handler(TOK_LSQB); }
-{RSQB}                  { token_handler(TOK_RSQB); }
-{LBRACE}                { token_handler(TOK_LBRACE); }
-{RBRACE}                { token_handler(TOK_RBRACE); }
-{NONE}                  { token_handler(TOK_NONE); }
-{TRUE}                  { token_handler(TOK_TRUE); }
-{FALSE}                 { token_handler(TOK_FALSE); }
-{NUMBER}                { token_handler(TOK_NUMBER); }
-{DOT}                   { token_handler(TOK_DOT); }
-{PASS}                  { token_handler(TOK_PASS); }
-{BREAK}                 { token_handler(TOK_BREAK); }
-{CONTINUE}              { token_handler(TOK_CONTINUE); }
-{RETURN}                { token_handler(TOK_RETURN); }
-{GLOBAL}                { token_handler(TOK_GLOBAL); }
-{NON_LOCAL}             { token_handler(TOK_NON_LOCAL); }
-{IDENTIFIER}            { token_handler(TOK_IDENTIFIER); }
-<<EOF>>                 { handle_eof(); }
+{COMMENT}               { cout << "pylex: ignoring comment" << yytext << endl;}
+{EXPLICIT_LINE_JOINER}  { cout << "pylex: found an explicit line joiner, doing nothing" << endl; }
+{NEWLINE_WITH_SPACE}    {   cout << "top of the stack now is " << INDENT_STACK.top() << endl;
+                            cout << "found newline (maybe with space)" << endl;
+                            int len = strlen(yytext) - 1;
+                            // if(joining_line_implicitly) {
+                                //TODO: simply ignore
+                            // }
+                            if(len % 2 == 0) {
+                                //TODO: throw error, odd number of spaces
+                            }
+                            if(INDENT_STACK.top() == len) {
+                                // expected amount of space, do nothing
+                                cout << "pylex: indent check: correct amount of space" << endl;
+                            }
+                            else if(INDENT_STACK.top() > len) {
+                                // a block has been closed, dedent must be passed
+                                dedent_space = len;
+                                // if(dedent_space < INDENT_STACK.top()) {
+                                //     cout << "need to pass multiple dedents" << endl;
+                                //     pending_dedent_flag = 1;
+                                // }
+                                pending_dedent_flag = 1;
+                                cout << "pylex: indent check: found that dedent is required, will pass dedent from now" << endl;
+                            }
+                            else {
+                                // a block has been opened, indent must be passed
+                                indent_space = len;
+                                pending_indent_flag = 1;
+                                cout << "pylex: indent check: found that indent is required, will pass indent" << endl;
+                            }
+                            cout << "pylex: indent check: returning TOK_NEWLINE" << endl;
+                            return TOK_NEWLINE;
+                        }
+
+{EMPTY_LINES}           {   cout << "pylex: found empty lines, doing nothing" << endl;
+                            int len = strlen(yytext);
+                            unput('\n');
+                            // return TOK_NEWLINE;
+                        }
+
+{FALSE}                 { cout << "pylex: found keyword " << yytext << endl; return TOK_FALSE; }
+{TRUE}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_TRUE; }
+{NONE}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_NONE; }
+{AND}                   { cout << "pylex: found keyword " << yytext << endl; return TOK_AND; }
+{BREAK}                 { cout << "pylex: found keyword " << yytext << endl; return TOK_BREAK; }
+{CLASS}                 { cout << "pylex: found keyword " << yytext << endl; return TOK_CLASS; }
+{CONTINUE}              { cout << "pylex: found keyword " << yytext << endl; return TOK_CONTINUE; }
+{DEF}                   { cout << "pylex: found keyword " << yytext << endl; return TOK_DEF; }
+{ELIF}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_ELIF; }
+{ELSE}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_ELSE; }
+{FOR}                   { cout << "pylex: found keyword " << yytext << endl; return TOK_FOR; }
+{GLOBAL}                { cout << "pylex: found keyword " << yytext << endl; return TOK_GLOBAL; }
+{IF}                    { cout << "pylex: found keyword " << yytext << endl; return TOK_IF; }
+{IN}                    { cout << "pylex: found keyword " << yytext << endl; return TOK_IN; }
+{IS}                    { cout << "pylex: found keyword " << yytext << endl; return TOK_IS; }
+{NON_LOCAL}             { cout << "pylex: found keyword " << yytext << endl; return TOK_NON_LOCAL; }
+{NOT}                   { cout << "pylex: found keyword " << yytext << endl; return TOK_NOT; }
+{OR}                    { cout << "pylex: found keyword " << yytext << endl; return TOK_OR; }
+{PASS}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_PASS; }
+{WHILE}                 { cout << "pylex: found keyword " << yytext << endl; return TOK_WHILE; }
+{RETURN}                { cout << "pylex: found keyword " << yytext << endl; return TOK_RETURN; }
+
+{INT}                   { cout << "pylex: found keyword " << yytext << endl; return TOK_INT; }
+{FLOAT}                 { cout << "pylex: found keyword " << yytext << endl; return TOK_FLOAT; }
+{STR}                   { cout << "pylex: found keyword " << yytext << endl; return TOK_STR; }
+{BOOL}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_BOOL; }
+
+{IDENTIFIER}            { cout << "pylex: found keyword " << yytext << endl; return TOK_IDENTIFIER; }
+
+{STRING_LITERAL}         { cout << "pylex: found string " << yytext << endl; return TOK_STRING_LITERAL; }
+
+{NUMBER}                { cout << "pylex: found keyword " << yytext << endl; return TOK_NUMBER; }
+
+{PLUS}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_PLUS; }
+{MINUS}                 { cout << "pylex: found keyword " << yytext << endl; return TOK_MINUS; }
+{STAR}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_STAR; }
+{SLASH}                 { cout << "pylex: found keyword " << yytext << endl; return TOK_SLASH; }
+{DOUBLE_SLASH}          { cout << "pylex: found keyword " << yytext << endl; return TOK_DOUBLE_SLASH; }
+{PERCENT}               { cout << "pylex: found keyword " << yytext << endl; return TOK_PERCENT; }
+{DOUBLE_STAR}           { cout << "pylex: found keyword " << yytext << endl; return TOK_DOUBLE_STAR; }
+
+{EQ_EQUAL}              { cout << "pylex: found keyword " << yytext << endl; return TOK_EQ_EQUAL; }
+{NOT_EQUAL}             { cout << "pylex: found keyword " << yytext << endl; return TOK_NOT_EQUAL; }
+{GREATER}               { cout << "pylex: found keyword " << yytext << endl; return TOK_GREATER; }
+{LESS}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_LESS; }
+{GREATER_EQUAL}         { cout << "pylex: found keyword " << yytext << endl; return TOK_GREATER_EQUAL; }
+{LESS_EQUAL}            { cout << "pylex: found keyword " << yytext << endl; return TOK_LESS_EQUAL; }
+
+{AMPER}                 { cout << "found keyword " << yytext << endl; return TOK_AMPER; }
+{VBAR}                  { cout << "found keyword " << yytext << endl; return TOK_VBAR; }
+{CIRCUMFLEX}            { cout << "found keyword " << yytext << endl; return TOK_CIRCUMFLEX; }
+{TILDE}                 { cout << "found keyword " << yytext << endl; return TOK_TILDE; }
+{LEFT_SHIFT}            { cout << "found keyword " << yytext << endl; return TOK_LEFT_SHIFT; }
+{RIGHT_SHIFT}           { cout << "found keyword " << yytext << endl; return TOK_RIGHT_SHIFT; }
+
+{EQUAL}                 { cout << "pylex: found keyword " << yytext << endl; return TOK_EQUAL; }
+{PLUS_EQUAL}            { cout << "pylex: found keyword " << yytext << endl; return TOK_PLUS_EQUAL; }
+{MINUS_EQUAL}           { cout << "pylex: found keyword " << yytext << endl; return TOK_MINUS_EQUAL; }
+{STAR_EQUAL}            { cout << "pylex: found keyword " << yytext << endl; return TOK_STAR_EQUAL; }
+{SLASH_EQUAL}           { cout << "pylex: found keyword " << yytext << endl; return TOK_SLASH_EQUAL; }
+{DOUBLE_SLASH_EQUAL}    { cout << "pylex: found keyword " << yytext << endl; return TOK_DOUBLE_SLASH_EQUAL; }
+{PERCENT_EQUAL}         { cout << "pylex: found keyword " << yytext << endl; return TOK_PERCENT_EQUAL; }
+{DOUBLE_STAR_EQUAL}     { cout << "pylex: found keyword " << yytext << endl; return TOK_DOUBLE_STAR_EQUAL; }
+{AMPER_EQUAL}           { cout << "pylex: found keyword " << yytext << endl; return TOK_AMPER_EQUAL; }
+{VBAR_EQUAL}            { cout << "pylex: found keyword " << yytext << endl; return TOK_VBAR_EQUAL; }
+{CIRCUMFLEX_EQUAL}      { cout << "pylex: found keyword " << yytext << endl; return TOK_CIRCUMFLEX_EQUAL; }
+{LEFT_SHIFT_EQUAL}      { cout << "pylex: found keyword " << yytext << endl; return TOK_LEFT_SHIFT_EQUAL; }
+{RIGHT_SHIFT_EQUAL}     { cout << "pylex: found keyword " << yytext << endl; return TOK_RIGHT_SHIFT_EQUAL; }
+
+{LPAR}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_LPAR; }
+{RPAR}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_RPAR; }
+{LSQB}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_LSQB; }
+{RSQB}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_RSQB; }
+{LBRACE}                { cout << "pylex: found keyword " << yytext << endl; return TOK_LBRACE; }
+{RBRACE}                { cout << "pylex: found keyword " << yytext << endl; return TOK_RBRACE; }
+{COMMA}                 { cout << "pylex: found keyword " << yytext << endl; return TOK_COMMA; }
+{COLON}                 { cout << "pylex: found keyword " << yytext << endl; return TOK_COLON; }
+{DOT}                   { cout << "pylex: found keyword " << yytext << endl; return TOK_DOT; }
+{SEMICOLON}             { cout << "pylex: found keyword " << yytext << endl; return TOK_SEMICOLON; }
+{RARROW}                { cout << "pylex: found keyword " << yytext << endl; return TOK_RARROW; }
 .                       { ; }
 
 %%
