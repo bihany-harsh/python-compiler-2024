@@ -9,14 +9,8 @@
     #include "pyparse.tab.h"
     using namespace std;
     // TODO: verify explicit line joining is being done correctly
+    // TODO: ensure that empty lines will not cause an issue
     // TODO: Assert keyword?
-
-    stack<int> INDENT_STACK;
-
-    pair<int, int> check_indentation();
-    pair<int, int> indent_res;
-
-    // bool line_flag = false;
 
     extern FILE* yyin;
     stack<int> INDENT_STACK;
@@ -69,21 +63,6 @@ FLOAT                   "float"
 STR                     "str"
 BOOL                    "bool"
 
-    // string and byte literals
-SHORT_STRING_CHAR       [^"'\n\\]
-LONG_STRING_CHAR        [^\\]
-    // STRING_ESCAPE_SEQ       (\\)/(.)
-SHORT_STRING_ITEM       {SHORT_STRING_CHAR}
-    // |{STRING_ESCAPE_SEQ}
-LONG_STRING_ITEM        {LONG_STRING_CHAR}
-    // |{STRING_ESCAPE_SEQ}
-SHORT_STRING            \'{SHORT_STRING_ITEM}*\'|\"{SHORT_STRING_ITEM}*\"
-LONG_STRING             \'{3}{LONG_STRING_ITEM}*\'{3}|\"{3}{LONG_STRING_ITEM}*\"{3}
-STRING_LITERAL          {SHORT_STRING}|{LONG_STRING}
-    //FIXME: string literal not working
-
-    //TODO: verify that no escape characters to be supported
-
     // integer literals
 OCT_DIGIT               [0-7]
 BIN_DIGIT               [0-1]
@@ -94,9 +73,7 @@ HEX_INTEGER             "0"("X"|"x")(("_")?{HEX_DIGIT})+
 OCT_INTEGER             "0"("O"|"o")(("_")?{OCT_DIGIT})+
 BIN_INTEGER             "0"("B"|"b")(("_")?{BIN_DIGIT})+
 DEC_INTEGER             {NONZERO_DIGIT}(("_")?{DIGIT})*|"0"+(("_")?"0")*
-    //TODO: test DEC_INTEGER
 INTEGER                 {DEC_INTEGER}|{BIN_INTEGER}|{OCT_INTEGER}|{HEX_INTEGER}
-
     // floating point literals
 DIGIT_PART              {DIGIT}(("_")?{DIGIT})*
 FRACTION                "."{DIGIT_PART}
@@ -104,11 +81,25 @@ EXPONENT                ("E"|"e")[+-]?{DIGIT_PART}
 POINT_FLOAT             {DIGIT_PART}?{FRACTION}|{DIGIT_PART}"."
 EXPONENT_FLOAT          ({DIGIT_PART}|{POINT_FLOAT}){EXPONENT}
 FLOAT_NUMBER            {POINT_FLOAT}|{EXPONENT_FLOAT}
-
     // imaginary literals
 IMAG_NUMBER             ({FLOAT_NUMBER}|{DIGIT_PART})("j"|"J")
 
 NUMBER                  {INTEGER}|{FLOAT_NUMBER}|{IMAG_NUMBER}
+    
+    // string and byte literals
+SHORT_STRING_CHAR       [^"'\n\\]
+LONG_STRING_CHAR        [^\\]
+
+STRING_ESCAPE_SEQ       (\\\\)|(\\\')|(\\\")|(\\a)|(\\b)|(\\f)|(\\n)|(\\r)|(\\t)|(\\v)|(\\{OCT_DIGIT}{1,3})|(\\x{HEX_DIGIT}{2})
+SHORT_STRING_ITEM       {SHORT_STRING_CHAR}|{STRING_ESCAPE_SEQ}
+LONG_STRING_ITEM        {LONG_STRING_CHAR}|{STRING_ESCAPE_SEQ}
+SHORT_STRING            \'{SHORT_STRING_ITEM}*\'|\"{SHORT_STRING_ITEM}*\"
+LONG_STRING             \'{3}{LONG_STRING_ITEM}*\'{3}|\"{3}{LONG_STRING_ITEM}*\"{3}
+STRING_LITERAL          {SHORT_STRING}|{LONG_STRING}
+
+    //TODO: verify that no escape characters to be supported
+    //TODO: byte literals?
+
 
     // operators
     //arithmetic operators
@@ -194,9 +185,9 @@ ERROR_CHAR              [$?`]
                             cout << "found newline (maybe with space)" << endl;
                             int len = strlen(yytext) - 1;
                             // if(joining_line_implicitly) {
-                                //TODO: simply ignore
+                                // //TODO: simply ignore
                             // }
-                            if(len % 2 == 0) {
+                            if(len % 2 != 0) {
                                 //TODO: throw error, odd number of spaces
                             }
                             if(INDENT_STACK.top() == len) {
@@ -225,7 +216,7 @@ ERROR_CHAR              [$?`]
 
 {EMPTY_LINES}           {   cout << "pylex: found empty lines, doing nothing" << endl;
                             int len = strlen(yytext);
-                            unput('\n');
+                            unput(yytext[len-1]); // this be equivalent to unput('\n')
                             // return TOK_NEWLINE;
                         }
 
@@ -258,9 +249,9 @@ ERROR_CHAR              [$?`]
 
 {IDENTIFIER}            { cout << "pylex: found keyword " << yytext << endl; return TOK_IDENTIFIER; }
 
-{STRING_LITERAL}         { cout << "pylex: found string " << yytext << endl; return TOK_STRING_LITERAL; }
+{STRING_LITERAL}        { cout << "pylex: found string " << yytext << endl; return TOK_STRING_LITERAL; }
 
-{NUMBER}                { cout << "pylex: found keyword " << yytext << endl; return TOK_NUMBER; }
+{NUMBER}                { cout << "pylex: found integer " << yytext << endl; return TOK_NUMBER; }
 
 {PLUS}                  { cout << "pylex: found keyword " << yytext << endl; return TOK_PLUS; }
 {MINUS}                 { cout << "pylex: found keyword " << yytext << endl; return TOK_MINUS; }
@@ -313,33 +304,8 @@ ERROR_CHAR              [$?`]
 
 %%
 
-void handle_eof() {
-    while(INDENT_STACK.top() > 0) {
-        INDENT_STACK.pop();
-        yypush_parse(pstate, TOK_DEDENT, &yylval, &yylloc);
-    }
-    yypstate_delete(pstate);
-}
+// int main() {
+//     yylex();
 
-void token_handler(int tok_) {
-    yypush_parse(pstate, tok_, &yylval, &yylloc);
-}
-
-void handle_indentation() {
-    int indent_level = strlen(yytext);
-    if (indent_level%2 == 1) {
-        cout << "TabError" << endl;
-        // TODO: proper handling
-        exit(-1);
-    }
-    indent_level /= 2;
-    if (INDENT_STACK.top() < indent_level) {
-        INDENT_STACK.push(indent_level);
-        yypush_parse(pstate, TOK_INDENT, &yylval, &yylloc);
-    } else {
-        while (INDENT_STACK.top() > indent_level) {
-            INDENT_STACK.pop();
-            yypush_parse(pstate, TOK_DEDENT, &yylval, &yylloc);
-        }
-    }
-}
+//     return 0;
+// }

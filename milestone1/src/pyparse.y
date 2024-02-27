@@ -16,13 +16,9 @@
     }
 %}
 
-%define api.pure full
-%define api.push-pull push
-
 %token TOK_IDENTIFIER TOK_NUMBER TOK_STRING_LITERAL
 
 %token TOK_NEWLINE TOK_INDENT TOK_DEDENT
-
 
 %token TOK_FALSE TOK_NONE TOK_TRUE
 %token TOK_AND TOK_OR TOK_NOT
