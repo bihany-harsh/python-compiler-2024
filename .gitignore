@@ -1,6 +1,13 @@
 .DS_Store
-*.c
+# *.c
+*.tab.c
+*.tab.h
+lex.yy.c
+*.out
+*.output
+*.exe
 *.o
-*.h
+# *.h
 .vscode
-*.py
+# *.py
+*.pdf

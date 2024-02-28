@@ -46,7 +46,7 @@
 
 %token TOK_AMPER TOK_VBAR TOK_CIRCUMFLEX TOK_TILDE TOK_LEFT_SHIFT TOK_RIGHT_SHIFT
 
-%token TOK_EQUAL TOK_PLUS_EQUAL TOK_MINUS_EQUAL TOK_STAR_EQUAL TOK_SLASH_EQUAL TOK_PERCENT_EQUAL 
+%token TOK_EQUAL TOK_PLUS_EQUAL TOK_MINUS_EQUAL TOK_STAR_EQUAL TOK_SLASH_EQUAL TOK_PERCENT_EQUAL
 %token TOK_AMPER_EQUAL TOK_VBAR_EQUAL TOK_CIRCUMFLEX_EQUAL TOK_LEFT_SHIFT_EQUAL TOK_RIGHT_SHIFT_EQUAL TOK_DOUBLE_STAR_EQUAL TOK_DOUBLE_SLASH_EQUAL
 
 %token TOK_LPAR TOK_RPAR TOK_LSQB TOK_RSQB TOK_LBRACE TOK_RBRACE
@@ -57,7 +57,7 @@
 
 %%
 
-file_input                  :   multiple_lines 
+file_input                  :   multiple_lines
                             ;
 multiple_lines              :   multiple_lines single_line
                             |
@@ -65,8 +65,8 @@ multiple_lines              :   multiple_lines single_line
 single_line                 :   stmt
                             |   TOK_NEWLINE
                             ;
-stmt                        :   simple_stmt 
-                            |   compound_stmt 
+stmt                        :   simple_stmt
+                            |   compound_stmt
                             ;
 simple_stmt                 :   indent_check_small small_stmt many_small_stmts optional_semicolon TOK_NEWLINE
                             ;
@@ -124,7 +124,7 @@ many_comma_tok_test         :   many_comma_tok_test TOK_COMMA test
 optional_comma              :   TOK_COMMA
                             |
                             ;
-                            
+
 test                        :   or_test optional_if_else
                             ;
 optional_if_else            :   TOK_IF or_test TOK_ELSE test
@@ -179,7 +179,7 @@ shift_expr                  :   arith_expr many_shift_op_arith_expr
 many_shift_op_arith_expr    :   many_shift_op_arith_expr TOK_LEFT_SHIFT arith_expr
                             |   many_shift_op_arith_expr TOK_RIGHT_SHIFT arith_expr
                             |
-                            ;   
+                            ;
 arith_expr                  :   term many_arith_term
                             ;
 many_arith_term             :   many_arith_term TOK_PLUS term
@@ -234,7 +234,7 @@ trailer                     :   TOK_LPAR { join_lines_implicitly = 1; } optional
 optional_arglist            :   arglist
                             |
                             ;
-arglist                     :   argument many_comma_argument optional_comma 
+arglist                     :   argument many_comma_argument optional_comma
                             ;
 many_comma_argument         :   many_comma_argument TOK_COMMA argument
                             |
@@ -247,10 +247,10 @@ subscriptlist               :   subscript many_comma_subscript optional_comma
 subscript                   :   test
                             ;
 many_comma_subscript        :   many_comma_subscript TOK_COMMA subscript
-                            |  
+                            |
                             ;
 optional_comp_for           :   comp_for
-                            |   
+                            |
                             ;
 comp_for                    :   TOK_FOR exprlist TOK_IN or_test optional_comp_iter
                             ;
@@ -322,9 +322,9 @@ suite                       :   simple_stmt
                             ;
 indent_check_compound       :   TOK_INDENT
                             |   {
-                                    snprintf(error_string, sizeof(error_string), "IndentationFault: expected an indented block after %s", compound_stmt_type); 
-                                    yyerror(error_string); 
-                                }   
+                                    snprintf(error_string, sizeof(error_string), "IndentationFault: expected an indented block after %s", compound_stmt_type);
+                                    yyerror(error_string);
+                                }
                             ;
 at_least_one_stmt           :   at_least_one_stmt stmt
                             |   stmt
@@ -333,7 +333,7 @@ at_least_one_stmt           :   at_least_one_stmt stmt
 while_stmt                  :   TOK_WHILE { strcpy(compound_stmt_type, "\'while\'"); } test TOK_COLON suite optional_else_suite
                             ;
 optional_else_suite         :   TOK_ELSE TOK_COLON suite
-                            |   
+                            |
                             ;
 for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'"); } exprlist TOK_IN testlist TOK_COLON suite optional_else_suite
                             ;
@@ -354,7 +354,7 @@ optional_equal_test         :   TOK_EQUAL test
                             |
                             ;
 many_comma_tfpdef_optional_equal_test   :   many_comma_tfpdef_optional_equal_test TOK_COMMA tfpdef optional_equal_test
-                                        |   
+                                        |
                                         ;
 tfpdef                      :   TOK_IDENTIFIER optional_tok_colon_test
                             ;
@@ -365,18 +365,6 @@ optional_tok_colon_test     :   TOK_COLON test
 classdef                    :   TOK_CLASS TOK_IDENTIFIER { strcpy(compound_stmt_type, "\'class definition\'"); } optional_paren_arglist TOK_COLON suite
                             ;
 optional_paren_arglist      :   TOK_LPAR { join_lines_implicitly = 1; } optional_arglist TOK_RPAR { join_lines_implicitly = 0; }
-                            |   
+                            |
                             ;
 %%
-
-int main(int argc, const char** argv) {
-    if (argc > 1) {
-        yyin = fopen(argv[1], "r");
-    } else {
-        yyin = stdin;
-    }
-    INDENT_STACK.push(0);
-    yyparse();
-
-    return 0;
-}
