@@ -1,3 +1,371 @@
 digraph ast {
-
+Node1055[label="FILE_INPUT"]
+Node1008[label="MULTIPLE_LINES"]
+Node619[label="FUNCDEF"]
+Node620[label="def"]
+Node619-> Node620
+Node0[label="bubbleSort"]
+Node619-> Node0
+Node35[label="TFPDEF"]
+Node1[label="array"]
+Node35-> Node1
+Node21[label="ATOM_EXPR"]
+Node2[label="list"]
+Node21-> Node2
+Node3[label="int"]
+Node21-> Node3
+Node35-> Node21
+Node619-> Node35
+Node53[label="OPTIONAL_TOK_RARROW_TEST"]
+Node54[label="->"]
+Node53-> Node54
+Node40[label="None"]
+Node53-> Node40
+Node619-> Node53
+Node618[label="AT_LEAST_ONE_STMT"]
+Node98[label="EXPR_STMT"]
+Node55[label="i"]
+Node98-> Node55
+Node96[label="ANNASSIGN"]
+Node68[label="int"]
+Node96-> Node68
+Node94[label="OPTIONAL_ASSIGN_TEST"]
+Node95[label="="]
+Node94-> Node95
+Node81[label="0"]
+Node94-> Node81
+Node96-> Node94
+Node98-> Node96
+Node618-> Node98
+Node614[label="FOR_STMT"]
+Node615[label="for"]
+Node614-> Node615
+Node100[label="i"]
+Node614-> Node100
+Node616[label="in"]
+Node614-> Node616
+Node149[label="ATOM_EXPR"]
+Node110[label="range"]
+Node149-> Node110
+Node131[label="ATOM_EXPR"]
+Node111[label="len"]
+Node131-> Node111
+Node112[label="array"]
+Node131-> Node112
+Node149-> Node131
+Node614-> Node149
+Node613[label="AT_LEAST_ONE_STMT"]
+Node592[label="AT_LEAST_ONE_STMT"]
+Node205[label="EXPR_STMT"]
+Node162[label="swapped"]
+Node205-> Node162
+Node203[label="ANNASSIGN"]
+Node175[label="bool"]
+Node203-> Node175
+Node201[label="OPTIONAL_ASSIGN_TEST"]
+Node202[label="="]
+Node201-> Node202
+Node188[label="False"]
+Node201-> Node188
+Node203-> Node201
+Node205-> Node203
+Node592-> Node205
+Node588[label="FOR_STMT"]
+Node589[label="for"]
+Node588-> Node589
+Node207[label="j"]
+Node588-> Node207
+Node590[label="in"]
+Node588-> Node590
+Node284[label="ATOM_EXPR"]
+Node217[label="range"]
+Node284-> Node217
+Node279[label="ARGLIST"]
+Node218[label="0"]
+Node279-> Node218
+Node267[label="ARITH_EXPR"]
+Node252[label="ATOM_EXPR"]
+Node232[label="len"]
+Node252-> Node232
+Node233[label="array"]
+Node252-> Node233
+Node267-> Node252
+Node265[label="MANY_ARITH_EXPR"]
+Node259[label="MANY_ARITH_EXPR"]
+Node260[label="-"]
+Node259-> Node260
+Node255[label="i"]
+Node259-> Node255
+Node265-> Node259
+Node266[label="-"]
+Node265-> Node266
+Node261[label="1"]
+Node265-> Node261
+Node267-> Node265
+Node279-> Node267
+Node284-> Node279
+Node588-> Node284
+Node585[label="IF_STMT"]
+Node586[label="if"]
+Node585-> Node586
+Node359[label="COMPARISON"]
+Node316[label="ATOM_EXPR"]
+Node297[label="array"]
+Node316-> Node297
+Node298[label="j"]
+Node316-> Node298
+Node359-> Node316
+Node358[label="MANY_COMPARISON_EXPR"]
+Node324[label=">"]
+Node358-> Node324
+Node350[label="ATOM_EXPR"]
+Node325[label="array"]
+Node350-> Node325
+Node336[label="ARITH_EXPR"]
+Node326[label="j"]
+Node336-> Node326
+Node334[label="MANY_ARITH_EXPR"]
+Node335[label="+"]
+Node334-> Node335
+Node330[label="1"]
+Node334-> Node330
+Node336-> Node334
+Node350-> Node336
+Node358-> Node350
+Node359-> Node358
+Node585-> Node359
+Node584[label="AT_LEAST_ONE_STMT"]
+Node553[label="AT_LEAST_ONE_STMT"]
+Node498[label="AT_LEAST_ONE_STMT"]
+Node424[label="EXPR_STMT"]
+Node363[label="temp"]
+Node424-> Node363
+Node422[label="ANNASSIGN"]
+Node376[label="int"]
+Node422-> Node376
+Node420[label="OPTIONAL_ASSIGN_TEST"]
+Node421[label="="]
+Node420-> Node421
+Node408[label="ATOM_EXPR"]
+Node389[label="array"]
+Node408-> Node389
+Node390[label="j"]
+Node408-> Node390
+Node420-> Node408
+Node422-> Node420
+Node424-> Node422
+Node498-> Node424
+Node496[label="EXPR_STMT"]
+Node445[label="ATOM_EXPR"]
+Node426[label="array"]
+Node445-> Node426
+Node427[label="j"]
+Node445-> Node427
+Node496-> Node445
+Node494[label="MANY_EQUAL_TESTLIST_STAR_EXPR"]
+Node495[label="="]
+Node494-> Node495
+Node482[label="ATOM_EXPR"]
+Node457[label="array"]
+Node482-> Node457
+Node468[label="ARITH_EXPR"]
+Node458[label="j"]
+Node468-> Node458
+Node466[label="MANY_ARITH_EXPR"]
+Node467[label="+"]
+Node466-> Node467
+Node462[label="1"]
+Node466-> Node462
+Node468-> Node466
+Node482-> Node468
+Node494-> Node482
+Node496-> Node494
+Node498-> Node496
+Node553-> Node498
+Node551[label="EXPR_STMT"]
+Node524[label="ATOM_EXPR"]
+Node499[label="array"]
+Node524-> Node499
+Node510[label="ARITH_EXPR"]
+Node500[label="j"]
+Node510-> Node500
+Node508[label="MANY_ARITH_EXPR"]
+Node509[label="+"]
+Node508-> Node509
+Node504[label="1"]
+Node508-> Node504
+Node510-> Node508
+Node524-> Node510
+Node551-> Node524
+Node549[label="MANY_EQUAL_TESTLIST_STAR_EXPR"]
+Node550[label="="]
+Node549-> Node550
+Node536[label="temp"]
+Node549-> Node536
+Node551-> Node549
+Node553-> Node551
+Node584-> Node553
+Node582[label="EXPR_STMT"]
+Node554[label="swapped"]
+Node582-> Node554
+Node580[label="MANY_EQUAL_TESTLIST_STAR_EXPR"]
+Node581[label="="]
+Node580-> Node581
+Node567[label="True"]
+Node580-> Node567
+Node582-> Node580
+Node584-> Node582
+Node585-> Node584
+Node588-> Node585
+Node592-> Node588
+Node613-> Node592
+Node610[label="IF_STMT"]
+Node611[label="if"]
+Node610-> Node611
+Node603[label="NOT_TEST"]
+Node604[label="not"]
+Node603-> Node604
+Node593[label="swapped"]
+Node603-> Node593
+Node610-> Node603
+Node608[label="break"]
+Node610-> Node608
+Node613-> Node610
+Node614-> Node613
+Node618-> Node614
+Node619-> Node618
+Node1008-> Node619
+Node1005[label="FUNCDEF"]
+Node1006[label="def"]
+Node1005-> Node1006
+Node623[label="main"]
+Node1005-> Node623
+Node624[label="PARAMETERS"]
+Node1005-> Node624
+Node1004[label="AT_LEAST_ONE_STMT"]
+Node885[label="AT_LEAST_ONE_STMT"]
+Node839[label="AT_LEAST_ONE_STMT"]
+Node804[label="AT_LEAST_ONE_STMT"]
+Node768[label="EXPR_STMT"]
+Node627[label="data"]
+Node768-> Node627
+Node766[label="ANNASSIGN"]
+Node659[label="ATOM_EXPR"]
+Node640[label="list"]
+Node659-> Node640
+Node641[label="int"]
+Node659-> Node641
+Node766-> Node659
+Node764[label="OPTIONAL_ASSIGN_TEST"]
+Node765[label="="]
+Node764-> Node765
+Node748[label="TESTLIST_COMP"]
+Node674[label="FACTOR"]
+Node675[label="-"]
+Node674-> Node675
+Node671[label="2"]
+Node674-> Node671
+Node748-> Node674
+Node746[label="MANY_COMMA_TOK_TEST"]
+Node729[label="MANY_COMMA_TOK_TEST"]
+Node714[label="MANY_COMMA_TOK_TEST"]
+Node686[label="45"]
+Node714-> Node686
+Node701[label="0"]
+Node714-> Node701
+Node729-> Node714
+Node716[label="11"]
+Node729-> Node716
+Node746-> Node729
+Node734[label="FACTOR"]
+Node735[label="-"]
+Node734-> Node735
+Node731[label="9"]
+Node734-> Node731
+Node746-> Node734
+Node748-> Node746
+Node764-> Node748
+Node766-> Node764
+Node768-> Node766
+Node804-> Node768
+Node790[label="ATOM_EXPR"]
+Node770[label="bubbleSort"]
+Node790-> Node770
+Node771[label="data"]
+Node790-> Node771
+Node804-> Node790
+Node839-> Node804
+Node825[label="ATOM_EXPR"]
+Node805[label="print"]
+Node825-> Node805
+Node806[label="'Sorted Array in Ascending Order:'"]
+Node825-> Node806
+Node839-> Node825
+Node885-> Node839
+Node883[label="EXPR_STMT"]
+Node840[label="i"]
+Node883-> Node840
+Node881[label="ANNASSIGN"]
+Node853[label="int"]
+Node881-> Node853
+Node879[label="OPTIONAL_ASSIGN_TEST"]
+Node880[label="="]
+Node879-> Node880
+Node866[label="0"]
+Node879-> Node866
+Node881-> Node879
+Node883-> Node881
+Node885-> Node883
+Node1004-> Node885
+Node1000[label="FOR_STMT"]
+Node1001[label="for"]
+Node1000-> Node1001
+Node886[label="i"]
+Node1000-> Node886
+Node1002[label="in"]
+Node1000-> Node1002
+Node935[label="ATOM_EXPR"]
+Node896[label="range"]
+Node935-> Node896
+Node917[label="ATOM_EXPR"]
+Node897[label="len"]
+Node917-> Node897
+Node898[label="data"]
+Node917-> Node898
+Node935-> Node917
+Node1000-> Node935
+Node986[label="ATOM_EXPR"]
+Node948[label="print"]
+Node986-> Node948
+Node968[label="ATOM_EXPR"]
+Node949[label="data"]
+Node968-> Node949
+Node950[label="i"]
+Node968-> Node950
+Node986-> Node968
+Node1000-> Node986
+Node1004-> Node1000
+Node1005-> Node1004
+Node1008-> Node1005
+Node1055-> Node1008
+Node1052[label="IF_STMT"]
+Node1053[label="if"]
+Node1052-> Node1053
+Node1029[label="COMPARISON"]
+Node1009[label="__name__"]
+Node1029-> Node1009
+Node1028[label="MANY_COMPARISON_EXPR"]
+Node1018[label="=="]
+Node1028-> Node1018
+Node1019[label="__main__"]
+Node1028-> Node1019
+Node1029-> Node1028
+Node1052-> Node1029
+Node1038[label="ATOM_EXPR"]
+Node1033[label="main"]
+Node1038-> Node1033
+Node1034[label="TRAILER"]
+Node1038-> Node1034
+Node1052-> Node1038
+Node1055-> Node1052
 }

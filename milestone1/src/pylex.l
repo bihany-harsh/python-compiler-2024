@@ -8,7 +8,6 @@
     #include <utility>
     #include "pyparse.tab.h"
     using namespace std;
-    // TODO: Assert keyword?
 
     extern FILE* yyin;
     stack<int> INDENT_STACK;
@@ -204,7 +203,6 @@ ERROR_CHAR              [$?`]
 
 {EMPTY_LINES}           {   int len = strlen(yytext);
                             unput(yytext[len-1]); // this be equivalent to unput('\n')
-                            // return TOK_NEWLINE;
                         }
 
 {FALSE}                 { return TOK_FALSE; }

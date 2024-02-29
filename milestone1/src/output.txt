@@ -1,0 +1,3 @@
+now adding all children to root
+adding child with name = MULTIPLE_LINES
+adding child with name = IF_STMT
