@@ -13,8 +13,8 @@
     char error_string[256];
     extern node* AST_ROOT;
     //TODO: make implicit line joining a counter instead of a boolean: for cases like: (first test if current implementation works)
-    // a = ((1, 2),
-    //        (3, 4))
+    // a = [[1, 2],
+    //        [3, 4]]
 
     extern char* yytext;
 
