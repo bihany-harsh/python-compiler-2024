@@ -62,7 +62,7 @@
 %token<tree_node> TOK_SEMICOLON TOK_COLON TOK_COMMA TOK_DOT
 %token<tree_node> TOK_RARROW
 
-%type<tree_node> file_input multiple_lines single_line stmt simple_stmt optional_semicolon small_stmt many_small_stmts
+%type<tree_node> file_input multiple_lines single_line stmt simple_stmt small_stmt many_small_stmts
 %type<tree_node> expr_stmt testlist_star_expr many_equal_testlist_star_expr annassign optional_assign_test augassign testlist many_comma_tok_test optional_comma
 %type<tree_node> test optional_if_else or_test many_or_tok_and_test and_test many_and_tok_not_test not_test comparison many_comparison_expr comp_op
 %type<tree_node> expr many_vbar_tok_xor_expr xor_expr many_cflex_tok_and_expr and_expr many_amper_tok_shift_expr shift_expr many_shift_op_arith_expr arith_expr many_arith_term
@@ -84,7 +84,13 @@ file_input                  :   multiple_lines {
                             ;
 multiple_lines              :   multiple_lines single_line {
                                     $$ = new node(MULTIPLE_LINES, "MULTIPLE_LINES", false, NULL);
-                                    $$->add_parent_child_relation($1);
+                                    // $$->add_parent_child_relation($1);
+                                    if($1) {
+                                        for(auto child: $1->children) {
+                                            $$->add_parent_child_relation(child);
+                                        }
+                                        delete $1;
+                                    }
                                     $$->add_parent_child_relation($2);
                             }
                             |   {   $$ = NULL;  }
@@ -106,14 +112,18 @@ stmt                        :   simple_stmt {
 simple_stmt                 :   indent_check_small_stmt small_stmt many_small_stmts optional_semicolon TOK_NEWLINE {
                                     $$ = new node(SIMPLE_STMT, "SIMPLE_STMT", false, NULL); // children 1 & 5 not needed
                                     $$->add_parent_child_relation($2);
-                                    $$->add_parent_child_relation($3);
-                                    $$->add_parent_child_relation($4);
+                                    // $$->add_parent_child_relation($3);
+                                    if($3) {
+                                        for(auto child: $3->children) {
+                                            $$->add_parent_child_relation(child);
+                                        }
+                                        delete $3;
+                                    }
+                                    // $$->add_parent_child_relation($4);
                             }
                             ;
-optional_semicolon          :   TOK_SEMICOLON {
-                                    $$ = new node(SEMICOLON, ";", true, NULL);
-                            }
-                            |   {  $$ = NULL;   }
+optional_semicolon          :   TOK_SEMICOLON
+                            |
                             ;
 small_stmt                  :   expr_stmt   {
                                     $$ = $1;
@@ -862,9 +872,13 @@ else_stmt                   :   TOK_ELSE { strcpy(compound_stmt_type, "\'else\'"
                             ;
 suite                       :   simple_stmt {
                                     $$ = $1;
+                                    $$->type = SUITE;
+                                    $$->name = "SUITE";
                             }
                             |   TOK_NEWLINE indent_check_compound at_least_one_stmt TOK_DEDENT {
                                     $$ = $3; // note that NEWLINE, INDENT and DEDENT are not needed for semantics
+                                    $$->type = SUITE;
+                                    $$->name = "SUITE";
                             }
                             ;
 indent_check_compound       :   TOK_INDENT
@@ -875,7 +889,13 @@ indent_check_compound       :   TOK_INDENT
                             ;
 at_least_one_stmt           :   at_least_one_stmt stmt {
                                     $$ = new node(AT_LEAST_ONE_STMT, "AT_LEAST_ONE_STMT", false, NULL);
-                                    $$->add_parent_child_relation($1);
+                                    // $$->add_parent_child_relation($1);
+                                    if($1) {
+                                        for(auto child: $1->children) {
+                                            $$->add_parent_child_relation(child);
+                                        }
+                                        delete $1;
+                                    }
                                     $$->add_parent_child_relation($2);
                             }
                             |   stmt {

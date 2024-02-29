@@ -157,6 +157,7 @@ typedef enum {
     IF_STMT,
     MANY_ELIF_STMTS,
     ELSE_STMT,
+    SUITE,
     AT_LEAST_ONE_STMT,
     WHILE_STMT,
     OPTIONAL_ELSE_SUITE,

@@ -1,3 +1,4 @@
-now adding all children to root
-adding child with name = MULTIPLE_LINES
-adding child with name = IF_STMT
+main.cpp: AST_ROOT->children.size = 3
+main.cpp: FUNCDEF
+main.cpp: FUNCDEF
+main.cpp: IF_STMT

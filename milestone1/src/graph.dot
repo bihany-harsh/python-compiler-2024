@@ -1,6 +1,5 @@
 digraph ast {
 Node1055[label="FILE_INPUT"]
-Node1008[label="MULTIPLE_LINES"]
 Node619[label="FUNCDEF"]
 Node620[label="def"]
 Node619-> Node620
@@ -22,7 +21,7 @@ Node53-> Node54
 Node40[label="None"]
 Node53-> Node40
 Node619-> Node53
-Node618[label="AT_LEAST_ONE_STMT"]
+Node618[label="SUITE"]
 Node98[label="EXPR_STMT"]
 Node55[label="i"]
 Node98-> Node55
@@ -54,8 +53,7 @@ Node112[label="array"]
 Node131-> Node112
 Node149-> Node131
 Node614-> Node149
-Node613[label="AT_LEAST_ONE_STMT"]
-Node592[label="AT_LEAST_ONE_STMT"]
+Node613[label="SUITE"]
 Node205[label="EXPR_STMT"]
 Node162[label="swapped"]
 Node205-> Node162
@@ -69,7 +67,7 @@ Node188[label="False"]
 Node201-> Node188
 Node203-> Node201
 Node205-> Node203
-Node592-> Node205
+Node613-> Node205
 Node588[label="FOR_STMT"]
 Node589[label="for"]
 Node588-> Node589
@@ -105,7 +103,7 @@ Node267-> Node265
 Node279-> Node267
 Node284-> Node279
 Node588-> Node284
-Node585[label="IF_STMT"]
+Node585[label="SUITE"]
 Node586[label="if"]
 Node585-> Node586
 Node359[label="COMPARISON"]
@@ -134,9 +132,7 @@ Node350-> Node336
 Node358-> Node350
 Node359-> Node358
 Node585-> Node359
-Node584[label="AT_LEAST_ONE_STMT"]
-Node553[label="AT_LEAST_ONE_STMT"]
-Node498[label="AT_LEAST_ONE_STMT"]
+Node584[label="SUITE"]
 Node424[label="EXPR_STMT"]
 Node363[label="temp"]
 Node424-> Node363
@@ -154,7 +150,7 @@ Node408-> Node390
 Node420-> Node408
 Node422-> Node420
 Node424-> Node422
-Node498-> Node424
+Node584-> Node424
 Node496[label="EXPR_STMT"]
 Node445[label="ATOM_EXPR"]
 Node426[label="array"]
@@ -180,8 +176,7 @@ Node468-> Node466
 Node482-> Node468
 Node494-> Node482
 Node496-> Node494
-Node498-> Node496
-Node553-> Node498
+Node584-> Node496
 Node551[label="EXPR_STMT"]
 Node524[label="ATOM_EXPR"]
 Node499[label="array"]
@@ -203,8 +198,7 @@ Node549-> Node550
 Node536[label="temp"]
 Node549-> Node536
 Node551-> Node549
-Node553-> Node551
-Node584-> Node553
+Node584-> Node551
 Node582[label="EXPR_STMT"]
 Node554[label="swapped"]
 Node582-> Node554
@@ -217,8 +211,7 @@ Node582-> Node580
 Node584-> Node582
 Node585-> Node584
 Node588-> Node585
-Node592-> Node588
-Node613-> Node592
+Node613-> Node588
 Node610[label="IF_STMT"]
 Node611[label="if"]
 Node610-> Node611
@@ -234,7 +227,7 @@ Node613-> Node610
 Node614-> Node613
 Node618-> Node614
 Node619-> Node618
-Node1008-> Node619
+Node1055-> Node619
 Node1005[label="FUNCDEF"]
 Node1006[label="def"]
 Node1005-> Node1006
@@ -242,10 +235,7 @@ Node623[label="main"]
 Node1005-> Node623
 Node624[label="PARAMETERS"]
 Node1005-> Node624
-Node1004[label="AT_LEAST_ONE_STMT"]
-Node885[label="AT_LEAST_ONE_STMT"]
-Node839[label="AT_LEAST_ONE_STMT"]
-Node804[label="AT_LEAST_ONE_STMT"]
+Node1004[label="SUITE"]
 Node768[label="EXPR_STMT"]
 Node627[label="data"]
 Node768-> Node627
@@ -287,21 +277,19 @@ Node748-> Node746
 Node764-> Node748
 Node766-> Node764
 Node768-> Node766
-Node804-> Node768
+Node1004-> Node768
 Node790[label="ATOM_EXPR"]
 Node770[label="bubbleSort"]
 Node790-> Node770
 Node771[label="data"]
 Node790-> Node771
-Node804-> Node790
-Node839-> Node804
+Node1004-> Node790
 Node825[label="ATOM_EXPR"]
 Node805[label="print"]
 Node825-> Node805
 Node806[label="'Sorted Array in Ascending Order:'"]
 Node825-> Node806
-Node839-> Node825
-Node885-> Node839
+Node1004-> Node825
 Node883[label="EXPR_STMT"]
 Node840[label="i"]
 Node883-> Node840
@@ -315,8 +303,7 @@ Node866[label="0"]
 Node879-> Node866
 Node881-> Node879
 Node883-> Node881
-Node885-> Node883
-Node1004-> Node885
+Node1004-> Node883
 Node1000[label="FOR_STMT"]
 Node1001[label="for"]
 Node1000-> Node1001
@@ -346,8 +333,7 @@ Node986-> Node968
 Node1000-> Node986
 Node1004-> Node1000
 Node1005-> Node1004
-Node1008-> Node1005
-Node1055-> Node1008
+Node1055-> Node1005
 Node1052[label="IF_STMT"]
 Node1053[label="if"]
 Node1052-> Node1053

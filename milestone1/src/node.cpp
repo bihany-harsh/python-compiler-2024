@@ -64,16 +64,16 @@ void node::traverse_tree() {
 }
 
 void node::clean_tree() {
-    cout << "node.cpp::clean_tree() \ncurrently on node " << this->name << " and the children of this node are (size = " << this->children.size() << ")" << endl;
+    // cout << "node.cpp::clean_tree() \ncurrently on node " << this->name << " and the children of this node are (size = " << this->children.size() << ")" << endl;
     // if a child is nullptr, simply delete the entry from the children vector
     auto newEnd = remove(this->children.begin(), this->children.end(), nullptr);
     this->children.erase(newEnd, children.end());
     
-    cout << "Will now call recursively" << endl;
+    // cout << "Will now call recursively" << endl;
     // recursively calling its children
     for (auto child : this->children) {
         if(child != nullptr) {
-            cout << "calling the function from child " << child->name << endl;
+            // cout << "calling the function from child " << child->name << endl;
             child->clean_tree();
         }
     }
@@ -90,7 +90,7 @@ bool node::delete_delimiters() {
     }
     // if this node is a delimiter, then delete this node and free the memory
     if(find(delimiter_toks_vector.begin(), delimiter_toks_vector.end(), this->type) != delimiter_toks_vector.end()) {
-        cout << "Deleting delimiter: " << this->name << this->type << endl;
+        // cout << "Deleting delimiter: " << this->name << this->type << endl;
         // delete from the parent's children vector and free this node
         auto& siblings = this->parent->children;
         auto it = find(siblings.begin(), siblings.end(), this);
