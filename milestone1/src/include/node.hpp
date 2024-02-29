@@ -181,7 +181,6 @@ const vector<int> delimiter_toks_vector = {
     RSQB,
     LBRACE,
     RBRACE,
-    COMMA,
     COLON,
     DOT,
     SEMICOLON,

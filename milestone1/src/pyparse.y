@@ -11,7 +11,7 @@
 
     char compound_stmt_type[64];
     char error_string[256];
-    extern node* AST_ROOT; // TODO: remove line after testing
+    extern node* AST_ROOT;
     //TODO: make implicit line joining a counter instead of a boolean: for cases like: (first test if current implementation works)
     // a = ((1, 2),
     //        (3, 4))
@@ -62,7 +62,7 @@
 %token<tree_node> TOK_SEMICOLON TOK_COLON TOK_COMMA TOK_DOT
 %token<tree_node> TOK_RARROW
 
-%type<tree_node> file_input multiple_lines single_line stmt simple_stmt small_stmt many_small_stmts
+%type<tree_node> file_input multiple_lines single_line stmt simple_stmt optional_semicolon small_stmt many_small_stmts
 %type<tree_node> expr_stmt testlist_star_expr many_equal_testlist_star_expr annassign optional_assign_test augassign testlist many_comma_tok_test optional_comma
 %type<tree_node> test optional_if_else or_test many_or_tok_and_test and_test many_and_tok_not_test not_test comparison many_comparison_expr comp_op
 %type<tree_node> expr many_vbar_tok_xor_expr xor_expr many_cflex_tok_and_expr and_expr many_amper_tok_shift_expr shift_expr many_shift_op_arith_expr arith_expr many_arith_term
@@ -119,11 +119,13 @@ simple_stmt                 :   indent_check_small_stmt small_stmt many_small_st
                                         }
                                         delete $3;
                                     }
-                                    // $$->add_parent_child_relation($4);
+                                    $$->add_parent_child_relation($4);
                             }
                             ;
-optional_semicolon          :   TOK_SEMICOLON
-                            |
+optional_semicolon          :   TOK_SEMICOLON {
+                                    $$ = new node(SEMICOLON, ";", true, NULL);
+                            }
+                            |   {   $$ = NULL;  }
                             ;
 small_stmt                  :   expr_stmt   {
                                     $$ = $1;

@@ -81,6 +81,9 @@ Node284-> Node217
 Node279[label="ARGLIST"]
 Node218[label="0"]
 Node279-> Node218
+Node277[label="MANY_COMMA_ARGUMENT"]
+Node278[label=","]
+Node277-> Node278
 Node267[label="ARITH_EXPR"]
 Node252[label="ATOM_EXPR"]
 Node232[label="len"]
@@ -100,7 +103,8 @@ Node265-> Node266
 Node261[label="1"]
 Node265-> Node261
 Node267-> Node265
-Node279-> Node267
+Node277-> Node267
+Node279-> Node277
 Node284-> Node279
 Node588-> Node284
 Node585[label="SUITE"]
@@ -259,14 +263,24 @@ Node748-> Node674
 Node746[label="MANY_COMMA_TOK_TEST"]
 Node729[label="MANY_COMMA_TOK_TEST"]
 Node714[label="MANY_COMMA_TOK_TEST"]
+Node699[label="MANY_COMMA_TOK_TEST"]
+Node700[label=","]
+Node699-> Node700
 Node686[label="45"]
-Node714-> Node686
+Node699-> Node686
+Node714-> Node699
+Node715[label=","]
+Node714-> Node715
 Node701[label="0"]
 Node714-> Node701
 Node729-> Node714
+Node730[label=","]
+Node729-> Node730
 Node716[label="11"]
 Node729-> Node716
 Node746-> Node729
+Node747[label=","]
+Node746-> Node747
 Node734[label="FACTOR"]
 Node735[label="-"]
 Node734-> Node735
