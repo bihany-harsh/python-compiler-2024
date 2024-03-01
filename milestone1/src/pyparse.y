@@ -640,14 +640,14 @@ data_type                   :   TOK_INT {
 at_least_one_string         :   at_least_one_string TOK_STRING_LITERAL {
                                     $$ = new node(AT_LEAST_ONE_STRING, "AT_LEAST_ONE_STRING", false, NULL);
                                     // the string literal is "<text>", however we need that the val_repr as well as the name is <text>
-                                    string str_literal = string(yytext).substr(1, strlen(yytext) - 2);
+                                    string str_literal = "\\\"" + string(yytext).substr(1, strlen(yytext) - 2) + "\\\"";
                                     $2 = new node(STRING_LITERAL, str_literal.c_str(), true, NULL);
                                 //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                             }
                             |   TOK_STRING_LITERAL {
-                                    string str_literal = string(yytext).substr(1, strlen(yytext) - 2);
+                                    string str_literal = "\\\"" + string(yytext).substr(1, strlen(yytext) - 2) + "\\\"";
                                     $$ = new node(STRING_LITERAL, str_literal.c_str(), true, NULL);
                             }
                             ;

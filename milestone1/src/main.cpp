@@ -41,14 +41,12 @@ int main(int argc, const char** argv) {
     INDENT_STACK.push(0);
     yyparse();
 
-    cout << "main.cpp: AST_ROOT->children.size = " << AST_ROOT->children.size() << endl;
-    for (auto child : AST_ROOT->children) {
-        cout << "main.cpp: " << child->name << endl;
-    }
     // AST_ROOT->traverse_tree();
     AST_ROOT->clean_tree();
     AST_ROOT->delete_delimiters();
     AST_ROOT->delete_single_child_nodes();
+
+    ast_conv_operators(AST_ROOT);
 
     dot_stream << "digraph ast {\n";
     AST_ROOT->generate_dot_script();

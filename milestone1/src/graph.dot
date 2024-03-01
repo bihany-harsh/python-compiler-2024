@@ -1,35 +1,19 @@
 digraph ast {
-Node88[label="FILE_INPUT"]
-Node34[label="EXPR_STMT"]
-Node0[label="a"]
-Node34-> Node0
+Node71[label="FILE_INPUT"]
 Node33[label="="]
-Node34-> Node33
-Node23[label="ARITH_EXPR"]
-Node13[label="a"]
-Node23-> Node13
+Node0[label="a"]
+Node33-> Node0
 Node22[label="+"]
-Node23-> Node22
+Node13[label="a"]
+Node22-> Node13
 Node17[label="1"]
-Node23-> Node17
-Node34-> Node23
-Node88-> Node34
-Node86[label="EXPR_STMT"]
-Node37[label="a"]
-Node86-> Node37
-Node84[label="ANNASSIGN"]
-Node50[label="int"]
-Node84-> Node50
-Node83[label="="]
-Node84-> Node83
-Node73[label="ARITH_EXPR"]
-Node63[label="a"]
-Node73-> Node63
-Node72[label="+"]
-Node73-> Node72
-Node67[label="1"]
-Node73-> Node67
-Node84-> Node73
-Node86-> Node84
-Node88-> Node86
+Node22-> Node17
+Node33-> Node22
+Node71-> Node33
+Node57[label="ATOM_EXPR"]
+Node37[label="print"]
+Node57-> Node37
+Node38[label="\"hello\""]
+Node57-> Node38
+Node71-> Node57
 }

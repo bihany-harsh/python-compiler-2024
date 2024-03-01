@@ -68,7 +68,7 @@ void node::clean_tree() {
     // if a child is nullptr, simply delete the entry from the children vector
     auto newEnd = remove(this->children.begin(), this->children.end(), nullptr);
     this->children.erase(newEnd, children.end());
-    
+
     // cout << "Will now call recursively" << endl;
     // recursively calling its children
     for (auto child : this->children) {
@@ -89,7 +89,7 @@ bool node::delete_delimiters() {
         }
     }
     // if this node is a delimiter, then delete this node and free the memory
-    if(find(delimiter_toks_vector.begin(), delimiter_toks_vector.end(), this->type) != delimiter_toks_vector.end()) {
+    if(find(delimiter_vector.begin(), delimiter_vector.end(), this->type) != delimiter_vector.end()) {
         // cout << "Deleting delimiter: " << this->name << this->type << endl;
         // delete from the parent's children vector and free this node
         auto& siblings = this->parent->children;
@@ -124,7 +124,7 @@ void node::delete_single_child_nodes() {
                 *it = child;
                 child->parent = this->parent;
             }
-            
+
             // Clear children list to prevent deleting the child when this node is deleted
             this->children.clear();
 
@@ -148,10 +148,38 @@ void node::generate_dot_script() {
 }
 
 void prune_custom_nodes(node* parent, node* child) {
-    if (child) { 
+    if (child) {
         for (auto child_: child->children) {
             parent->add_parent_child_relation(child_);
         }
         delete child;
+    }
+}
+
+void ast_conv_operators(node *root) {
+    if (root == nullptr) return;
+
+    vector<node*> children_copy = root->children;
+    for (auto child: children_copy) {
+        ast_conv_operators(child);
+    }
+
+    if ((operator_set.find(root->type) != operator_set.end()) && root->parent != nullptr && (operator_set.find(root->parent->type) == operator_set.end())) {
+        node* parent = root->parent;
+        if(parent->parent != nullptr) {
+            vector<node*>& siblings = parent->parent->children;
+            auto it = find(siblings.begin(), siblings.end(), parent);
+            if (it != siblings.end()) {
+                *it = root;
+            }
+            root->parent = parent->parent;
+        }
+        for(auto* sibling: parent->children) {
+            if(sibling != root) {
+                root->add_parent_child_relation(sibling);
+            } 
+        }
+        parent->children.clear();
+        delete parent;
     }
 }

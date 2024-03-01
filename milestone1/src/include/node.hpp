@@ -1,6 +1,7 @@
 // to define the node structure used in the Abstract Syntax Tree (AST)
 #include <string>
 #include <vector>
+#include <set>
 using namespace std;
 
 typedef enum {
@@ -174,7 +175,7 @@ typedef enum {
     OPTIONAL_PAREN_ARGLIST,
 } node_type;
 
-const vector<int> delimiter_toks_vector = {
+const vector<int> delimiter_vector = {
     LPAR,
     RPAR,
     LSQB,
@@ -184,6 +185,44 @@ const vector<int> delimiter_toks_vector = {
     COLON,
     DOT,
     SEMICOLON,
+};
+
+const set<int> operator_set = {
+    PLUS,
+    MINUS,
+    STAR,
+    SLASH,
+    PERCENT,
+    DOUBLE_SLASH,
+    DOUBLE_STAR,
+
+    EQ_EQUAL,
+    NOT_EQUAL,
+    GREATER,
+    LESS,
+    GREATER_EQUAL,
+    LESS_EQUAL,
+
+    AMPER,
+    VBAR,
+    CIRCUMFLEX,
+    TILDE,
+    LEFT_SHIFT,
+    RIGHT_SHIFT,
+
+    EQUAL,
+    PLUS_EQUAL,
+    MINUS_EQUAL,
+    STAR_EQUAL,
+    SLASH_EQUAL,
+    DOUBLE_SLASH_EQUAL,
+    PERCENT_EQUAL,
+    DOUBLE_STAR_EQUAL,
+    AMPER_EQUAL,
+    VBAR_EQUAL,
+    CIRCUMFLEX_EQUAL,
+    LEFT_SHIFT_EQUAL,
+    RIGHT_SHIFT_EQUAL,
 };
 
 typedef struct node {
@@ -228,7 +267,11 @@ typedef struct node {
     // to parse tree
     void generate_dot_script();
 
-    // 
+    //
 } node;
 
 void prune_custom_nodes(node* parent, node* child);
+
+void ast_conv_operators(node* root);
+
+void clear_delete_nodes();
