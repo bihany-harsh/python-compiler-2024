@@ -55,7 +55,7 @@ void node::assign_value(bool value) {
 }
 
 void node::traverse_tree() {
-    cout << "ID: " << this->ID << " | Type: " << this->type << " | Name: " << this->name << " | Line No: " << this->line_no << " | Value: " << this->name << endl;
+    cout << "ID: " << this->ID << " | Type: " << this->type << " | Name: " << this->name << " | Line No: " << this->line_no << " | Value: " << this->name << " | Is_terminal " << this->is_terminal << endl;
     for (auto child : this->children) {
         if(child != nullptr) {
             child->traverse_tree();
@@ -106,25 +106,34 @@ bool node::delete_delimiters() {
 }
 
 void node::delete_single_child_nodes() {
-    for (auto child: this->children) {
+    for (auto& child : this->children) {
         if(child != nullptr) {
             child->delete_single_child_nodes();
         }
     }
-    // if only 1 child for this node, can delete this node and move the child to the parent
+
     if(this->children.size() == 1) { // terminals will have 0 children
         node* child = this->children.front();
-        auto& siblings = this->parent->children;
-        auto it = find(siblings.begin(), siblings.end(), this);
-        if(it != siblings.end()) {  // this condition should never be false
-            *it = child;
-            child->parent = this->parent;
+
+        // Check if this node is not the root node (it has a parent)
+        if(this->parent != nullptr) {
+            // Find this node among its siblings and replace it with its child
+            auto& siblings = this->parent->children;
+            auto it = std::find(siblings.begin(), siblings.end(), this);
+            if(it != siblings.end()) {
+                *it = child;
+                child->parent = this->parent;
+            }
+            
+            // Clear children list to prevent deleting the child when this node is deleted
+            this->children.clear();
+
+            // Delete this node
+            delete this;
         }
-        this->children.clear();
-        delete this;
-        return;
     }
 }
+
 
 void node::generate_dot_script() {
     //TODO: if the name of a node is a string then need to resolve below code, right now ignoring it
@@ -136,4 +145,13 @@ void node::generate_dot_script() {
         }
     }
     return;
+}
+
+void prune_custom_nodes(node* parent, node* child) {
+    if (child) { 
+        for (auto child_: child->children) {
+            parent->add_parent_child_relation(child_);
+        }
+        delete child;
+    }
 }

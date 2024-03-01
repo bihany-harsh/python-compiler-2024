@@ -1,4 +1,3 @@
-main.cpp: AST_ROOT->children.size = 3
-main.cpp: FUNCDEF
-main.cpp: FUNCDEF
-main.cpp: IF_STMT
+main.cpp: AST_ROOT->children.size = 2
+main.cpp: SIMPLE_STMT
+main.cpp: SIMPLE_STMT

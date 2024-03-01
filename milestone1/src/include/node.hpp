@@ -5,7 +5,7 @@ using namespace std;
 
 typedef enum {
     // keywords
-    FALSE, 
+    FALSE,
     TRUE,
     NONE,
     AND,
@@ -102,7 +102,7 @@ typedef enum {
     OPTIONAL_ASSIGN_TEST,
     TESTLIST,
     MANY_COMMA_TOK_TEST,
-    
+
     TEST,
     OPTIONAL_IF_ELSE,
     OR_TEST,
@@ -113,7 +113,7 @@ typedef enum {
     COMPARISON,
     MANY_COMPARISON_EXPR,
     COMP_OP,
-    
+
     EXPR,
     MANY_VBAR_TOK_XOR_EXPR,
     XOR_EXPR,
@@ -124,13 +124,13 @@ typedef enum {
     MANY_SHIFT_OP_ARITH_EXPR,
     ARITH_EXPR,
     MANY_ARITH_EXPR,
-    
+
     TERM,
     MANY_MOD_FACTOR,
     FACTOR,
     POWER,
     OPTIONAL_DSTAR_TOK_FACTOR,
-    
+
     ATOM_EXPR,
     ATOM,
     AT_LEAST_ONE_STRING,
@@ -142,13 +142,13 @@ typedef enum {
     ARGUMENT,
     SUBSCRIPTLIST,
     MANY_COMMA_SUBSCRIPT,
-    
+
     COMP_FOR,
     EXPRLIST,
     MANY_COMMA_EXPR,
     COMP_IF,
     TESTLIST_COMP,
-    
+
     RETURN_STMT,
     GLOBAL_STMT,
     MANY_COMMA_TOK_IDENTIFIER,
@@ -230,3 +230,5 @@ typedef struct node {
 
     // 
 } node;
+
+void prune_custom_nodes(node* parent, node* child);
