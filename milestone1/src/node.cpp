@@ -147,6 +147,31 @@ void node::generate_dot_script() {
     return;
 }
 
+int get_operator_precedence(node_type type) {
+    auto it = operator_precedence.find(type);
+    if (it != operator_precedence.end()) {
+        return it->second;
+    }
+    return numeric_limits<int>::max();
+}
+
+bool is_right_associative(node_type type) {
+    return type == DOUBLE_STAR ||
+           type == EQUAL ||
+           type == PLUS_EQUAL ||
+           type == MINUS_EQUAL ||
+           type == STAR_EQUAL ||
+           type == SLASH_EQUAL ||
+           type == DOUBLE_SLASH_EQUAL ||
+           type == PERCENT_EQUAL ||
+           type == DOUBLE_STAR_EQUAL ||
+           type == AMPER_EQUAL ||
+           type == VBAR_EQUAL ||
+           type == CIRCUMFLEX_EQUAL ||
+           type == LEFT_SHIFT_EQUAL ||
+           type == RIGHT_SHIFT_EQUAL;
+}
+
 void prune_custom_nodes(node* parent, node* child) {
     if (child) {
         for (auto child_: child->children) {
@@ -156,30 +181,91 @@ void prune_custom_nodes(node* parent, node* child) {
     }
 }
 
+// void ast_conv_operators(node *root) {
+//     if (root == nullptr) return;
+
+//     vector<node*> children_copy = root->children;
+//     for (auto child: children_copy) {
+//         ast_conv_operators(child);
+//     }
+
+//     if ((operator_set.find(root->type) != operator_set.end()) && root->parent != nullptr && (operator_set.find(root->parent->type) == operator_set.end())) {
+//         node* parent = root->parent;
+//         if(parent->parent != nullptr) {
+//             vector<node*>& siblings = parent->parent->children;
+//             auto it = find(siblings.begin(), siblings.end(), parent);
+//             if (it != siblings.end()) {
+//                 *it = root;
+//             }
+//             root->parent = parent->parent;
+//         }
+//         for(auto* sibling: parent->children) {
+//             if(sibling != root) {
+//                 if (operator_set.find(sibling->type) == operator_set.end()) {
+//                     root->add_parent_child_relation(sibling);
+//                 } else {
+//                     // complete this part of the function mainting the precedence and associativity
+//                 }
+//             } 
+//         }
+//         parent->children.clear();
+//         delete parent;
+//     }
+// }
+
 void ast_conv_operators(node *root) {
     if (root == nullptr) return;
 
-    vector<node*> children_copy = root->children;
-    for (auto child: children_copy) {
+    // Perform depth-first traversal to process all children first
+    std::vector<node*> children_copy = root->children;
+    for (auto* child : children_copy) {
         ast_conv_operators(child);
     }
 
-    if ((operator_set.find(root->type) != operator_set.end()) && root->parent != nullptr && (operator_set.find(root->parent->type) == operator_set.end())) {
-        node* parent = root->parent;
-        if(parent->parent != nullptr) {
-            vector<node*>& siblings = parent->parent->children;
-            auto it = find(siblings.begin(), siblings.end(), parent);
-            if (it != siblings.end()) {
-                *it = root;
+    // Check if the current node is an operator
+    if (operator_set.find(root->type) != operator_set.end()) {
+        // Check if the parent exists and is not an operator of higher precedence
+        while (root->parent != nullptr &&
+               operator_set.find(root->parent->type) == operator_set.end()) {
+            node* parent = root->parent;
+            
+            // Check if the parent is an operator with lower or same precedence
+            if (operator_set.find(parent->type) != operator_set.end() &&
+                (get_operator_precedence(parent->type) > get_operator_precedence(root->type) ||
+                (get_operator_precedence(parent->type) == get_operator_precedence(root->type) &&
+                 !is_right_associative(root->type)))) {
+                // Break the loop if the parent operator has higher precedence or is right associative
+                break;
             }
-            root->parent = parent->parent;
+
+            // Re-parenting: make the operator node a direct child of the grandparent node
+            if (parent->parent != nullptr) {
+                auto& siblings = parent->parent->children;
+                auto it = std::find(siblings.begin(), siblings.end(), parent);
+                if (it != siblings.end()) {
+                    *it = root;
+                }
+                root->parent = parent->parent;
+            } else {
+                root->parent = nullptr; // Current node becomes the root of the tree
+            }
+
+            // Transfer the siblings that are not operators or have lower precedence
+            // to be children of the current operator node
+            for (auto* sibling : parent->children) {
+                if (sibling != root &&
+                    (operator_set.find(sibling->type) == operator_set.end() ||
+                     get_operator_precedence(sibling->type) > get_operator_precedence(root->type))) {
+                    root->children.push_back(sibling);
+                    sibling->parent = root;
+                }
+            }
+
+            // Clear the parent's children to avoid double deletion
+            parent->children.clear();
+
+            // Delete the parent node as it has been replaced in the AST
+            delete parent;
         }
-        for(auto* sibling: parent->children) {
-            if(sibling != root) {
-                root->add_parent_child_relation(sibling);
-            } 
-        }
-        parent->children.clear();
-        delete parent;
     }
 }

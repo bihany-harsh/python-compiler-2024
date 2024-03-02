@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <map>
 using namespace std;
 
 typedef enum {
@@ -224,6 +225,53 @@ const set<int> operator_set = {
     LEFT_SHIFT_EQUAL,
     RIGHT_SHIFT_EQUAL,
 };
+
+const map<node_type, int> operator_precedence = {
+    {DOUBLE_STAR, 1},
+
+    {STAR, 2},
+    {SLASH, 2},
+    {DOUBLE_SLASH, 2},
+    {PERCENT, 2},
+
+    {PLUS, 3},
+    {MINUS, 3},
+
+    {LEFT_SHIFT, 4},
+    {RIGHT_SHIFT, 4},
+
+    {AMPER, 5},
+
+    {CIRCUMFLEX, 6},
+
+    {VBAR, 7},
+
+    {GREATER, 8},
+    {LESS, 8},
+    {GREATER_EQUAL, 8},
+    {LESS_EQUAL, 8},
+    {EQ_EQUAL, 9},
+    {NOT_EQUAL, 9},
+
+    // Assignment operators have the lowest precedence
+    {EQUAL, 10},
+    {PLUS_EQUAL, 10},
+    {MINUS_EQUAL, 10},
+    {STAR_EQUAL, 10},
+    {SLASH_EQUAL, 10},
+    {DOUBLE_SLASH_EQUAL, 10},
+    {PERCENT_EQUAL, 10},
+    {DOUBLE_STAR_EQUAL, 10},
+    {AMPER_EQUAL, 10},
+    {VBAR_EQUAL, 10},
+    {CIRCUMFLEX_EQUAL, 10},
+    {LEFT_SHIFT_EQUAL, 10},
+    {RIGHT_SHIFT_EQUAL, 10},
+};
+
+int get_operator_precedence(node_type type);
+
+bool is_right_associative(node_type type);
 
 typedef struct node {
     unsigned long long int ID; // ID for a node
