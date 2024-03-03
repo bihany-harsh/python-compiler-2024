@@ -170,8 +170,30 @@ const set<int> operator_set = {
     AUGASSIGN,
 };
 
+const set<int> keywords {
+    FALSE,
+    TRUE,
+    NONE,
+    BREAK,
+    CLASS,
+    CONTINUE,
+    DEF,
+    ELIF,
+    ELSE,
+    FOR,
+    GLOBAL,
+    IF,
+    IN,
+    IS,
+    NON_LOCAL,
+    PASS,
+    WHILE,
+    RETURN,
+};
+
 const set<int> unary_ops = { // it is declared so that these nodes are retained when cleaning the tree
     UNARY_OP,
+    PARAMETERS,
     IF,
     ELSE,
 };

@@ -12,7 +12,7 @@ CXX_SOURCES = main.cpp node.cpp
 HEADER_FILE = include/node.hpp
 
 # Input, generated files and graph
-INPUT_FILE = ../testcases/public1.py
+INPUT_FILE = ../tests/public1.py
 VERBOSE = false
 BINARY = a.out
 GRAPH_PDF = graph.pdf

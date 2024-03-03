@@ -23,7 +23,7 @@ extern node* AST_ROOT;
 // }
 
 void setup_dot() {
-    dot_stream << "digraph ast {\n";
+    dot_stream << "digraph ast {\n node [shape=rectangle]; \n";
     // AST_ROOT->add_nodes_to_dot(dot_file);
     AST_ROOT->generate_dot_script();
     // AST_ROOT->add_edges_to_dot(dot_file);

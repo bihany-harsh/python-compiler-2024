@@ -139,14 +139,24 @@ void node::generate_dot_script() {
     if(this->is_terminal) {
         auto it = type_map.find(this->type);
         if(it != type_map.end()) {
-            dot_stream << "Node" << this->ID << "[label=" << "\"" << it->second << "(" << this->name << ")\"]\n";
+            if (operator_set.find(it->first) != operator_set.end())
+                dot_stream << "Node" << this->ID << "[label=" << "\"" << it->second << "(" << this->name << ")\"" << "fillcolor=indianred1 style=filled" << "]\n";
+            else if (it->first == IDENTIFIER) {
+                dot_stream << "Node" << this->ID << "[label=" << "\"" << it->second << "(" << this->name << ")\"" << "fillcolor=lightskyblue style=filled" << "]\n";
+            } else if ((it->first == NUMBER) || (it->first == STRING_LITERAL)) {
+                dot_stream << "Node" << this->ID << "[label=" << "\"" << it->second << "(" << this->name << ")\"" << "fillcolor=aquamarine style=filled" << "]\n";
+            } else if (keywords.find(it->first) != keywords.end()) {
+                dot_stream << "Node" << this->ID << "[label=" << "\"" << it->second << "(" << this->name << ")\"" << "fillcolor=plum style=filled" << "]\n";
+            } else {
+                dot_stream << "Node" << this->ID << "[label=" << "\"" << it->second << "(" << this->name << ")\"" << "fillcolor=lightgoldenrodyellow style=filled" << "]\n";
+            }
         }
         else {
             cout << "node.cpp: line 145: unexpected error" << endl;
         }
     }
     else {
-        dot_stream << "Node" << this->ID << "[label=\"" << this->name << "\"]\n";
+        dot_stream << "Node" << this->ID << "[label=\"" << this->name << "\"" << "fillcolor=aliceblue style=filled shape=hexagon" << "]\n";
     }
     for(auto child : this->children) {
         if(child != nullptr) {
