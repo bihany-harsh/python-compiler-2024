@@ -1,6 +1,6 @@
 # HDS COMPILER
 
-A compiler made as a course project for CS335: Compiler Design under the guidance of Prof. Swarnendu Biswas and Mr. in IIT Kanpur CSE Dept. in semester 2023-2024 II.
+A compiler made as a course project for CS335: Compiler Design under the guidance of Prof. Swarnendu Biswas in IIT Kanpur CSE Dept. in semester 2023-2024 II.
 
 Group Members: Harsh Bihany (210406) Danish Mehmood (210297) Siddhant Suresh Jakhotiya (211030)
 
@@ -19,10 +19,10 @@ $ sudo apt-get install graphviz
 
 A script file `pyrun.sh` has been made to help run the program against a test case. The command line options provided by our program are as follows:
 
-- `-i` or `--input`: Filename from which the compiler reads the Python program.
-- `-o` or `--output`: Filename to which the compiler outputs the `DOT` file.
-- `-v` or `--verbose`: Prints additional checkpoints to show progress.
-- `-h` or `--help`: Shows the usage for the script.
+- `-i` or `-input`: Filename from which the compiler reads the Python program.
+- `-o` or `-output`: Filename to which the compiler outputs the `DOT` file.
+- `-v` or `-verbose`: Prints additional checkpoints to show progress.
+- `-h` or `-help`: Shows the usage for the script.
 
 Each of the commands mentioned above is optional and can be utilized in any sequence. The script takes `../tests/test1.py` as default input and `graph.pdf` as the default output and doesn't print additional messages.
 
