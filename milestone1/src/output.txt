@@ -1,3 +1,0 @@
-main.cpp: AST_ROOT->children.size = 2
-main.cpp: SIMPLE_STMT
-main.cpp: SIMPLE_STMT

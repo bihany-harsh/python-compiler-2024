@@ -7,7 +7,8 @@
 #include "include/node.hpp"
 using namespace std;
 
-string filename = "graph.dot";
+//TODO: Add support for command line arguments
+const string filename = "graph.dot";
 ostringstream dot_stream;
 
 extern FILE* yyin;
@@ -20,15 +21,15 @@ extern node* AST_ROOT;
 //     AST_ROOT = new node(FILE_INPUT, "root", false, NULL);
 // }
 
-void setup_dot(string filename) {
-    string dot_file = "digraph ast {\n";
+void setup_dot() {
+    dot_stream << "digraph ast {\n";
     // AST_ROOT->add_nodes_to_dot(dot_file);
-    dot_file += "\n";
+    AST_ROOT->generate_dot_script();
     // AST_ROOT->add_edges_to_dot(dot_file);
-    dot_file += "}\n";
+    dot_stream << "}\n";
 
     ofstream out(filename);
-    out << dot_file;
+    out << dot_stream.str();
     out.close();
 }
 
@@ -40,22 +41,10 @@ int main(int argc, const char** argv) {
     }
     INDENT_STACK.push(0);
     yyparse();
-
+    cout << "finished parsing" << endl;
     // AST_ROOT->traverse_tree();
-    AST_ROOT->clean_tree();
-    AST_ROOT->delete_delimiters();
-    AST_ROOT->delete_single_child_nodes();
 
-    ast_conv_operators(AST_ROOT);
-
-    dot_stream << "digraph ast {\n";
-    AST_ROOT->generate_dot_script();
-    dot_stream << "}\n";
-
-    ofstream out(filename);
-    out << dot_stream.str();
-    out.close();
-
+    setup_dot();
 
     return 0;
 }

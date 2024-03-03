@@ -1,17 +1,7 @@
 import ast
 
 string = """
-a = 1
-if a == 1:
-    print("hello")
-elif a == 2:
-    print("elif")
-else:
-    print("else")
-
-if a != 3:
-    print("hello again")
-
+a ** 2
 """
 
 parsed_string = ast.parse(string)
