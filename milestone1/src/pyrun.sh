@@ -56,4 +56,4 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-make INPUT_FILE="$input" GRAPH_PDF="$output" VERBOSE="$verbose" 2>/dev/null
+make INPUT_FILE="$input" GRAPH_PDF="$output" VERBOSE="$verbose" 

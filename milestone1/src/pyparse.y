@@ -832,6 +832,9 @@ testlist_comp               :   test comp_for {
                                 //     $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3);
                             }
+                            |   {
+                                    $$ = new node(TESTLIST_COMP, "TESTLIST_COMP", false, NULL);
+                                }
                             ;
 
 pass_stmt                   :   TOK_PASS {

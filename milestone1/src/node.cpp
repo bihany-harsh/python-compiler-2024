@@ -88,7 +88,7 @@ bool node::delete_delimiters() {
         }
     }
     // if this node is a delimiter, then delete this node and free the memory
-    if(this->type == DELIMITER) {
+    if(this->type == DELIMITER && (this->name != "[" || this->name != "]")) {
         // cout << "Deleting delimiter: " << this->name << this->type << endl;
         // delete from the parent's children vector and free this node
         auto& siblings = this->parent->children;
