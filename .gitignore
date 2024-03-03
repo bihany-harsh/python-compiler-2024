@@ -12,3 +12,4 @@ lex.yy.c
 .vscode
 # *.py
 *.pdf
+!*report.pdf
