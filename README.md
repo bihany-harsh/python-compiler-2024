@@ -1,13 +1,10 @@
-#HDS COMPILER
+# HDS COMPILER
 
-A compiler made for as course project for course CS335: Compiler Design under the guidance of Prof. Swarnendu Biswas and Mr. in IIT Kanpur CSE Dept. in semester 2023-2024 II.
+A compiler made as a course project for CS335: Compiler Design under the guidance of Prof. Swarnendu Biswas and Mr. in IIT Kanpur CSE Dept. in semester 2023-2024 II.
 
-Group Members:
-Harsh Bihany (210406)
-Danish Mehmood (210297)
-Siddhant Suresh Jakhotiya (211030)
+Group Members: Harsh Bihany (210406) Danish Mehmood (210297) Siddhant Suresh Jakhotiya (211030)
 
-##Milestone 1
+## Milestone 1
 
 ### Running the files
 
