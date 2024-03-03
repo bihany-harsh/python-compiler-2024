@@ -15,7 +15,6 @@
     char compound_stmt_type[64];
     char error_string[256];
     extern node* AST_ROOT;
-    // TODO: see the `ast` implementation of `if elif else` statement and modify the ast of pyparse accordingly
     // TODO: test with optional_if_else (body with head of production = test)
 
     extern char* yytext;
@@ -285,8 +284,8 @@ test                        :   or_test optional_if_else {
                             ;
 optional_if_else            :   TOK_IF or_test TOK_ELSE test {
                                     $$ = new node(OPTIONAL_IF_ELSE, "OPTIONAL_IF_ELSE", false, NULL);
-                                    $1 = new node(IF, "if", true, NULL);
-                                    $3 = new node(ELSE, "else", true, NULL);
+                                    $1 = new node(KEYWORD, "if", true, NULL);
+                                    $3 = new node(KEYWORD, "else", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     // $$->add_parent_child_relation($2);
                                     $1->add_parent_child_relation($2);
@@ -627,13 +626,13 @@ atom                        :   TOK_LPAR { join_lines_implicitly++; } testlist_c
                                     $$ = $1;
                             }
                             |   TOK_NONE {
-                                    $$ = new node(NONE, "None", true, NULL);
+                                    $$ = new node(KEYWORD, "None", true, NULL);
                             }
                             |   TOK_TRUE {
-                                    $$ = new node(TRUE, "True", true, NULL);
+                                    $$ = new node(KEYWORD, "True", true, NULL);
                             }
                             |   TOK_FALSE {
-                                    $$ = new node(FALSE, "False", true, NULL);
+                                    $$ = new node(KEYWORD, "False", true, NULL);
                             }
                             ;
 data_type                   :   TOK_INT {
@@ -767,8 +766,8 @@ optional_comp_for           :   comp_for {
                             ;
 comp_for                    :   TOK_FOR exprlist TOK_IN or_test optional_comp_iter {
                                     $$ = new node(COMP_FOR, "COMP_FOR", false, NULL);
-                                    $1 = new node(FOR, "for", true, NULL);
-                                    $3 = new node(IN, "in", true, NULL);
+                                    $1 = new node(KEYWORD, "for", true, NULL);
+                                    $3 = new node(KEYWORD, "in", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -809,7 +808,7 @@ comp_iter                   :   comp_for {
                             ;
 comp_if                     :   TOK_IF test_nocond optional_comp_iter {
                                     $$ = new node(COMP_IF, "COMP_IF", false, NULL);
-                                    $1 = new node(IF, "if", true, NULL);
+                                    $1 = new node(KEYWORD, "if", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
                                 //     $$->add_parent_child_relation($3);
@@ -836,7 +835,7 @@ testlist_comp               :   test comp_for {
                             ;
 
 pass_stmt                   :   TOK_PASS {
-                                    $$ = new node(PASS, "pass", true, NULL);
+                                    $$ = new node(KEYWORD, "pass", true, NULL);
                             }
                             ;
 
@@ -851,16 +850,16 @@ flow_stmt                   :   break_stmt {
                             }
                             ;
 break_stmt                  :   TOK_BREAK {
-                                    $$ = new node(BREAK, "break", true, NULL);
+                                    $$ = new node(KEYWORD, "break", true, NULL);
                             }
                             ;
 continue_stmt               :   TOK_CONTINUE {
-                                    $$ = new node(CONTINUE, "continue", true, NULL);
+                                    $$ = new node(KEYWORD, "continue", true, NULL);
                             }
                             ;
 return_stmt                 :   TOK_RETURN optional_testlist {
                                     $$ = new node(RETURN_STMT, "RETURN_STMT", false, NULL);
-                                    $1 = new node(RETURN, "return", true, NULL);
+                                    $1 = new node(KEYWORD, "return", true, NULL);
                                     $$->add_parent_child_relation($1);
                                 //     $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
@@ -874,7 +873,7 @@ optional_testlist           :   testlist {
 global_stmt                 :   TOK_GLOBAL TOK_IDENTIFIER { 
                                     $2 = new node(IDENTIFIER, yytext, true, NULL); } many_comma_tok_identifier {
                                     $$ = new node(GLOBAL_STMT, "GLOBAL_STMT", false, NULL);
-                                    $1 = new node(GLOBAL, "global", true, NULL);
+                                    $1 = new node(KEYWORD, "global", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($4);
@@ -894,7 +893,7 @@ many_comma_tok_identifier   :   many_comma_tok_identifier TOK_COMMA TOK_IDENTIFI
 
 nonlocal_stmt               :   TOK_NON_LOCAL TOK_IDENTIFIER { $2 = new node(IDENTIFIER, yytext, true, NULL); } many_comma_tok_identifier {
                                     $$ = new node(NONLOCAL_STMT, "NONLOCAL_STMT", false, NULL);
-                                    $1 = new node(NON_LOCAL, "nonlocal", true, NULL);
+                                    $1 = new node(KEYWORD, "nonlocal", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
                                     // $$->add_parent_child_relation($4);
@@ -921,7 +920,7 @@ compound_stmt               :   if_stmt {
 
 if_stmt                     :   TOK_IF { strcpy(compound_stmt_type, "\'if\'"); } test TOK_COLON suite many_elif_stmts optional_else_stmt {
                                     $$ = new node(IF_STMT, "IF_STMT", false, NULL);
-                                    $1 = new node(IF, "if", true, NULL);
+                                    $1 = new node(KEYWORD, "if", true, NULL);
                                     $4 = new node(DELIMITER, ":", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $1->add_parent_child_relation($3);
@@ -936,15 +935,10 @@ if_stmt                     :   TOK_IF { strcpy(compound_stmt_type, "\'if\'"); }
                                     snprintf(error_string, sizeof(error_string), "SyntaxError: invalid syntax");
                                     yyerror(error_string);
                             }
-                            //TODO: try to correct this
-                            // |   TOK_IF test suite {
-                            //         snprintf(error_string, sizeof(error_string), "SyntaxError: expected ':'");
-                            //         yyerror(error_string);
-                            // }
                             ;
 many_elif_stmts             :   many_elif_stmts TOK_ELIF { strcpy(compound_stmt_type, "\'elif\'"); } test TOK_COLON suite {
                                     $$ = new node(MANY_ELIF_STMTS, "MANY_ELIF_STMTS", false, NULL);
-                                    $2 = new node(ELIF, "elif", true, NULL);
+                                    $2 = new node(KEYWORD, "elif", true, NULL);
                                     $5 = new node(DELIMITER, ":", true, NULL);
                                 //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
@@ -960,7 +954,7 @@ optional_else_stmt          :   else_stmt {
                             |   {   $$ = NULL;  }
 else_stmt                   :   TOK_ELSE { strcpy(compound_stmt_type, "\'else\'"); } TOK_COLON suite {
                                     $$ = new node(ELSE_STMT, "ELSE_STMT", false, NULL);
-                                    $1 = new node(ELSE, "else", true, NULL);
+                                    $1 = new node(KEYWORD, "else", true, NULL);
                                     $3 = new node(DELIMITER, ":", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $1->add_parent_child_relation($3);
@@ -996,7 +990,7 @@ at_least_one_stmt           :   at_least_one_stmt stmt {
                             ;
 while_stmt                  :   TOK_WHILE { strcpy(compound_stmt_type, "\'while\'"); } test TOK_COLON suite optional_else_suite {
                                     $$ = new node(WHILE_STMT, "WHILE_STMT", false, NULL);
-                                    $1 = new node(WHILE, "while", true, NULL);
+                                    $1 = new node(KEYWORD, "while", true, NULL);
                                     $4 = new node(DELIMITER, ":", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $1->add_parent_child_relation($3);
@@ -1008,7 +1002,7 @@ while_stmt                  :   TOK_WHILE { strcpy(compound_stmt_type, "\'while\
                             ;
 optional_else_suite         :   TOK_ELSE TOK_COLON suite {
                                     $$ = new node(OPTIONAL_ELSE_SUITE, "OPTIONAL_ELSE_SUITE", false, NULL);
-                                    $1 = new node(ELSE, "else", true, NULL);
+                                    $1 = new node(KEYWORD, "else", true, NULL);
                                     $2 = new node(DELIMITER, ":", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $1->add_parent_child_relation($2);
@@ -1019,8 +1013,8 @@ optional_else_suite         :   TOK_ELSE TOK_COLON suite {
 for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'"); } exprlist TOK_IN testlist TOK_COLON suite optional_else_suite {
                                     $$ = new node(FOR_STMT, "FOR_STMT", false, NULL);
                                     node* temp = new node(TEST, "TEST", false, NULL);
-                                    $1 = new node(FOR, "for", true, NULL);
-                                    $4 = new node(IN, "in", true, NULL);
+                                    $1 = new node(KEYWORD, "for", true, NULL);
+                                    $4 = new node(KEYWORD, "in", true, NULL);
                                     // $6 = new node(COLON, ":", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $1->add_parent_child_relation(temp);
@@ -1040,7 +1034,7 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                 }
                                 parameters optional_tok_rarrow_test TOK_COLON suite {
                                     $$ = new node(FUNCDEF, "FUNCDEF", false, NULL);
-                                    $1 = new node(DEF, "def", true, NULL);
+                                    $1 = new node(KEYWORD, "def", true, NULL);
                                     $6 = new node(DELIMITER, ":", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
@@ -1126,7 +1120,7 @@ classdef                    :   TOK_CLASS TOK_IDENTIFIER {
                                 } 
                                 optional_paren_arglist TOK_COLON suite {
                                     $$ = new node(CLASSDEF, "CLASSDEF", false, NULL);
-                                    $1 = new node(CLASS, "class", true, NULL);
+                                    $1 = new node(KEYWORD, "class", true, NULL);
                                     $5 = new node(DELIMITER, ":", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);

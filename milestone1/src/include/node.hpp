@@ -8,30 +8,12 @@ using namespace std;
 
 typedef enum {
     // keywords
-    FALSE,
-    TRUE,
-    NONE,
-    BREAK,
-    CLASS,
-    CONTINUE,
-    DEF,
-    ELIF,
-    ELSE,
-    FOR,
-    GLOBAL,
-    IF,
-    IN,
-    IS,
-    NON_LOCAL,
-    PASS,
-    WHILE,
-    RETURN,
-
+    KEYWORD,
     BOOL_OP,
-    UNARY_OP,
-    // NOT,
     // OR,
     // AND,
+    UNARY_OP,
+    // NOT,
 
     // datatypes
     INT,
@@ -170,54 +152,13 @@ const set<int> operator_set = {
     AUGASSIGN,
 };
 
-const set<int> keywords {
-    FALSE,
-    TRUE,
-    NONE,
-    BREAK,
-    CLASS,
-    CONTINUE,
-    DEF,
-    ELIF,
-    ELSE,
-    FOR,
-    GLOBAL,
-    IF,
-    IN,
-    IS,
-    NON_LOCAL,
-    PASS,
-    WHILE,
-    RETURN,
-};
-
 const set<int> unary_ops = { // it is declared so that these nodes are retained when cleaning the tree
     UNARY_OP,
     PARAMETERS,
-    IF,
-    ELSE,
 };
 
 const map<node_type, string> type_map = {
-    {FALSE, "FALSE"},
-    {TRUE, "TRUE"},
-    {NONE, "NONE"},
-    {BREAK, "BREAK"},
-    {CLASS, "CLASS"},
-    {CONTINUE, "CONTINUE"},
-    {DEF, "DEF"},
-    {ELIF, "ELIF"},
-    {ELSE, "ELSE"},
-    {FOR, "FOR"},
-    {GLOBAL, "GLOBAL"},
-    {IF, "IF"},
-    {IN, "IN"},
-    {IS, "IS"},
-    {NON_LOCAL, "NON_LOCAL"},
-    {PASS, "PASS"},
-    {WHILE, "WHILE"},
-    {RETURN, "RETURN"},
-
+    {KEYWORD, "KEYWORD"},
     {BOOL_OP, "BOOL_OP"},
     {UNARY_OP, "UNARY_OP"},
     {INT, "INT"},

@@ -145,7 +145,7 @@ void node::generate_dot_script() {
                 dot_stream << "Node" << this->ID << "[label=" << "\"" << it->second << "(" << this->name << ")\"" << "fillcolor=lightskyblue style=filled" << "]\n";
             } else if ((it->first == NUMBER) || (it->first == STRING_LITERAL)) {
                 dot_stream << "Node" << this->ID << "[label=" << "\"" << it->second << "(" << this->name << ")\"" << "fillcolor=aquamarine style=filled" << "]\n";
-            } else if (keywords.find(it->first) != keywords.end()) {
+            } else if (it->first == KEYWORD) {
                 dot_stream << "Node" << this->ID << "[label=" << "\"" << it->second << "(" << this->name << ")\"" << "fillcolor=plum style=filled" << "]\n";
             } else {
                 dot_stream << "Node" << this->ID << "[label=" << "\"" << it->second << "(" << this->name << ")\"" << "fillcolor=lightgoldenrodyellow style=filled" << "]\n";

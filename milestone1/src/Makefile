@@ -31,7 +31,7 @@ FORCE:
 
 # generating the output PDF
 $(GRAPH_DOT): $(BINARY) input-file-name verbose-flag
-	@(./$(BINARY) $(INPUT_FILE) $(VERBOSE) || echo "Error in executing the program. Cannot generate dot script")
+	@(./$(BINARY) $(INPUT_FILE) $(VERBOSE) || echo "Error in executing the program. Cannot generate dot script. \nExiting...")
 	@rm input-file-name 
 
 $(GRAPH_PDF): $(GRAPH_DOT) input-file-name graph-file-name
