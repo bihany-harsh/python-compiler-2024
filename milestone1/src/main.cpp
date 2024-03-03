@@ -10,6 +10,7 @@ using namespace std;
 //TODO: Add support for command line arguments
 const string filename = "graph.dot";
 ostringstream dot_stream;
+bool verbose_flag = false;
 
 extern FILE* yyin;
 extern stack<int> INDENT_STACK;
@@ -34,17 +35,35 @@ void setup_dot() {
 }
 
 int main(int argc, const char** argv) {
+    if(argc != 3) {
+        cout << "Something went terribly wrong." << endl;
+        exit(-1);
+    }
     if (argc > 1) {
         yyin = fopen(argv[1], "r");
     } else {
         yyin = stdin;
     }
-    INDENT_STACK.push(0);
-    yyparse();
-    cout << "finished parsing" << endl;
-    // AST_ROOT->traverse_tree();
+    if(string(argv[2]) == "true") {
+        // verbose has been passed
+        verbose_flag = true;
+    }
 
+    INDENT_STACK.push(0);
+    if(verbose_flag) {
+        cout << "Calling the parser routine..." << endl;
+    }
+    yyparse();
+    if(verbose_flag) {
+        cout << "Finished parsing!" << endl;
+    }
+    if(verbose_flag) {
+        cout << "Generating dot file..." << endl;
+    }
     setup_dot();
+    if(verbose_flag) {
+        cout << "Dot file generated!\nExiting the program..." << endl;
+    }
 
     return 0;
 }

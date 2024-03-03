@@ -9,6 +9,7 @@
 
     extern FILE* yyin;
     extern int yylineno;
+    extern bool verbose_flag;
     extern stack<int> INDENT_STACK;
 
     char compound_stmt_type[64];
@@ -21,7 +22,7 @@
 
     int yylex(void);
     void yyerror (char const *s) {
-        fprintf (stderr, "line number %d: \t %s\n", yylineno, s);
+        fprintf (stdout, "line number %d: \t %s\n", yylineno, s);
         exit(-1);
     }
 
@@ -79,14 +80,14 @@
 
 file_input                  :   multiple_lines { 
                                     $$ = $1; 
-                                    $$->name = "FILE_INPUT"; 
+                                    $$->name = "FILE_INPUT";
                                     AST_ROOT = $$;
                                     AST_ROOT->clean_tree();
-                                    // cout << "cleaning done " << endl;
+                                    if(verbose_flag) {
+                                        cout << "AST cleaning done!" << endl;
+                                    }
                                     AST_ROOT->delete_delimiters();
-                                    // cout << "delimiters deleted" << endl;
                                     AST_ROOT->delete_single_child_nodes();
-                                    // cout << "single child nodes deleted" << endl;
                             }
                             ;
 multiple_lines              :   multiple_lines single_line {

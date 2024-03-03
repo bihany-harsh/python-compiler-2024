@@ -4,16 +4,16 @@ CXX_FLAGS = -std=c++17
 LEX = flex
 BISON = bison
 DOT = dot
-INPUT_FILE = ../testcases/public1.py
 
 # Source and object files
 LEX_SOURCE = pylex.l
 BISON_SOURCE = pyparse.y
-CPP_SOURCES = main.cpp node.cpp
+CXX_SOURCES = main.cpp node.cpp
 HEADER_FILE = include/node.hpp
-OBJECTS = lex.yy.o pyparse.tab.o $(CPP_SOURCES:.cpp=.o)
 
-# Output files and graph
+# Input, generated files and graph
+INPUT_FILE = ../testcases/public1.py
+VERBOSE = false
 BINARY = a.out
 GRAPH_PDF = graph.pdf
 GRAPH_DOT = graph.dot
@@ -21,22 +21,32 @@ GRAPH_DOT = graph.dot
 # Default target
 all: $(GRAPH_PDF)
 
+verbose-flag : FORCE
+	@echo $(VERBOSE) | cmp -s - $@ || echo $(VERBOSE > $@)
+graph-file-name: FORCE
+	@echo $(GRAPH_PDF) | cmp -s - $@ || echo $(GRAPH_PDF) > $@
+input-file-name: FORCE
+	@echo $(INPUT_FILE) | cmp -s - $@ || echo $(INPUT_FILE) > $@
+FORCE:
+
 # generating the output PDF
-$(GRAPH_PDF): $(GRAPH_DOT)
-	$(DOT) -Tpdf $^ -o $@
+$(GRAPH_DOT): $(BINARY) input-file-name verbose-flag
+	@(./$(BINARY) $(INPUT_FILE) $(VERBOSE) || echo "Error in executing the program. Cannot generate dot script")
+	@rm input-file-name 
 
-$(GRAPH_DOT): $(BINARY) $(INPUT_FILE)
-	./$(BINARY) $(INPUT_FILE)
+$(GRAPH_PDF): $(GRAPH_DOT) input-file-name graph-file-name
+	@($(DOT) -Tpdf $(GRAPH_DOT) -o $(GRAPH_PDF))
+	@rm graph-file-name
 
-$(BINARY): lex.yy.c pyparse.tab.c $(CPP_SOURCES)
-	$(CPP) -o $@ $^ -ll
+$(BINARY): lex.yy.c pyparse.tab.c $(CXX_SOURCES)
+	@$(CXX) $(CXX_FLAGS) $^ -ll
 
 lex.yy.c: $(LEX_SOURCE) pyparse.tab.h
-	$(LEX) $(LEX_SOURCE)
+	@$(LEX) $(LEX_SOURCE)
 
 pyparse.tab.c pyparse.tab.h: $(BISON_SOURCE) $(HEADER_FILE)
-	$(BISON) -d $(BISON_SOURCE)
+	@$(BISON) -d $(BISON_SOURCE)
 
 # Clean target
 clean:
-	rm -f lex.yy.c pyparse.tab.c pyparse.tab.h $(BINARY) $(GRAPH_DOT) $(GRAPH_PDF) $(OBJECTS)
+	@rm -f lex.yy.c pyparse.tab.c pyparse.tab.h $(BINARY) $(GRAPH_DOT) $(GRAPH_PDF) $(OBJECTS)
