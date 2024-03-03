@@ -55,7 +55,7 @@ void node::assign_value(bool value) {
 }
 
 void node::traverse_tree() {
-    cout << "ID: " << this->ID << " | Type: " << this->type << " | Name: " << this->name << " | Line No: " << this->line_no << " | Value: " << this->name << " | Is_terminal " << this->is_terminal << endl;
+    cout << "ID: " << this->ID << " | Type: " << this->type << " | Name: " << this->name << " | Line No: " << this->line_no << " | Value: " << this->name << " | Is_terminal " << this->is_terminal << "| children.size()" << this->children.size() << endl;
     for (auto child : this->children) {
         if(child != nullptr) {
             child->traverse_tree();
@@ -72,10 +72,9 @@ void node::clean_tree() {
     // cout << "Will now call recursively" << endl;
     // recursively calling its children
     for (auto child : this->children) {
-        if(child != nullptr) {
-            // cout << "calling the function from child " << child->name << endl;
-            child->clean_tree();
-        }
+        // if(child != nullptr) { // this condiiton is not required since already removed the nullptr children
+        child->clean_tree();
+        // }
     }
 }
 
@@ -89,7 +88,7 @@ bool node::delete_delimiters() {
         }
     }
     // if this node is a delimiter, then delete this node and free the memory
-    if(find(delimiter_vector.begin(), delimiter_vector.end(), this->type) != delimiter_vector.end()) {
+    if(this->type == DELIMITER) {
         // cout << "Deleting delimiter: " << this->name << this->type << endl;
         // delete from the parent's children vector and free this node
         auto& siblings = this->parent->children;
@@ -112,7 +111,8 @@ void node::delete_single_child_nodes() {
         }
     }
 
-    if(this->children.size() == 1) { // terminals will have 0 children
+    // terminals have 0 children
+    if(this->children.size() == 1 && unary_ops.find(this->type) == unary_ops.end()) { // it is not a unary operator
         node* child = this->children.front();
 
         // Check if this node is not the root node (it has a parent)
@@ -134,10 +134,20 @@ void node::delete_single_child_nodes() {
     }
 }
 
-
 void node::generate_dot_script() {
     //TODO: if the name of a node is a string then need to resolve below code, right now ignoring it
-    dot_stream << "Node" << this->ID << "[label=\"" << this->name << "\"]\n";
+    if(this->is_terminal) {
+        auto it = type_map.find(this->type);
+        if(it != type_map.end()) {
+            dot_stream << "Node" << this->ID << "[label=" << "\"" << it->second << "(" << this->name << ")\"]\n";
+        }
+        else {
+            cout << "node.cpp: line 145: unexpected error" << endl;
+        }
+    }
+    else {
+        dot_stream << "Node" << this->ID << "[label=\"" << this->name << "\"]\n";
+    }
     for(auto child : this->children) {
         if(child != nullptr) {
             child->generate_dot_script();
@@ -147,125 +157,84 @@ void node::generate_dot_script() {
     return;
 }
 
-int get_operator_precedence(node_type type) {
-    auto it = operator_precedence.find(type);
-    if (it != operator_precedence.end()) {
-        return it->second;
-    }
-    return numeric_limits<int>::max();
-}
-
-bool is_right_associative(node_type type) {
-    return type == DOUBLE_STAR ||
-           type == EQUAL ||
-           type == PLUS_EQUAL ||
-           type == MINUS_EQUAL ||
-           type == STAR_EQUAL ||
-           type == SLASH_EQUAL ||
-           type == DOUBLE_SLASH_EQUAL ||
-           type == PERCENT_EQUAL ||
-           type == DOUBLE_STAR_EQUAL ||
-           type == AMPER_EQUAL ||
-           type == VBAR_EQUAL ||
-           type == CIRCUMFLEX_EQUAL ||
-           type == LEFT_SHIFT_EQUAL ||
-           type == RIGHT_SHIFT_EQUAL;
-}
-
 void prune_custom_nodes(node* parent, node* child) {
     if (child) {
         for (auto child_: child->children) {
-            parent->add_parent_child_relation(child_);
+            if(child_) { // child_ is non-null
+                parent->add_parent_child_relation(child_);
+            }
         }
         delete child;
     }
 }
 
-// void ast_conv_operators(node *root) {
-//     if (root == nullptr) return;
-
-//     vector<node*> children_copy = root->children;
-//     for (auto child: children_copy) {
-//         ast_conv_operators(child);
-//     }
-
-//     if ((operator_set.find(root->type) != operator_set.end()) && root->parent != nullptr && (operator_set.find(root->parent->type) == operator_set.end())) {
-//         node* parent = root->parent;
-//         if(parent->parent != nullptr) {
-//             vector<node*>& siblings = parent->parent->children;
-//             auto it = find(siblings.begin(), siblings.end(), parent);
-//             if (it != siblings.end()) {
-//                 *it = root;
-//             }
-//             root->parent = parent->parent;
-//         }
-//         for(auto* sibling: parent->children) {
-//             if(sibling != root) {
-//                 if (operator_set.find(sibling->type) == operator_set.end()) {
-//                     root->add_parent_child_relation(sibling);
-//                 } else {
-//                     // complete this part of the function mainting the precedence and associativity
-//                 }
-//             } 
-//         }
-//         parent->children.clear();
-//         delete parent;
-//     }
-// }
-
-void ast_conv_operators(node *root) {
-    if (root == nullptr) return;
-
-    // Perform depth-first traversal to process all children first
-    std::vector<node*> children_copy = root->children;
-    for (auto* child : children_copy) {
-        ast_conv_operators(child);
+void to_ast_operator(node* root, bool is_left_associative, set<string> matching_strings) {
+    if(is_left_associative) {
+        for(int i = 0; i < root->children.size(); i++) {
+            node* child = root->children[i];
+            if(matching_strings.find(child->name) != matching_strings.end()) {
+                child->add_parent_child_relation(root->children[i - 1]);
+                child->add_parent_child_relation(root->children[i + 1]);
+                // now to remove earlier relations
+                root->children[i - 1] = NULL;
+                root->children[i + 1] = NULL;
+                // now to remove the NULL children
+                auto newEnd = remove(root->children.begin(), root->children.end(), nullptr);
+                root->children.erase(newEnd, root->children.end());
+                i--;
+            }
+        }
     }
-
-    // Check if the current node is an operator
-    if (operator_set.find(root->type) != operator_set.end()) {
-        // Check if the parent exists and is not an operator of higher precedence
-        while (root->parent != nullptr &&
-               operator_set.find(root->parent->type) == operator_set.end()) {
-            node* parent = root->parent;
-            
-            // Check if the parent is an operator with lower or same precedence
-            if (operator_set.find(parent->type) != operator_set.end() &&
-                (get_operator_precedence(parent->type) > get_operator_precedence(root->type) ||
-                (get_operator_precedence(parent->type) == get_operator_precedence(root->type) &&
-                 !is_right_associative(root->type)))) {
-                // Break the loop if the parent operator has higher precedence or is right associative
-                break;
+    else {
+        for(int i = root->children.size() - 1; i >= 0; i--) {
+            if(root->children.size() == 1) break;
+            node* child = root->children[i];
+            if(matching_strings.find(child->name) != matching_strings.end()) {
+                child->add_parent_child_relation(root->children[i - 1]);
+                child->add_parent_child_relation(root->children[i + 1]);
+                // now to remove earlier relations
+                root->children[i - 1] = NULL;
+                root->children[i + 1] = NULL;
+                // now to remove the NULL children
+                auto newEnd = remove(root->children.begin(), root->children.end(), nullptr);
+                root->children.erase(newEnd, root->children.end());
+                i--;
             }
+        }
+    }
+}
 
-            // Re-parenting: make the operator node a direct child of the grandparent node
-            if (parent->parent != nullptr) {
-                auto& siblings = parent->parent->children;
-                auto it = std::find(siblings.begin(), siblings.end(), parent);
-                if (it != siblings.end()) {
-                    *it = root;
-                }
-                root->parent = parent->parent;
-            } else {
-                root->parent = nullptr; // Current node becomes the root of the tree
-            }
+void comp_op_processing(node* root) {
+    int modified = 0;
+    for(int i = 0; i < root->children.size(); i++) {
+        node* child = root->children[i];
+        if(child->type == COMPARE) {
+            // we have a comparison operator
+            modified = 1;
+            child->add_parent_child_relation(root->children[i - 1]);
+            child->add_parent_child_relation(root->children[i + 1]);
 
-            // Transfer the siblings that are not operators or have lower precedence
-            // to be children of the current operator node
-            for (auto* sibling : parent->children) {
-                if (sibling != root &&
-                    (operator_set.find(sibling->type) == operator_set.end() ||
-                     get_operator_precedence(sibling->type) > get_operator_precedence(root->type))) {
-                    root->children.push_back(sibling);
-                    sibling->parent = root;
-                }
-            }
-
-            // Clear the parent's children to avoid double deletion
-            parent->children.clear();
-
-            // Delete the parent node as it has been replaced in the AST
-            delete parent;
+            // now remove the earlier relations
+            root->children[i - 1] = NULL;
+            // root->children[i + 1] = NULL;
+            auto newEnd = remove(root->children.begin(), root->children.end(), nullptr);
+            root->children.erase(newEnd, root->children.end());
+            i--;
+        }
+    }
+    if(modified) {
+        if(!root->children.empty()) {
+            root->children.pop_back();
+        }
+        while(root->children.size() > 1) {
+            node* new_node = new node(BOOL_OP, "and", true, NULL);
+            new_node->add_parent_child_relation(root->children.front());
+            root->children.erase(root->children.begin());
+            new_node->add_parent_child_relation(root->children.front());
+            root->children.erase(root->children.begin());
+            // we cannot directly use add_parent_child_relation because we have to maintain relative order
+            new_node->parent = root;
+            root->children.insert(root->children.begin(), new_node); // insert at the beginning
         }
     }
 }

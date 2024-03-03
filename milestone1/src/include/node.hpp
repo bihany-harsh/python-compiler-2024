@@ -3,6 +3,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <string>
 using namespace std;
 
 typedef enum {
@@ -10,7 +11,6 @@ typedef enum {
     FALSE,
     TRUE,
     NONE,
-    AND,
     BREAK,
     CLASS,
     CONTINUE,
@@ -23,11 +23,15 @@ typedef enum {
     IN,
     IS,
     NON_LOCAL,
-    NOT,
-    OR,
     PASS,
     WHILE,
     RETURN,
+
+    BOOL_OP,
+    UNARY_OP,
+    // NOT,
+    // OR,
+    // AND,
 
     // datatypes
     INT,
@@ -41,53 +45,36 @@ typedef enum {
     NUMBER,
 
     // operators
-    PLUS,
-    MINUS,
-    STAR,
-    SLASH,
-    PERCENT,
-    DOUBLE_SLASH,
-    DOUBLE_STAR,
-
-    EQ_EQUAL,
-    NOT_EQUAL,
-    GREATER,
-    LESS,
-    GREATER_EQUAL,
-    LESS_EQUAL,
-
-    AMPER,
-    VBAR,
-    CIRCUMFLEX,
-    TILDE,
-    LEFT_SHIFT,
-    RIGHT_SHIFT,
-
-    EQUAL,
-    PLUS_EQUAL,
-    MINUS_EQUAL,
-    STAR_EQUAL,
-    SLASH_EQUAL,
-    DOUBLE_SLASH_EQUAL,
-    PERCENT_EQUAL,
-    DOUBLE_STAR_EQUAL,
-    AMPER_EQUAL,
-    VBAR_EQUAL,
-    CIRCUMFLEX_EQUAL,
-    LEFT_SHIFT_EQUAL,
-    RIGHT_SHIFT_EQUAL,
+    // PLUS,
+    // MINUS,
+    // STAR,
+    // SLASH,
+    // PERCENT,
+    // DOUBLE_SLASH,
+    // DOUBLE_STAR,
+    // AMPER,
+    // VBAR,
+    // CIRCUMFLEX,
+    // TILDE,
+    // LEFT_SHIFT,
+    // RIGHT_SHIFT,
+    BIN_OP,
+    COMPARE,
+    ASSIGN,
+    AUGASSIGN,
 
     // delimiters
-    LPAR,
-    RPAR,
-    LSQB,
-    RSQB,
-    LBRACE,
-    RBRACE,
-    COMMA,
-    COLON,
-    DOT,
-    SEMICOLON,
+    // LPAR,
+    // RPAR,
+    // LSQB,
+    // RSQB,
+    // LBRACE,
+    // RBRACE,
+    // COMMA,
+    // COLON,
+    // DOT,
+    // SEMICOLON,
+    DELIMITER,
     RARROW,
 
 
@@ -99,7 +86,7 @@ typedef enum {
     MANY_SMALL_STMTS,
 
     EXPR_STMT,
-    MANY_EQUAL_TESTLIST_STAR_EXPR,
+    MANY_EQUAL_TEST,
     ANNASSIGN,
     OPTIONAL_ASSIGN_TEST,
     TESTLIST,
@@ -176,102 +163,58 @@ typedef enum {
     OPTIONAL_PAREN_ARGLIST,
 } node_type;
 
-const vector<int> delimiter_vector = {
-    LPAR,
-    RPAR,
-    LSQB,
-    RSQB,
-    LBRACE,
-    RBRACE,
-    COLON,
-    DOT,
-    SEMICOLON,
-};
-
 const set<int> operator_set = {
-    PLUS,
-    MINUS,
-    STAR,
-    SLASH,
-    PERCENT,
-    DOUBLE_SLASH,
-    DOUBLE_STAR,
-
-    EQ_EQUAL,
-    NOT_EQUAL,
-    GREATER,
-    LESS,
-    GREATER_EQUAL,
-    LESS_EQUAL,
-
-    AMPER,
-    VBAR,
-    CIRCUMFLEX,
-    TILDE,
-    LEFT_SHIFT,
-    RIGHT_SHIFT,
-
-    EQUAL,
-    PLUS_EQUAL,
-    MINUS_EQUAL,
-    STAR_EQUAL,
-    SLASH_EQUAL,
-    DOUBLE_SLASH_EQUAL,
-    PERCENT_EQUAL,
-    DOUBLE_STAR_EQUAL,
-    AMPER_EQUAL,
-    VBAR_EQUAL,
-    CIRCUMFLEX_EQUAL,
-    LEFT_SHIFT_EQUAL,
-    RIGHT_SHIFT_EQUAL,
+    BIN_OP,
+    COMPARE,
+    ASSIGN,
+    AUGASSIGN,
 };
 
-const map<node_type, int> operator_precedence = {
-    {DOUBLE_STAR, 1},
-
-    {STAR, 2},
-    {SLASH, 2},
-    {DOUBLE_SLASH, 2},
-    {PERCENT, 2},
-
-    {PLUS, 3},
-    {MINUS, 3},
-
-    {LEFT_SHIFT, 4},
-    {RIGHT_SHIFT, 4},
-
-    {AMPER, 5},
-
-    {CIRCUMFLEX, 6},
-
-    {VBAR, 7},
-
-    {GREATER, 8},
-    {LESS, 8},
-    {GREATER_EQUAL, 8},
-    {LESS_EQUAL, 8},
-    {EQ_EQUAL, 9},
-    {NOT_EQUAL, 9},
-
-    // Assignment operators have the lowest precedence
-    {EQUAL, 10},
-    {PLUS_EQUAL, 10},
-    {MINUS_EQUAL, 10},
-    {STAR_EQUAL, 10},
-    {SLASH_EQUAL, 10},
-    {DOUBLE_SLASH_EQUAL, 10},
-    {PERCENT_EQUAL, 10},
-    {DOUBLE_STAR_EQUAL, 10},
-    {AMPER_EQUAL, 10},
-    {VBAR_EQUAL, 10},
-    {CIRCUMFLEX_EQUAL, 10},
-    {LEFT_SHIFT_EQUAL, 10},
-    {RIGHT_SHIFT_EQUAL, 10},
+const set<int> unary_ops = { // it is declared so that these nodes are retained when cleaning the tree
+    UNARY_OP,
+    IF,
+    ELSE,
 };
 
-int get_operator_precedence(node_type type);
+const map<node_type, string> type_map = {
+    {FALSE, "FALSE"},
+    {TRUE, "TRUE"},
+    {NONE, "NONE"},
+    {BREAK, "BREAK"},
+    {CLASS, "CLASS"},
+    {CONTINUE, "CONTINUE"},
+    {DEF, "DEF"},
+    {ELIF, "ELIF"},
+    {ELSE, "ELSE"},
+    {FOR, "FOR"},
+    {GLOBAL, "GLOBAL"},
+    {IF, "IF"},
+    {IN, "IN"},
+    {IS, "IS"},
+    {NON_LOCAL, "NON_LOCAL"},
+    {PASS, "PASS"},
+    {WHILE, "WHILE"},
+    {RETURN, "RETURN"},
 
-bool is_right_associative(node_type type);
+    {BOOL_OP, "BOOL_OP"},
+    {UNARY_OP, "UNARY_OP"},
+    {INT, "INT"},
+    {FLOAT, "FLOAT"},
+    {STR, "STR"},
+    {BOOL, "BOOL"},
+
+    // misc
+    {IDENTIFIER, "IDENTIFIER"},
+    {STRING_LITERAL, "STRING_LITERAL"},
+    {NUMBER, "NUMBER"},
+
+    {BIN_OP, "BIN_OP"},
+    {COMPARE, "COMPARE"},
+    {ASSIGN, "ASSIGN"},
+    {AUGASSIGN, "AUGASSIGN"},
+    {DELIMITER, "DELIMITER"},
+    {RARROW, "RARROW"},
+};
 
 typedef struct node {
     unsigned long long int ID; // ID for a node
@@ -320,6 +263,6 @@ typedef struct node {
 
 void prune_custom_nodes(node* parent, node* child);
 
-void ast_conv_operators(node* root);
+void to_ast_operator(node* root, bool is_left_associative, set<string> matching_strings);
 
-void clear_delete_nodes();
+void comp_op_processing(node* root);
