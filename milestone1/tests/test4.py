@@ -1,55 +1,54 @@
 def merge_sort(arr):
-    """
-    Sorts an array in ascending order using the Merge Sort algorithm.
-    """
-    if len(arr) > 1:
-        # Finding the mid of the array
-        mid = len(arr) // 2
+    # Base case: if the list is one element or empty, it's already sorted.
+    if len(arr) <= 1:
+        return arr
 
-        # Dividing the array elements into 2 halves
-        left_half = arr[:mid]
-        right_half = arr[mid:]
+    # Recursive case: manually split the array into halves and sort each half.
+    middle = len(arr) // 2
+    left_half = split_array(arr, 0, middle)
+    right_half = split_array(arr, middle, len(arr))
 
-        # Sorting the first half
-        merge_sort(left_half)
+    left_sorted = merge_sort(left_half)
+    right_sorted = merge_sort(right_half)
 
-        # Sorting the second half
-        merge_sort(right_half)
+    # Merge the sorted halves.
+    return merge(left_sorted, right_sorted)
 
-        # Merging the sorted halves
-        merge(arr, left_half, right_half)
+def split_array(arr, start, end):
+    # Manually creates a new list from start to end indices of arr
+    result = []
+    for i in range(start, end):
+        result.append(arr[i])
+    return result
 
-def merge(arr, left_half, right_half):
-    """
-    Merges two halves sorted in ascending order to produce a single sorted array.
-    """
-    i = j = k = 0
+def merge(left, right):
+    # Merges two sorted lists into a single sorted list
+    sorted_arr = []  # This will contain the merged and sorted array.
+    i = 0  # Index for left array
+    j = 0  # Index for right array
 
-    # Copy data to temp arrays left_half[] and right_half[]
-    while i < len(left_half) and j < len(right_half):
-        if left_half[i] < right_half[j]:
-            arr[k] = left_half[i]
+    # Compare each element of the left and right arrays and append the smaller to sorted_arr
+
+    while i < len(left) and j < len(right):
+        if left[i] < right[j] < right[i] < left[j]:
+            sorted_arr.append(left[i])
             i += 1
         else:
-            arr[k] = right_half[j]
+            sorted_arr.append(right[j])
             j += 1
-        k += 1
 
-    # Checking if any element was left in left_half
-    while i < len(left_half):
-        arr[k] = left_half[i]
+    # Append the remainder of the other array to sorted_arr.
+    while i < len(left):
+        sorted_arr.append(left[i])
         i += 1
-        k += 1
 
-    # Checking if any element was left in right_half
-    while j < len(right_half):
-        arr[k] = right_half[j]
+    while j < len(right):
+        sorted_arr.append(right[j])
         j += 1
-        k += 1
+
+    return sorted_arr
 
 # Example usage
-if __name__ == "__main__":
-    arr = [12, 11, 13, 5, 6, 7]
-    print("Given array is:", arr)
-    merge_sort(arr)
-    print("Sorted array is:", arr)
+arr = [38, 27, 43, 3, 9, 82, 10]
+sorted_arr = merge_sort(arr)
+print("Sorted array:", sorted_arr)

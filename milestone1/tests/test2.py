@@ -1,54 +1,84 @@
-def get_matrix_input(prompt):
-    print(prompt)
-    rows = int(input("Enter the number of rows: "))
-    cols = int(input("Enter the number of columns: "))
-
-    matrix = []
-    print("Enter the rows of the matrix (space-separated values):")
-    for _ in range(rows):
-        row = list(map(int, input().split()))
-        assert len(row) == cols, "Row does not match specified column count."
-        matrix.append(row)
+def validate_matrices(matrix_a, matrix_b):
+    # Check if matrices are not empty and have proper structure
+    if not matrix_a or not matrix_b:
+        print("Error: One of the matrices is empty.")
+        return False
     
-    return matrix
-
-def validate_matrices_for_multiplication(matrix_a, matrix_b):
-    # Number of columns in matrix_a must equal number of rows in matrix_b
-    return len(matrix_a[0]) == len(matrix_b)
-
-def matrix_multiply(matrix_a, matrix_b):
-    if not validate_matrices_for_multiplication(matrix_a, matrix_b):
-        raise ValueError("Matrices cannot be multiplied due to incompatible dimensions.")
-
     rows_a = len(matrix_a)
     cols_a = len(matrix_a[0])
+    rows_b = len(matrix_b)
     cols_b = len(matrix_b[0])
 
-    result = [[0 for _ in range(cols_b)] for _ in range(rows_a)]
+    # Check for uniformity in matrix dimensions
+    for row in matrix_a:
+        if len(row) != cols_a:
+            print("Error: Matrix A is not uniform.")
+            return False
+    for row in matrix_b:
+        if len(row) != cols_b:
+            print("Error: Matrix B is not uniform.")
+            return False
 
+    # Check if multiplication is possible
+    if cols_a != rows_b:
+        print("Error: Matrices cannot be multiplied due to incompatible dimensions.")
+        return False
+
+    return True
+
+def matrix_multiply(matrix_a, matrix_b):
+    # Validate matrices before proceeding
+    if not validate_matrices(matrix_a, matrix_b):
+        return None
+
+    # Initialize the result matrix with zeros
+    rows_a = len(matrix_a)
+    cols_b = len(matrix_b[0])
+    result = []
+    for i in range(rows_a):
+        result_row = []
+        for j in range(cols_b):
+            result_row.append(0)
+        result.append(result_row)
+
+    # Perform the multiplication
     for i in range(rows_a):
         for j in range(cols_b):
-            for k in range(cols_a):
-                result[i][j] += matrix_a[i][k] * matrix_b[k][j]
+            cell_sum = 0
+            for k in range(len(matrix_a[0])):
+                cell_sum += matrix_a[i][k] * matrix_b[k][j]
+            result[i][j] = cell_sum
 
     return result
 
 def print_matrix(matrix):
-    print("Result:")
+    # Function to print matrix in a formatted way
+    if matrix is None:
+        print("Matrix is None, cannot print.")
+        return
     for row in matrix:
-        print(" ".join(map(str, row)))
+        print_row = ""
+        for element in row:
+            print_row += "{:4}".format(element)
+        print(print_row)
 
-def main():
-    try:
-        matrix_a = get_matrix_input("Enter the first matrix")
-        matrix_b = get_matrix_input("Enter the second matrix")
+# Example usage
+matrix_a = [
+    [1, 2, 3],
+    [4, 5, 6]
+]
 
-        result = matrix_multiply(matrix_a, matrix_b)
-        print_matrix(result)
-    except ValueError as e:
-        print(e)
-    except AssertionError as e:
-        print(e)
+matrix_b = [
+    [7, 8],
+    [9, 10],
+    [11, 12]
+]
 
-if __name__ == "__main__":
-    main()
+print("Matrix A:")
+print_matrix(matrix_a)
+print("\nMatrix B:")
+print_matrix(matrix_b)
+
+result = matrix_multiply(matrix_a, matrix_b)
+print("\nResult of Matrix A multiplied by Matrix B:")
+print_matrix(result)
