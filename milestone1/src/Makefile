@@ -12,7 +12,7 @@ CXX_SOURCES = main.cpp node.cpp
 HEADER_FILE = include/node.hpp
 
 # Input, generated files and graph
-INPUT_FILE = ../tests/public1.py
+INPUT_FILE = ../tests/test1.py
 VERBOSE = false
 BINARY = a.out
 GRAPH_PDF = graph.pdf
@@ -49,4 +49,4 @@ pyparse.tab.c pyparse.tab.h: $(BISON_SOURCE) $(HEADER_FILE)
 
 # Clean target
 clean:
-	@rm -f lex.yy.c pyparse.tab.c pyparse.tab.h $(BINARY) $(GRAPH_DOT) $(GRAPH_PDF) $(OBJECTS)
+	@rm -f lex.yy.c pyparse.tab.c pyparse.tab.h $(BINARY) input-file-name graph-file-name

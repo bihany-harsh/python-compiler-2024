@@ -162,7 +162,7 @@ ERROR_CHAR              [$?`]
                 return TOK_DEDENT;
             }
             if(INDENT_STACK.top() < dedent_space) {
-                cout << "pylex: indent_stack top = " << INDENT_STACK.top() << " and dedent_space " << dedent_space << endl;
+                // cout << "pylex: indent_stack top = " << INDENT_STACK.top() << " and dedent_space " << dedent_space << endl;
                 yyerror("IndentationError: unindent does not match any outer indentation level");
             }
             dedent_space = 0;

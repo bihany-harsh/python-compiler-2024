@@ -154,6 +154,7 @@ const set<int> operator_set = {
 
 const set<int> unary_ops = { // it is declared so that these nodes are retained when cleaning the tree
     UNARY_OP,
+    KEYWORD,
     PARAMETERS,
     TESTLIST_COMP,
 };

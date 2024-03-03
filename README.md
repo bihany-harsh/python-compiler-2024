@@ -23,8 +23,9 @@ A script file `pyrun.sh` has been made to help run the program against a test ca
 - `-o` or `-output`: Filename to which the compiler outputs the `DOT` file.
 - `-v` or `-verbose`: Prints additional checkpoints to show progress.
 - `-h` or `-help`: Shows the usage for the script.
+- `-c` or `-clean`: Performs `make`, with given options (if any) and then performs `make clean`.
 
-Each of the commands mentioned above is optional and can be utilized in any sequence. The script takes `../tests/test1.py` as default input and `graph.pdf` as the default output and doesn't print additional messages.
+Each of the commands mentioned above is optional and can be utilized in any sequence. The script takes `../tests/test1.py` as default input and `graph.pdf` as the default output and doesn't print additional messages and does not perform `make clean` after execution
 
 An example of a successful default execution is as follows:
 
@@ -36,7 +37,7 @@ An example of successful execution using the command line options provided above
 
 
 ```bash
-$ ./pyrun.sh -input ../tests/test3.py -o graph1.pdf -verbose
+$ ./pyrun.sh -input ../tests/test3.py -o graph1.pdf -verbose -c
 ```
 
 ---
