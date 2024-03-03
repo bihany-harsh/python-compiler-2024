@@ -1,5 +1,14 @@
+#HDS COMPILER
+A compiler made for as course project for course CS335: Compiler Design under the guidance of Prof. Swarnendu Biswas and Mr. in IIT Kanpur CSE Dept. in semester 2023-2024 II.
 
-## Running the files
+Group Members:
+Harsh Bihany (210406)
+Danish Mehmood (210297)
+Siddhant Suresh Jakhotiya (211030)
+
+##Milestone 1
+
+### Running the files
 
 The implementation of Parser and Lexer is in Flex+Bison, and is written in C++. Further, DOT is used to create a graphical representation of the AST and exporting it to a PDF file. Users should install all the above (if not already installed) by running the following commands:
 
