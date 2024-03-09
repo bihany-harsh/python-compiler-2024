@@ -12,6 +12,7 @@ node* AST_ROOT = NULL;
 
 extern int yylineno;
 extern ostringstream dot_stream;
+extern void yyerror(const char*);
 
 node::node(node_type type, string name, bool is_terminal, node* parent) {
     this->type = type;
@@ -55,7 +56,7 @@ void node::assign_value(bool value) {
 }
 
 void node::traverse_tree() {
-    cout << "ID: " << this->ID << " | Type: " << this->type << " | Name: " << this->name << " | Line No: " << this->line_no << " | Value: " << this->name << " | Is_terminal " << this->is_terminal << "| children.size()" << this->children.size() << endl;
+    cout << "ID: " << this->ID << " | Type: " << this->type << " | Name: " << this->name << " | Line No: " << this->line_no << " | Value: " << this->name << " | Is_terminal " << this->is_terminal << endl;
     for (auto child : this->children) {
         if(child != nullptr) {
             child->traverse_tree();
@@ -246,5 +247,109 @@ void comp_op_processing(node* root) {
             new_node->parent = root;
             root->children.insert(root->children.begin(), new_node); // insert at the beginning
         }
+    }
+}
+
+void handle_annassign(node* root) {
+    if(root == nullptr) {
+        return;
+    }
+
+    if(root->type == ANNASSIGN) {
+        // if there is an ANNASSIGN node, its parent will DEFINITELY be expr_stmt
+        if(root->children.size() == 1) {
+            // if there is only 1 child, it has to be the specified type. Then, we simply add it in the place of annassign.
+            node* parent = root->parent;
+            for(int i = 0; i < parent->children.size(); i++) {
+                if(parent->children[i] == root) {
+                    parent->children[i] = root->children[0];    // establishing parent
+                    root->children[0]->parent = parent;         // child relationship
+                    delete root;
+                    return;
+                }
+            }
+        }
+    }
+
+    for(int i = 0; i < root->children.size(); i++) {
+        handle_annassign(root->children[i]);
+    }
+}
+
+node* sem_lval_check(node* root) {
+    node* tmp = root;
+
+    while(tmp && (!tmp->is_terminal)) {
+        if(tmp->children.size() > 1) {
+            yyerror("Not a vaid lvalue");
+        }
+        tmp = tmp->children[0];
+    }
+    if(!tmp) {
+        yyerror("Not a valid lvalue");
+    }
+    if(tmp->type != IDENTIFIER || (tmp->type == IDENTIFIER && tmp->name == "print")) {
+        yyerror((tmp->name + " is not a valid lvalue").c_str());
+    }
+    return tmp;
+}
+
+base_data_type sem_rval_check(symbol_table* st, node* root) {
+    node* tmp = root->children[1]; // this points to the node of ```test``` in the grammar
+    while(tmp && (!tmp->is_terminal)) {
+        if(tmp->children.size() > 1) {
+            if(tmp->type != ATOM_EXPR) {
+                yyerror("Not a valid rvalue");
+            }
+            else {
+                if(tmp->children[1]->children[1]->type == INT) {
+                    return D_LIST_INT;
+                } else if(tmp->children[1]->children[1]->type == FLOAT) {
+                    return D_LIST_FLOAT;
+                } else if(tmp->children[1]->children[1]->type == BOOL) {
+                    return D_LIST_BOOL;
+                } else if(tmp->children[1]->children[1]->type == STR) {
+                    return D_LIST_STRING;
+                } else {
+                    yyerror("Not a valid rvalue");
+                }
+            }
+        }
+        tmp = tmp->children[0];
+    }
+    if(!tmp) {
+        yyerror("Not a valid rvalue");
+    }
+    if(tmp->type == INT) {
+        return D_INT;
+    } else if(tmp->type == FLOAT) {
+        return D_FLOAT;
+    } else if(tmp->type == BOOL) {
+        return D_BOOL;
+    } else if(tmp->type == STR) {
+        return D_STRING;
+    } else if(tmp->type == IDENTIFIER) {
+        st_entry* entry = st->get_entry(tmp->name);
+        if(entry && entry->b_type == D_CLASS) {
+            return entry->b_type;
+        } else {
+            yyerror((tmp->name + " is not defined").c_str());
+        }
+    } else {
+        yyerror("Not a valid rvalue");
+    }
+    return D_VOID;
+}
+
+void check_declare_before_use(symbol_table* st, node* root) {
+    if(root == nullptr)
+        return;
+    if(root->type == IDENTIFIER) {
+        if(!st->get_entry(root->name)) {
+            yyerror((root->name + " is not defined").c_str());
+        }
+    }
+    for(int i = 0; i < root->children.size(); i++) {
+        check_declare_before_use(st, root->children[i]);
     }
 }

@@ -5,9 +5,9 @@
 #include <fstream>
 #include "pyparse.tab.h"
 #include "include/node.hpp"
+#include "include/symbol_table.hpp"
 using namespace std;
 
-//TODO: Add support for command line arguments
 const string filename = "graph.dot";
 ostringstream dot_stream;
 bool verbose_flag = false;
@@ -18,6 +18,9 @@ extern stack<int> INDENT_STACK;
 extern long long int NODE_COUNT;
 extern node* AST_ROOT;
 
+extern symbol_table* SYMBOL_TABLE;
+extern stack<symbol_table*> ST_STACK;
+extern st_entry* dummy_entry;
 // void make_root_node() {
 //     AST_ROOT = new node(FILE_INPUT, "root", false, NULL);
 // }
@@ -35,6 +38,7 @@ void setup_dot() {
 }
 
 int main(int argc, const char** argv) {
+    cout << "Execution started" << endl;
     if(argc != 3) {
         cout << "Something went terribly wrong." << endl;
         exit(-1);
@@ -53,7 +57,16 @@ int main(int argc, const char** argv) {
     if(verbose_flag) {
         cout << "Calling the parser routine..." << endl;
     }
+    SYMBOL_TABLE = new symbol_table(GLOBAL, "GLOBAL", NULL);
+    dummy_entry = new st_entry("print", D_FUNCTION, -8, -1, SYMBOL_TABLE->scope);
+    SYMBOL_TABLE->add_entry(dummy_entry);
+    // dummy_entry = new st_entry("self", )
+    ST_STACK.push(nullptr); // nullptr will denote bottom of the stack
     yyparse();
+    cout << "Symbol table created" << endl;
+    SYMBOL_TABLE->print_st();
+    // handle_annassign(AST_ROOT);
+    // AST_ROOT->traverse_tree();
     if(verbose_flag) {
         cout << "Finished parsing!" << endl;
     }

@@ -1,9 +1,12 @@
 // to define the node structure used in the Abstract Syntax Tree (AST)
+#ifndef NODE_HPP
+#define NODE_HPP
 #include <string>
 #include <vector>
 #include <set>
 #include <map>
 #include <string>
+#include "symbol_table.hpp"
 using namespace std;
 
 typedef enum {
@@ -20,6 +23,7 @@ typedef enum {
     FLOAT,
     STR,
     BOOL,
+    LIST,
 
     // misc
     IDENTIFIER,
@@ -155,8 +159,13 @@ const set<int> operator_set = {
 const set<int> unary_ops = { // it is declared so that these nodes are retained when cleaning the tree
     UNARY_OP,
     KEYWORD,
+    EXPR_STMT,
+    RETURN_STMT,
     PARAMETERS,
     TESTLIST_COMP,
+    ANNASSIGN,
+    OPTIONAL_PAREN_ARGLIST,
+    SUITE,
 };
 
 const map<node_type, string> type_map = {
@@ -167,6 +176,7 @@ const map<node_type, string> type_map = {
     {FLOAT, "FLOAT"},
     {STR, "STR"},
     {BOOL, "BOOL"},
+    {LIST, "LIST"},
 
     // misc
     {IDENTIFIER, "IDENTIFIER"},
@@ -201,6 +211,10 @@ typedef struct node {
     vector<node*> children;
     node* parent = NULL;
 
+    // linking the nodes with symbol table and symbol table entries
+    struct symbol_table* st = nullptr;
+    struct symbol_table_entry* st_entry = nullptr;
+
     // METHODS
     // constructor
     node(node_type type, string name, bool is_terminal, node* parent);
@@ -231,3 +245,13 @@ void prune_custom_nodes(node* parent, node* child);
 void to_ast_operator(node* root, bool is_left_associative, set<string> matching_strings);
 
 void comp_op_processing(node* root);
+
+void handle_annassign(node* root);
+
+node* sem_lval_check(node* root);
+
+base_data_type sem_rval_check(symbol_table* st, node* root);
+
+void check_declare_before_use(symbol_table* st, node* root);
+
+#endif

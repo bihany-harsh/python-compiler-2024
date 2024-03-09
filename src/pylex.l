@@ -60,6 +60,7 @@ INT                     "int"
 FLOAT                   "float"
 STR                     "str"
 BOOL                    "bool"
+LIST                    "list"
 
     // integer literals
 OCT_DIGIT               [0-7]
@@ -230,6 +231,7 @@ ERROR_CHAR              [$?`]
 {FLOAT}                 { return TOK_FLOAT; }
 {STR}                   { return TOK_STR; }
 {BOOL}                  { return TOK_BOOL; }
+{LIST}                  { return TOK_LIST; }
 
 {IDENTIFIER}            { return TOK_IDENTIFIER; }
 

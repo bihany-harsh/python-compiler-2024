@@ -8,7 +8,7 @@ DOT = dot
 # Source and object files
 LEX_SOURCE = pylex.l
 BISON_SOURCE = pyparse.y
-CXX_SOURCES = main.cpp node.cpp
+CXX_SOURCES = main.cpp node.cpp symbol_table.cpp
 HEADER_FILE = include/node.hpp
 
 # Input, generated files and graph
@@ -46,7 +46,6 @@ lex.yy.c: $(LEX_SOURCE) pyparse.tab.h
 
 pyparse.tab.c pyparse.tab.h: $(BISON_SOURCE) $(HEADER_FILE)
 	@$(BISON) -d $(BISON_SOURCE)
-
 # Clean target
 clean:
 	@rm -f lex.yy.c pyparse.tab.c pyparse.tab.h $(BINARY) input-file-name graph-file-name

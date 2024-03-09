@@ -1,4 +1,3 @@
-
 ## Lines
 
 * Any line can have a `explicit line joiner` anywhere within the line.
@@ -29,3 +28,9 @@
 * Also, instead of post-processing the tree (for example, to delete delimiters), instead of using helper functions, simply ignore them in the parser itself - refer to the production of *many_small_stmts*.
 * Similarly, for tokens like *optional_semicolon*, simply don't access their tree_node so that it doesn't result in any segmentation errors.
 * However, try to retain non-terminals that will make the process of 3AC generation easy. For example, arith_expr is term followed by many_arith_term. This format allows for 3AC code generation (since we can perform a simple *op* btw 2 operands in many_arith_expr). If we merge these non-terminals, that might make 3AC generation harder.
+* To build the symbol table:
+
+  1. Either build it during parsing itself. Might need to alter `struct node and not sure about how to deal with types`
+  2. Build it post parsing by traversal of the AST.
+     * To handle annassign or to not handle it? If handled, assign would always be at the top, helps in 3AC generation. If not, 3AC needs cases for assign.
+     * So handle it!
