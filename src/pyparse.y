@@ -95,7 +95,6 @@ file_input                  :   multiple_lines {
                             ;
 multiple_lines              :   multiple_lines single_line {
                                     $$ = new node(MULTIPLE_LINES, "MULTIPLE_LINES", false, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1); // adds all non-null multiple_lines children of $1 to $$ and deletes $1
                                     $$->add_parent_child_relation($2);
                             }
@@ -118,10 +117,7 @@ stmt                        :   simple_stmt {
 simple_stmt                 :   indent_check_small_stmt small_stmt many_small_stmts optional_semicolon TOK_NEWLINE {
                                     $$ = new node(SIMPLE_STMT, "SIMPLE_STMT", false, NULL); // children 1, 4 & 5 not needed
                                     $$->add_parent_child_relation($2);
-                                    // $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3);
-                                    // $$->add_parent_child_relation($4);
-                                    // prune_custom_nodes($$, $4); // $4 is not needed
                             }
                             ;
 optional_semicolon          :   TOK_SEMICOLON
@@ -150,10 +146,7 @@ indent_check_small_stmt     :   TOK_INDENT  {   snprintf(error_string, sizeof(er
                             ;
 many_small_stmts            :   many_small_stmts TOK_SEMICOLON small_stmt {
                                     $$ = new node(MANY_SMALL_STMTS, "MANY_SMALL_STMTS", false, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
-                                    // $2 = new node(SEMICOLON, ";", true, NULL);
-                                    // $$->add_parent_child_relation($2); // $2 is not needed
                                     $$->add_parent_child_relation($3);
                             }
                             |   {   $$ = NULL;  }
@@ -179,7 +172,6 @@ expr_stmt                   :   test annassign {
                             |   test many_equal_test {
                                     $$ = new node(EXPR_STMT, "EXPR_STMT", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
                                     check_declare_before_use(SYMBOL_TABLE, $1); // to check that the LHS has been declared before use
                                     set<string> match = {"="};
@@ -194,7 +186,6 @@ expr_stmt                   :   test annassign {
 many_equal_test             :   many_equal_test TOK_EQUAL test {
                                     $$ = new node(MANY_EQUAL_TEST, "MANY_EQUAL_TEST", false, NULL);
                                     $2 = new node(ASSIGN, "=", true, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -211,7 +202,6 @@ annassign                   :   TOK_COLON test optional_assign_test {
                                     $1 = new node(DELIMITER, ":", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
-                                    // $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3);
                                     check_declare_before_use(SYMBOL_TABLE, $2);
                             }
@@ -265,9 +255,7 @@ augassign                   :   TOK_PLUS_EQUAL {
 testlist                    :   test many_comma_tok_test optional_comma {
                                     $$ = new node(TESTLIST, "TESTLIST", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                //     $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                //     $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3);
                                     check_declare_before_use(SYMBOL_TABLE, $1);
                             }
@@ -275,7 +263,6 @@ testlist                    :   test many_comma_tok_test optional_comma {
 many_comma_tok_test         :   many_comma_tok_test TOK_COMMA test {
                                     $$ = new node(MANY_COMMA_TOK_TEST, "MANY_COMMA_TOK_TEST", false, NULL);
                                     $2 = new node(DELIMITER, ",", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -291,7 +278,6 @@ optional_comma              :   TOK_COMMA {
 test                        :   or_test optional_if_else {
                                     $$ = new node(TEST, "TEST", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
                             }
                             ;
@@ -300,19 +286,15 @@ optional_if_else            :   TOK_IF or_test TOK_ELSE test {
                                     $1 = new node(KEYWORD, "if", true, NULL);
                                     $3 = new node(KEYWORD, "else", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     $1->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
-                                    // $$->add_parent_child_relation($4);
                                     $3->add_parent_child_relation($4);
                             }
                             |   {   $$ = NULL;  }
 or_test                     :   and_test many_or_tok_and_test {
                                     $$ = new node(OR_TEST, "OR_TEST", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                    // set<node_type> ops = { BOOL_OP };
                                     set<string> match = {"or"};
                                     to_ast_operator($$, true, match);
                             }
@@ -320,7 +302,6 @@ or_test                     :   and_test many_or_tok_and_test {
 many_or_tok_and_test        :   many_or_tok_and_test TOK_OR and_test {
                                     $$ = new node(MANY_OR_TOK_AND_TEST, "MANY_OR_TOK_AND_TEST", false, NULL);
                                     $2 = new node(BOOL_OP, "or", true, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -330,9 +311,7 @@ many_or_tok_and_test        :   many_or_tok_and_test TOK_OR and_test {
 and_test                    :   not_test many_and_tok_not_test {
                                     $$ = new node(AND_TEST, "AND_TEST", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                //     $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                    // set<node_type> ops = { BOOL_OP };
                                     set<string> match = {"and"};
                                     to_ast_operator($$, true, match);
                             }
@@ -340,7 +319,6 @@ and_test                    :   not_test many_and_tok_not_test {
 many_and_tok_not_test       :   many_and_tok_not_test TOK_AND not_test {
                                     $$ = new node(MANY_AND_TOK_NOT_TEST, "MANY_AND_TOK_NOT_TEST", false, NULL);
                                     $2 = new node(BOOL_OP, "and", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -357,7 +335,6 @@ not_test                    :   TOK_NOT not_test {
 comparison                  :   expr many_comparison_expr {
                                     $$ = new node(COMPARISON, "COMPARISON", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
                                     $$->delete_single_child_nodes(); //TODO: clean this up
                                     comp_op_processing($$);
@@ -365,7 +342,6 @@ comparison                  :   expr many_comparison_expr {
                             ;
 many_comparison_expr        :   many_comparison_expr comp_op expr {
                                     $$ = new node(MANY_COMPARISON_EXPR, "MANY_COMPARISON_EXPR", false, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -406,9 +382,7 @@ comp_op                     :   TOK_LESS {
 expr                        :   xor_expr many_vbar_tok_xor_expr {
                                     $$ = new node(EXPR, "EXPR", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                    // set<node_type> ops = { BIN_OP };
                                     set<string> match = {"|"};
                                     to_ast_operator($$, true, match);
                             }
@@ -416,7 +390,6 @@ expr                        :   xor_expr many_vbar_tok_xor_expr {
 many_vbar_tok_xor_expr      :   many_vbar_tok_xor_expr TOK_VBAR xor_expr {
                                     $$ = new node(MANY_VBAR_TOK_XOR_EXPR, "MANY_VBAR_TOK_XOR_EXPR", false, NULL);
                                     $2 = new node(BIN_OP, "|", true, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -425,9 +398,7 @@ many_vbar_tok_xor_expr      :   many_vbar_tok_xor_expr TOK_VBAR xor_expr {
 xor_expr                    :   and_expr many_cflex_tok_and_expr {
                                     $$ = new node(XOR_EXPR, "XOR_EXPR", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                    // set<node_type> ops = { BIN_OP };
                                     set<string> match = {"^"};
                                     to_ast_operator($$, true, match);
                             }
@@ -435,7 +406,6 @@ xor_expr                    :   and_expr many_cflex_tok_and_expr {
 many_cflex_tok_and_expr     :   many_cflex_tok_and_expr TOK_CIRCUMFLEX and_expr {
                                     $$ = new node(MANY_CFLEX_TOK_AND_EXPR, "MANY_CFLEX_TOK_AND_EXPR", false, NULL);
                                     $2 = new node(BIN_OP, "^", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -444,9 +414,7 @@ many_cflex_tok_and_expr     :   many_cflex_tok_and_expr TOK_CIRCUMFLEX and_expr 
 and_expr                    :   shift_expr many_amper_tok_shift_expr {
                                     $$ = new node(AND_EXPR, "AND_EXPR", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                    // set<node_type> ops = { AMPER };
                                     set<string> match = {"&"};
                                     to_ast_operator($$, true, match);
                             }
@@ -454,7 +422,6 @@ and_expr                    :   shift_expr many_amper_tok_shift_expr {
 many_amper_tok_shift_expr   :   many_amper_tok_shift_expr TOK_AMPER shift_expr {
                                     $$ = new node(MANY_AMPER_TOK_SHIFT_EXPR, "MANY_AMPER_TOK_SHIFT_EXPR", false, NULL);
                                     $2 = new node(BIN_OP, "&", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -463,9 +430,7 @@ many_amper_tok_shift_expr   :   many_amper_tok_shift_expr TOK_AMPER shift_expr {
 shift_expr                  :   arith_expr many_shift_op_arith_expr {
                                     $$ = new node(SHIFT_EXPR, "SHIFT_EXPR", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                    // set<node_type> ops = { LEFT_SHIFT, RIGHT_SHIFT };
                                     set<string> match = {"<<", ">>"};
                                     to_ast_operator($$, true, match);
                             }
@@ -473,7 +438,6 @@ shift_expr                  :   arith_expr many_shift_op_arith_expr {
 many_shift_op_arith_expr    :   many_shift_op_arith_expr TOK_LEFT_SHIFT arith_expr {
                                     $$ = new node(MANY_SHIFT_OP_ARITH_EXPR, "MANY_SHIFT_OP_ARITH_EXPR", false, NULL);
                                     $2 = new node(BIN_OP, "<<", true, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -481,7 +445,6 @@ many_shift_op_arith_expr    :   many_shift_op_arith_expr TOK_LEFT_SHIFT arith_ex
                             |   many_shift_op_arith_expr TOK_RIGHT_SHIFT arith_expr {
                                     $$ = new node(MANY_SHIFT_OP_ARITH_EXPR, "MANY_SHIFT_OP_ARITH_EXPR", false, NULL);
                                     $2 = new node(BIN_OP, ">>", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -491,9 +454,7 @@ many_shift_op_arith_expr    :   many_shift_op_arith_expr TOK_LEFT_SHIFT arith_ex
 arith_expr                  :   term many_arith_term {
                                     $$ = new node(ARITH_EXPR, "ARITH_EXPR", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                    // set<node_type> ops = { PLUS, MINUS };
                                     set<string> match = {"+", "-"};
                                     to_ast_operator($$, true, match);
                             }
@@ -501,7 +462,6 @@ arith_expr                  :   term many_arith_term {
 many_arith_term             :   many_arith_term TOK_PLUS term {
                                     $$ = new node(MANY_ARITH_EXPR, "MANY_ARITH_EXPR", false, NULL);
                                     $2 = new node(BIN_OP, "+", true, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -509,7 +469,6 @@ many_arith_term             :   many_arith_term TOK_PLUS term {
                             |   many_arith_term TOK_MINUS term {
                                     $$ = new node(MANY_ARITH_EXPR, "MANY_ARITH_EXPR", false, NULL);
                                     $2 = new node(BIN_OP, "-", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -519,9 +478,7 @@ many_arith_term             :   many_arith_term TOK_PLUS term {
 term                        :   factor many_mod_factor {
                                     $$ = new node(TERM, "TERM", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                    // set<node_type> ops = { STAR, SLASH, PERCENT, DOUBLE_SLASH };
                                     set<string> match = {"*", "/", "%", "//"};
                                     to_ast_operator($$, true, match);
                             }
@@ -529,7 +486,6 @@ term                        :   factor many_mod_factor {
 many_mod_factor             :   many_mod_factor TOK_STAR factor {
                                     $$ = new node(MANY_MOD_FACTOR, "MANY_MOD_FACTOR", false, NULL);
                                     $2 = new node(BIN_OP, "*", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -537,7 +493,6 @@ many_mod_factor             :   many_mod_factor TOK_STAR factor {
                             |   many_mod_factor TOK_SLASH factor {
                                     $$ = new node(MANY_MOD_FACTOR, "MANY_MOD_FACTOR", false, NULL);
                                     $2 = new node(BIN_OP, "/", true, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -545,7 +500,6 @@ many_mod_factor             :   many_mod_factor TOK_STAR factor {
                             |   many_mod_factor TOK_PERCENT factor {
                                     $$ = new node(MANY_MOD_FACTOR, "MANY_MOD_FACTOR", false, NULL);
                                     $2 = new node(BIN_OP, "%", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -554,7 +508,6 @@ many_mod_factor             :   many_mod_factor TOK_STAR factor {
                                     // factor corresponds to sort of using unary operator +, -, ~
                                     $$ = new node(MANY_MOD_FACTOR, "MANY_MOD_FACTOR", false, NULL);
                                     $2 = new node(BIN_OP, "//", true, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -564,20 +517,14 @@ many_mod_factor             :   many_mod_factor TOK_STAR factor {
 factor                      :   TOK_PLUS factor {
                                     $$ = new node(UNARY_OP, "+", true, NULL);
                                     $$->add_parent_child_relation($2);
-                                    // $$->add_parent_child_relation($2);
-                                    // prune_custom_nodes($$, $2);
                             }
                             |   TOK_MINUS factor {
                                     $$ = new node(UNARY_OP, "-", true, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
-                                    // prune_custom_nodes($$, $2);
                             }
                             |   TOK_TILDE factor {
                                     $$ = new node(UNARY_OP, "~", true, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
-                                    // prune_custom_nodes($$, $2);
                             }
                             |   power {
                                     $$ = $1;
@@ -586,9 +533,7 @@ factor                      :   TOK_PLUS factor {
 power                       :   atom_expr optional_dstar_tok_factor {
                                     $$ = new node(POWER, "POWER", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                    // set<node_type> ops = {DOUBLE_STAR};
                                     set<string> match = {"**"};
                                     to_ast_operator($$, false, match);
                             }
@@ -604,7 +549,6 @@ optional_dstar_tok_factor   :   TOK_DOUBLE_STAR factor {
 atom_expr                   :   atom many_trailers {
                                     $$ = new node(ATOM_EXPR, "ATOM_EXPR", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
                             }
                             ;
@@ -676,7 +620,6 @@ data_type                   :   TOK_INT {
 //                             ;
 many_trailers               :   many_trailers trailer {
                                     $$ = new node(MANY_TRAILERS, "MANY_TRAILERS", false, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                             }
@@ -688,7 +631,6 @@ trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_a
                                     $1 = new node(DELIMITER, "(", true, NULL);
                                     $4 = new node(DELIMITER, ")", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                //     $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3); 
                                     $$->add_parent_child_relation($4);
                             }|
@@ -698,7 +640,6 @@ trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_a
                                     $1 = new node(DELIMITER, "[", true, NULL);
                                     $4 = new node(DELIMITER, "]", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // prune_custom_nodes($$, $3);
                                     $$->add_parent_child_relation($3);
                                     $$->add_parent_child_relation($4);
                             }
@@ -718,16 +659,13 @@ optional_arglist            :   arglist {
 arglist                     :   argument many_comma_argument optional_comma {
                                     $$ = new node(ARGLIST, "ARGLIST", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                //     $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                //     $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3);
                             }
                             ;
 many_comma_argument         :   many_comma_argument TOK_COMMA argument {
                                     $$ = new node(MANY_COMMA_ARGUMENT, "MANY_COMMA_ARGUMENT", false, NULL);
                                     $2 = new node(DELIMITER, ",", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -737,7 +675,6 @@ many_comma_argument         :   many_comma_argument TOK_COMMA argument {
 argument                    :   test optional_comp_for {
                                     $$ = new node(ARGUMENT, "ARGUMENT", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
                             }
                             |   test TOK_EQUAL test {
@@ -764,7 +701,6 @@ subscript                   :   test {
 many_comma_subscript        :   many_comma_subscript TOK_COMMA subscript {
                                     $$ = new node(MANY_COMMA_SUBSCRIPT, "MANY_COMMA_SUBSCRIPT", false, NULL);
                                     $2 = new node(DELIMITER, ",", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -784,23 +720,19 @@ comp_for                    :   TOK_FOR exprlist TOK_IN or_test optional_comp_it
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
                                     $$->add_parent_child_relation($4);
-                                //     $$->add_parent_child_relation($5);
                                     prune_custom_nodes($$, $5);
                             }
                             ;
 exprlist                    :   expr many_comma_expr optional_comma {
                                     $$ = new node(EXPRLIST, "EXPRLIST", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                //     $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                //     $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3);
                             }
                             ;
 many_comma_expr             :   many_comma_expr TOK_COMMA expr {
                                     $$ = new node(MANY_COMMA_EXPR, "MANY_COMMA_EXPR", false, NULL);
                                     $2 = new node(DELIMITER, ",", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -823,7 +755,6 @@ comp_if                     :   TOK_IF or_test optional_comp_iter {
                                     $1 = new node(KEYWORD, "if", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
-                                //     $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3);
                             }
                             ;
@@ -836,9 +767,7 @@ testlist_comp               :   test comp_for {
                             |   test many_comma_tok_test optional_comma {
                                     $$ = new node(TESTLIST_COMP, "TESTLIST_COMP", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                //     $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                //     $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3);
                                     check_declare_before_use(SYMBOL_TABLE, $1);
                             }
@@ -874,15 +803,9 @@ return_stmt                 :   TOK_RETURN optional_test {
                                     $$ = new node(RETURN_STMT, "RETURN_STMT", false, NULL);
                                     $1 = new node(KEYWORD, "return", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
                             }
                             |   TOK_RETURN test TOK_COMMA testlist {
-                                //     $$ = new node(RETURN_STMT, "RETURN_STMT", false, NULL);
-                                //     $1 = new node(KEYWORD, "return", true, NULL);
-                                //     $$->add_parent_child_relation($1);
-                                // //     $$->add_parent_child_relation($2);
-                                //     prune_custom_nodes($$, $2);
                                     yyerror("SyntaxError: Attempting to return multiple values from a function");
                             }
                             ;
@@ -905,7 +828,6 @@ many_comma_tok_identifier   :   many_comma_tok_identifier TOK_COMMA TOK_IDENTIFI
                                     $$ = new node(MANY_COMMA_TOK_IDENTIFIER, "MANY_COMMA_TOK_IDENTIFIER", false, NULL);
                                     $2 = new node(DELIMITER, ",", true, NULL);
                                     $3 = new node(IDENTIFIER, yytext, true, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -918,7 +840,6 @@ nonlocal_stmt               :   TOK_NON_LOCAL TOK_IDENTIFIER { $2 = new node(IDE
                                     $1 = new node(KEYWORD, "nonlocal", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
-                                    // $$->add_parent_child_relation($4);
                                     prune_custom_nodes($$, $4);
                             }
                             ;
@@ -948,9 +869,7 @@ if_stmt                     :   TOK_IF { strcpy(compound_stmt_type, "\'if\'"); }
                                     $1->add_parent_child_relation($3);
                                     $1->add_parent_child_relation($4);
                                     $1->add_parent_child_relation($5);
-                                //     $$->add_parent_child_relation($6);
                                     prune_custom_nodes($$, $6);
-                                //     $$->add_parent_child_relation($7);
                                     prune_custom_nodes($$, $7);
                                     check_declare_before_use(SYMBOL_TABLE, $3);
                             }
@@ -963,7 +882,6 @@ many_elif_stmts             :   many_elif_stmts TOK_ELIF { strcpy(compound_stmt_
                                     $$ = new node(MANY_ELIF_STMTS, "MANY_ELIF_STMTS", false, NULL);
                                     $2 = new node(KEYWORD, "elif", true, NULL);
                                     $5 = new node(DELIMITER, ":", true, NULL);
-                                //     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                                     $2->add_parent_child_relation($4);
@@ -1004,7 +922,6 @@ indent_check_compound       :   TOK_INDENT
                             ;
 at_least_one_stmt           :   at_least_one_stmt stmt {
                                     $$ = new node(AT_LEAST_ONE_STMT, "AT_LEAST_ONE_STMT", false, NULL);
-                                    // $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $1);
                                     $$->add_parent_child_relation($2);
                             }
@@ -1021,7 +938,6 @@ while_stmt                  :   TOK_WHILE { strcpy(compound_stmt_type, "\'while\
                                     $1->add_parent_child_relation($3);
                                     $1->add_parent_child_relation($4);
                                     $1->add_parent_child_relation($5);
-                                //     $$->add_parent_child_relation($6);
                                     prune_custom_nodes($$, $6);
                                     check_declare_before_use(SYMBOL_TABLE, $3);
                             }
@@ -1041,7 +957,6 @@ for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'");
                                     node* temp = new node(TEST, "TEST", false, NULL);
                                     $1 = new node(KEYWORD, "for", true, NULL);
                                     $4 = new node(KEYWORD, "in", true, NULL);
-                                    // $6 = new node(COLON, ":", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $1->add_parent_child_relation(temp);
                                     temp->add_parent_child_relation($3);
@@ -1049,7 +964,6 @@ for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'");
                                     temp->add_parent_child_relation($5);
                                     $1->add_parent_child_relation($6);
                                     $1->add_parent_child_relation($7);
-                                //     $$->add_parent_child_relation($8);
                                     prune_custom_nodes($$, $8);
                                 }
                             ;
@@ -1068,7 +982,6 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($4);
                                     $$->add_parent_child_relation($5);
-                                    // prune_custom_nodes($$, $5);
                                     $$->add_parent_child_relation($6);
                                     $$->add_parent_child_relation($7);
                                     $$->add_parent_child_relation($8);
@@ -1084,14 +997,14 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
 //                             }
 //                             |   {   $$ = NULL;  }
 //                             ;
-parameters                  :   TOK_LPAR optional_typedargslist TOK_RPAR {
+parameters                  :   TOK_LPAR  {join_lines_implicitly++;} optional_typedargslist TOK_RPAR {
+                                    join_lines_implicitly--;
                                     $$ = new node(PARAMETERS, "PARAMETERS", false, NULL);
                                     $1 = new node(DELIMITER, "(", true, NULL);
-                                    $3 = new node(DELIMITER, ")", true, NULL);
+                                    $4 = new node(DELIMITER, ")", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($2);
-                                    prune_custom_nodes($$, $2);
-                                    $$->add_parent_child_relation($3);
+                                    prune_custom_nodes($$, $3);
+                                    $$->add_parent_child_relation($4);
                             }
                             ;
 optional_typedargslist      :   typedargslist {
@@ -1102,9 +1015,7 @@ optional_typedargslist      :   typedargslist {
 typedargslist               :   tfpdef optional_equal_test many_comma_tfpdef_optional_equal_test {
                                     $$ = new node(TYPEDARGSLIST, "TYPEDARGSLIST", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                //     $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
-                                //     $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3);
                             }
                             ;
@@ -1120,11 +1031,9 @@ optional_equal_test         :   TOK_EQUAL test {
 many_comma_tfpdef_optional_equal_test   :   many_comma_tfpdef_optional_equal_test TOK_COMMA tfpdef optional_equal_test {
                                             $$ = new node(MANY_COMMA_TFPDEF_OPTIONAL_EQUAL_TEST, "MANY_COMMA_TFPDEF_OPTIONAL_EQUAL_TEST", false, NULL);
                                             $2 = new node(DELIMITER, ",", true, NULL);
-                                        //     $$->add_parent_child_relation($1);
                                             prune_custom_nodes($$, $1);
                                             $$->add_parent_child_relation($2);
                                             $$->add_parent_child_relation($3);
-                                        //     $$->add_parent_child_relation($4);
                                             prune_custom_nodes($$, $4);
                                         }
                                         |   {   $$ = NULL;  }
@@ -1187,7 +1096,6 @@ optional_paren_arglist      :   TOK_LPAR { join_lines_implicitly++; } optional_a
                                     $1 = new node(DELIMITER, "(", true, NULL);
                                     $4 = new node(DELIMITER, ")", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3);
                                     $$->add_parent_child_relation($4);
                             }
