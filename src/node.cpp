@@ -303,7 +303,8 @@ node* sem_lval_check(node* root) {
 }
 
 base_data_type sem_rval_check(symbol_table* st, node* root) {
-    node* tmp = root->children[1]; // this points to the node of ```test``` in the grammar
+    //  root points to the node of ```test``` in the grammar
+    node* tmp = root;
     while(tmp && (!tmp->is_terminal)) {
         if(tmp->children.size() > 1) {
             if(tmp->type != ATOM_EXPR) {
@@ -319,7 +320,7 @@ base_data_type sem_rval_check(symbol_table* st, node* root) {
                 } else if(tmp->children[1]->children[1]->type == STR) {
                     return D_LIST_STRING;
                 } else if(tmp->children[1]->children[1]->type == IDENTIFIER) {
-                    // we can have a list of objects of user defined classes
+                    //TODO: verify if correct (we can have a list of objects of user defined classes)
                     st_entry* entry = st->get_entry(tmp->children[1]->children[1]->name);
                     if(entry && entry->b_type == D_CLASS) {
                         return D_LIST_CLASS;
@@ -351,10 +352,12 @@ base_data_type sem_rval_check(symbol_table* st, node* root) {
         } else {
             yyerror((tmp->name + " is not defined").c_str());
         }
+    } else if(tmp->type == KEYWORD && tmp->name == "None") {
+        return D_VOID;
     } else {
         yyerror("Not a valid rvalue");
     }
-    return D_VOID;
+    return D_VOID; // gcc shutup!
 }
 
 void check_declare_before_use(symbol_table* st, node* root) {
@@ -396,5 +399,45 @@ void node::create_block_st(const char* block_name) {
     }
     ST_STACK.pop();
     OFFSET_STACK.pop();
+    return;
+}
+
+void node::create_func_st(string func_name) {
+    this->st = SYMBOL_TABLE;
+    // for functions, we create the st_entry before executing the body so that we can add arguments
+    this->st_entry = new symbol_table_entry(this->name, D_FUNCTION, OFFSET, this->line_no, SYMBOL_TABLE->scope);
+    // create a symbol table for the function scope
+        // first store the current symbol table and offset
+    ST_STACK.push(SYMBOL_TABLE);
+    OFFSET_STACK.push(OFFSET);
+        // create a new symbol table
+    SYMBOL_TABLE = new symbol_table(FUNCTION, func_name, ST_STACK.top());
+    OFFSET = 0;
+    return;
+}
+
+void node::exit_from_func(node* args) {
+    cout << "exit from function called for function " << this->name << endl;
+    // if TFPDEF has a single child, it can only be self and the current environment must be a class environment
+    // in all other cases, TFPDEF has > 1 children. The type is specified by the descendent of TFPDEP->children[2] and the name is specified by TFPDEF->children[0]
+    this->st_entry->set_size(OFFSET);
+    this->st_entry->child_symbol_table = SYMBOL_TABLE;
+    //TODO: handle that non-default arguments appear before default args
+    bool found_default_arg = false; // to check that typed (non-default arguments) are before typed (default) arguments
+    // non-default arguments are arguments that do not have optional_equal_test
+    cout << "num_args = " << this->st_entry->f_attr.num_args << endl;
+    for(int i = 0; i < this->st_entry->f_attr.num_args; i++) {
+        symbol_table_entry* arg = SYMBOL_TABLE->entries[i];
+        // cout << "obtained the argument entry" << endl;
+        this->st_entry->f_attr.args.push_back(arg->b_type);
+    }
+
+    SYMBOL_TABLE = ST_STACK.top();
+    OFFSET = OFFSET_STACK.top();
+    SYMBOL_TABLE->add_entry(this->st_entry);
+    OFFSET += this->st_entry->size;
+    ST_STACK.pop();
+    OFFSET_STACK.pop();
+    cout << "Completed the function exit_from_func" << endl;
     return;
 }

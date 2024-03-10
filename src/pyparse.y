@@ -24,6 +24,7 @@
     extern stack<int> OFFSET_STACK;
     extern int OFFSET;
     extern int block_counter;
+    extern int num_args;
 
     extern char* yytext;
 
@@ -94,8 +95,8 @@ file_input                  :   multiple_lines {
                                     if(verbose_flag) {
                                         cout << "AST cleaning done!" << endl;
                                     }
-                                    AST_ROOT->delete_delimiters();
-                                    AST_ROOT->delete_single_child_nodes();
+                                    // AST_ROOT->delete_delimiters();
+                                    // AST_ROOT->delete_single_child_nodes();
                             }
                             ;
 multiple_lines              :   multiple_lines single_line {
@@ -161,7 +162,7 @@ expr_stmt                   :   test annassign {
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
                                     node* terminal = sem_lval_check($1);
-                                    base_data_type b_type = sem_rval_check(SYMBOL_TABLE, $2);
+                                    base_data_type b_type = sem_rval_check(SYMBOL_TABLE, $2->children[1]);
                                     st_entry* new_entry = new st_entry(terminal->name, b_type, OFFSET, terminal->line_no, SYMBOL_TABLE->scope);
                                     OFFSET += new_entry->size;
                                     SYMBOL_TABLE->add_entry(new_entry);
@@ -1013,24 +1014,32 @@ for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'");
                             ;
 
 funcdef                     :   TOK_DEF TOK_IDENTIFIER {
-                                    $2 = new node(IDENTIFIER, yytext, true, NULL);
-                                    strcpy(compound_stmt_type, "\'function definition\'"); 
-                                }
-                                parameters TOK_RARROW test TOK_COLON suite {
-                                    $$ = new node(FUNCDEF, "FUNCDEF", false, NULL);
                                     $1 = new node(KEYWORD, "def", true, NULL);
-                                    $5 = new node(RARROW, "->", true, NULL);
-                                    $7 = new node(DELIMITER, ":", true, NULL);
-                                    check_declare_before_use(SYMBOL_TABLE, $6); // return type must be defined before the function
+                                    $2 = new node(IDENTIFIER, yytext, true, NULL);
+                                    strcpy(compound_stmt_type, "\'function definition\'");
+                                    $2->create_func_st($2->name);
+                                }
+                                parameters {
+                                    $2->st_entry->set_num_args(num_args);
+                                    num_args = 0;
+                                } TOK_RARROW test {
+                                    $2->st_entry->set_return_type(sem_rval_check(SYMBOL_TABLE, $7));
+                                } TOK_COLON suite {
+                                    $$ = new node(FUNCDEF, "FUNCDEF", false, NULL);
+                                    $6 = new node(RARROW, "->", true, NULL);
+                                    $9 = new node(DELIMITER, ":", true, NULL);
+                                    $2->exit_from_func($4); // sets the argument types of the function and restores scope
+
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($4);
-                                    $$->add_parent_child_relation($5);
                                     $$->add_parent_child_relation($6);
                                     $$->add_parent_child_relation($7);
-                                    $$->add_parent_child_relation($8);
+                                    $$->add_parent_child_relation($9);
+                                    $$->add_parent_child_relation($10);
                             }
                             ;
+                            // FIXME: based on piazza clarification of function return type, ensure that either TOK_RARROW is present or not
                             // return type is compulsory so no longer ```optional```_tok_rarrow_test
 // optional_tok_rarrow_test    :   TOK_RARROW test {
 //                                     $$ = new node(OPTIONAL_TOK_RARROW_TEST, "OPTIONAL_TOK_RARROW_TEST", false, NULL);
@@ -1044,11 +1053,7 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
 parameters                  :   TOK_LPAR  {join_lines_implicitly++;} optional_typedargslist TOK_RPAR {
                                     join_lines_implicitly--;
                                     $$ = new node(PARAMETERS, "PARAMETERS", false, NULL);
-                                    $1 = new node(DELIMITER, "(", true, NULL);
-                                    $4 = new node(DELIMITER, ")", true, NULL);
-                                    $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $3);
-                                    $$->add_parent_child_relation($4);
                             }
                             ;
 optional_typedargslist      :   typedargslist {
@@ -1074,9 +1079,7 @@ optional_equal_test         :   TOK_EQUAL test {
                             ;
 many_comma_tfpdef_optional_equal_test   :   many_comma_tfpdef_optional_equal_test TOK_COMMA tfpdef optional_equal_test {
                                             $$ = new node(MANY_COMMA_TFPDEF_OPTIONAL_EQUAL_TEST, "MANY_COMMA_TFPDEF_OPTIONAL_EQUAL_TEST", false, NULL);
-                                            $2 = new node(DELIMITER, ",", true, NULL);
                                             prune_custom_nodes($$, $1);
-                                            $$->add_parent_child_relation($2);
                                             $$->add_parent_child_relation($3);
                                             prune_custom_nodes($$, $4);
                                         }
@@ -1084,6 +1087,16 @@ many_comma_tfpdef_optional_equal_test   :   many_comma_tfpdef_optional_equal_tes
                                         ;
 tfpdef                      :   TOK_IDENTIFIER { $1 = new node(IDENTIFIER, yytext, true, NULL); } optional_tok_colon_test {
                                     // for now, we can keep it as optional_tok_colon_test since ```self``` will not have a type specification
+                                    // TODO: handle all args in num_args.
+                                    if($3 != NULL) {
+                                        num_args++;
+                                        base_data_type b_type = sem_rval_check(SYMBOL_TABLE, $3->children[1]); // passing the node of ```test``` to rval_check
+                                        st_entry* new_entry = new st_entry($1->name, b_type, OFFSET, $1->line_no, SYMBOL_TABLE->scope);
+                                        OFFSET += new_entry->size;
+                                        SYMBOL_TABLE->add_entry(new_entry);
+                                        $1->st = SYMBOL_TABLE;
+                                        $1->st_entry = new_entry;
+                                    }
                                     $$ = new node(TFPDEF, "TFPDEF", false, NULL);
                                     $$->add_parent_child_relation($1);
                                     if($3 == NULL && $1->name != "self") {
@@ -1107,7 +1120,8 @@ optional_tok_colon_test     :   TOK_COLON test {
 classdef                    :   TOK_CLASS TOK_IDENTIFIER {
                                     $2 = new node(IDENTIFIER, yytext, true, NULL);
                                     strcpy(compound_stmt_type, "\'class definition\'");
-                                    // st_entry* new_entry = new st_entry(yytext, D_CLASS, SYMBOL_TABLE->offset, yylineno, SYMBOL_TABLE->scope);
+                                    st_entry* new_entry = new st_entry(yytext, D_CLASS, SYMBOL_TABLE->offset, yylineno, SYMBOL_TABLE->scope);
+                                    SYMBOL_TABLE->add_entry(new_entry);
                                     // $2->st_entry = new_entry;
                                     // $2->st = SYMBOL_TABLE;
                                     // ST_STACK.push(SYMBOL_TABLE);

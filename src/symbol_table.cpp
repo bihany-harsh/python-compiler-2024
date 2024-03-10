@@ -18,6 +18,7 @@ st_entry* dummy_entry;
 stack<int> OFFSET_STACK;
 int OFFSET = 0;
 int block_counter = 0; // keeps a track of how many block scopes have been created (for giving unique names to st_entries of each block)
+int num_args = 0; // for function parameters, is updated in pyparse.y
 
 symbol_table::symbol_table(symbol_table_type st_type, string st_name, symbol_table* parent) {
     this->st_type = st_type;
@@ -31,49 +32,45 @@ symbol_table::symbol_table(symbol_table_type st_type, string st_name, symbol_tab
     }
 }
 
+// symbol_table::~symbol_table() {
+//     for(st_entry* entry: this->entries) {
+//         if(entry->child_symbol_table) {
+//             delete entry->child_symbol_table;
+//         }
+//         delete entry;
+//     }
+// }
+
 void symbol_table::add_entry(st_entry* entry) {
-    // TODO: decide the datatype for the function, class etc.
     // to add a new entry in the given symbol table
-    // ERROR CASE: already present
+    // ERROR CASE: entry already present
 
     // TODO: proper error messages
+
     for(st_entry* present_entry: this->entries) {
         if (present_entry->name == entry->name) {
-            snprintf(sym_error_string, sizeof(sym_error_string), "Reconsider identifier name. Already declared on line no.: %d", present_entry->decl_line);
-            yyerror(sym_error_string);
+            if(entry->b_type == D_FUNCTION && present_entry->b_type == D_FUNCTION) {
+                // any other type of clash (var with class/ func with class/ class with class) is not allowed
+                // If a function, check only arguments, needn't check return type for static polymorphism
+                if(entry->f_attr.num_args == present_entry->f_attr.num_args) {
+                    bool args_diff = false;
+                    for(int i = 0; i < present_entry->f_attr.num_args; i++) {
+                        if(present_entry->f_attr.args[i] != entry->f_attr.args[i]) {
+                            args_diff = true;
+                            break;
+                        }
+                    }
+                    if(!args_diff) {
+                        yyerror(("Function with same prototype already declared on line no.: " + to_string(present_entry->decl_line)).c_str());
+                    }
+                }
+            }
+            else {
+                snprintf(sym_error_string, sizeof(sym_error_string), "Reconsider identifier name. Already declared on line no.: %d", present_entry->decl_line);
+                yyerror(sym_error_string);
+            }
         }
     }
-    // if (this->st_type == FUNCTION) {
-    //     // check for function parameters
-    //     for(st_entry* param: this->xattr->func_attr.params) {
-    //         if (param->name == entry->name) {
-    //             yyerror("Identifier already a function parameter.");
-    //         }
-    //     }
-    // }
-    // if (this->st_type == CLASS) {
-    //     for (st_entry* member: this->xattr->class_attr.members) {
-    //         if(member->name == entry->name) {
-    //             //NOTE: to check for STATIC POLYMORPHISM
-    //             if (member->is_function && entry->is_function) {
-    //                 bool flag = false;
-    //                 for(int i = 0; i < min(member->child_symbol_table->xattr->func_attr.params.size(), entry->child_symbol_table->xattr->func_attr.params.size()); i++) {
-    //                     st_entry* p1 = member->child_symbol_table->xattr->func_attr.params[i];
-    //                     st_entry* p2 = entry->child_symbol_table->xattr->func_attr.params[i];
-    //                     if (p1->b_type != p2->b_type) {
-    //                         flag = true;
-    //                         break;
-    //                     }
-    //                 }
-    //                 if (!flag) {
-    //                     yyerror("Function definition already exists.");
-    //                 }
-    //             } else {
-    //                 yyerror("Class member already exists!");
-    //             }
-    //         }
-    //     }
-    // }
 
     // ELSE push_back into the st_entry list
     this->entries.push_back(entry);
@@ -95,9 +92,16 @@ int symbol_table::delete_entry(string name) {
 
 void symbol_table::print_st() {
     for(st_entry* entry: this->entries) {
-        cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", offset = " << entry->offset << endl;
+        if(entry->b_type == D_FUNCTION) {
+            cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", num_args = " << entry->f_attr.num_args << ", return_type = " << entry->f_attr.return_type << ", offset = " << entry->offset << endl;
+        }
+        else {
+            cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", offset = " << entry->offset << endl;
+        }
         if(entry->child_symbol_table) {
+            cout << "Entering the child symbol table" << endl;
             entry->child_symbol_table->print_st();
+            cout << "Returned from the child symbol table" << endl;
         }
     }
 }
@@ -155,4 +159,20 @@ symbol_table_entry::symbol_table_entry(string name, base_data_type b_type, int o
 
 void symbol_table_entry::set_size(int size) {
     this->size = size;
+}
+
+void symbol_table_entry::set_num_args(int num_args) {
+    if(this->b_type != D_FUNCTION) {
+        cout << "Erroneous call to the function set_arg_types" << endl;
+        exit(1);
+    }
+    this->f_attr.num_args = num_args;
+}
+
+void symbol_table_entry::set_return_type(base_data_type return_type) {
+    if(this->b_type != D_FUNCTION) {
+        cout << "Erroneous call to the function set_return_type" << endl;
+        exit(1);
+    }
+    this->f_attr.return_type = return_type;
 }

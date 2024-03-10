@@ -240,7 +240,9 @@ typedef struct node {
     // symbol table handling
     void setup_new_st_env();
     void create_block_st(const char* block_name);   // to create symbol_table for a block scope
-                                                    // only called when a block has a declaration within it 
+                                                    // only called when a block has a declaration within it
+    void create_func_st(string func_name);     // to create symbol_table for a function scope
+    void exit_from_func(node* args); // sets the arguments and return type. Also, restores SYMBOL_TABLE and OFFSET
 } node;
 
 void prune_custom_nodes(node* parent, node* child);

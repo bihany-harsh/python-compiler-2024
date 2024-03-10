@@ -38,18 +38,14 @@ struct symbol_table_entry;
 // } list_attr;
 
 typedef struct func_attributes {
-    vector<struct symbol_table_entry*> params;
-    base_data_type return_type;
+    int num_args = 0; // stores the number of arguments
+    vector<base_data_type> args = {}; // stores the datatypes of the arguments, in order
+    base_data_type return_type = D_VOID; // stores the return type of the function
 } func_attr;
 
 typedef struct class_attributes {
     vector<struct symbol_table_entry*> members; // members as well as methods should work
 } class_attr;
-
-// union extended_attr {
-//     func_attr func_attr;
-//     class_attr class_attr;
-// };
 
 const map<base_data_type, int> base_data_type_size = {
     {D_INT, 4},
@@ -76,22 +72,30 @@ typedef struct symbol_table_entry {
     int decl_line = 0;
     int scope = 0;
     // NOTE: the following fields to be set explicitly by the parser.
-    bool is_list = false;
-    bool is_function = false;
-    bool is_class = false;
-    // list_attr* list_attr = nullptr;
+    // These are not needed since LIST, FUNCTION, CLASS have been added to types of symbol_table_entries
+    // bool is_list = false;
+    // bool is_function = false;
+    // bool is_class = false;
+
+    func_attr f_attr;
+    class_attr c_attr;
 
     symbol_table* child_symbol_table = nullptr;
 
+    // basic routines of a symbol table entry
     symbol_table_entry(string name, base_data_type b_type, int offset, int decl_line, int scope);
-    void set_size(int size);
-    // symbol_table_entry(string name, base_data_type b_type, int offset, int decl_line, int scope, bool is_list, bool is_function, bool is_class, extended_attr* xattr);
     // ~symbol_table_entry();
+    void set_size(int size);
+
+
+    // routines for symbol tables entries of a function
+    void set_num_args(int num_args);
+    void set_return_type(base_data_type return_type);
 } st_entry;
 
 typedef struct symbol_table {
-    symbol_table_type st_type;
     string st_name = "";
+    symbol_table_type st_type;
     vector<st_entry*> entries;
     symbol_table* parent = nullptr;
     int scope = 0;
@@ -100,12 +104,15 @@ typedef struct symbol_table {
     // additional attributes that might be required
     // extended_attr* xattr = nullptr;
 
+    // basic routines for a symbol table
     symbol_table(symbol_table_type st_type, string st_name, symbol_table* parent);
+    // ~symbol_table();
     void add_entry(st_entry* entry);
-    int delete_entry(string name);
-
     st_entry* get_entry(string name);
-    void set_scope(); // adding a new scope
+    int delete_entry(string name);
     void print_st();
+
+
+    void set_scope(); // set the scope of the symbol table
 } symbol_table;
 #endif
