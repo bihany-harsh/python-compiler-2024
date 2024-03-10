@@ -14,8 +14,10 @@ typedef enum base_data_types {
     D_LIST_FLOAT,
     D_LIST_STRING,
     D_LIST_BOOL,
+    D_LIST_CLASS,
     D_CLASS,
     D_FUNCTION,
+    D_BLOCK,
     D_VOID,
 } base_data_type;
 
@@ -59,8 +61,10 @@ const map<base_data_type, int> base_data_type_size = {
     {D_LIST_FLOAT, 8},
     {D_LIST_STRING, 8},
     {D_LIST_BOOL, 8},
+    {D_LIST_CLASS, 8},
     {D_CLASS, 8},
     {D_FUNCTION, 8},
+    {D_BLOCK, 8},
     {D_VOID, 0}
 };
 

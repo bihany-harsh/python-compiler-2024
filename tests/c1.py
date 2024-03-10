@@ -5,15 +5,24 @@ b = 2.5
 c: str = "abc"
 d : list[int] = [b, c]
 a : int = 1
+e : str
 if a:
-  print(a)
+  e : bool
+  print(e)
 elif b:
   print(b)
 elif c:
   print(c)
 else:
+  f : int
   print(d)
 print(c)
+if a:
+  print("I have a string")
+for a in b:
+  print(a)
+  x : int
+  e = a + 1
 # myF(a)
 b = c = d
 b = c

@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <algorithm>
+#include <stack>
 #include "include/node.hpp"
 using namespace std;
 
@@ -13,6 +14,13 @@ node* AST_ROOT = NULL;
 extern int yylineno;
 extern ostringstream dot_stream;
 extern void yyerror(const char*);
+
+extern symbol_table* SYMBOL_TABLE;
+extern stack<symbol_table*> ST_STACK;
+
+extern stack<int> OFFSET_STACK;
+extern int OFFSET;
+extern int block_counter;
 
 node::node(node_type type, string name, bool is_terminal, node* parent) {
     this->type = type;
@@ -310,6 +318,14 @@ base_data_type sem_rval_check(symbol_table* st, node* root) {
                     return D_LIST_BOOL;
                 } else if(tmp->children[1]->children[1]->type == STR) {
                     return D_LIST_STRING;
+                } else if(tmp->children[1]->children[1]->type == IDENTIFIER) {
+                    // we can have a list of objects of user defined classes
+                    st_entry* entry = st->get_entry(tmp->children[1]->children[1]->name);
+                    if(entry && entry->b_type == D_CLASS) {
+                        return D_LIST_CLASS;
+                    } else {
+                        yyerror("Not a valid rvalue");
+                    }
                 } else {
                     yyerror("Not a valid rvalue");
                 }
@@ -352,4 +368,33 @@ void check_declare_before_use(symbol_table* st, node* root) {
     for(int i = 0; i < root->children.size(); i++) {
         check_declare_before_use(st, root->children[i]);
     }
+}
+
+void node::setup_new_st_env() {
+    this->st = SYMBOL_TABLE; // this entry belongs to the parent symbol table
+    ST_STACK.push(SYMBOL_TABLE);
+    SYMBOL_TABLE = new symbol_table(BLOCK, ("IF_BLOCK" + to_string(++block_counter)).c_str(), ST_STACK.top());
+    OFFSET_STACK.push(OFFSET);
+    OFFSET = 0;
+    return;
+}
+
+void node::create_block_st(const char* block_name) {
+    if(OFFSET > 0) {
+        this->st_entry = new symbol_table_entry((block_name + to_string(block_counter)).c_str(), D_BLOCK, OFFSET_STACK.top(), this->line_no, SYMBOL_TABLE->parent->scope);
+        this->st_entry->set_size(OFFSET);
+        this->st_entry->child_symbol_table = SYMBOL_TABLE;
+        SYMBOL_TABLE = ST_STACK.top();
+        OFFSET = OFFSET_STACK.top();
+        SYMBOL_TABLE->add_entry(this->st_entry);
+        OFFSET += this->st_entry->size;
+    }
+    else {
+        delete SYMBOL_TABLE; // preventing a memory leak
+        SYMBOL_TABLE = ST_STACK.top();
+        OFFSET = OFFSET_STACK.top();
+    }
+    ST_STACK.pop();
+    OFFSET_STACK.pop();
+    return;
 }

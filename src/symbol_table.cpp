@@ -17,11 +17,18 @@ st_entry* dummy_entry;
 
 stack<int> OFFSET_STACK;
 int OFFSET = 0;
+int block_counter = 0; // keeps a track of how many block scopes have been created (for giving unique names to st_entries of each block)
 
 symbol_table::symbol_table(symbol_table_type st_type, string st_name, symbol_table* parent) {
     this->st_type = st_type;
     this->st_name = st_name;
     this->parent = parent;
+    if(parent) {
+        this->scope = parent->scope + 1;
+    }
+    else {
+        this->scope = 0; // when creating the first table
+    }
 }
 
 void symbol_table::add_entry(st_entry* entry) {
@@ -89,6 +96,9 @@ int symbol_table::delete_entry(string name) {
 void symbol_table::print_st() {
     for(st_entry* entry: this->entries) {
         cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", offset = " << entry->offset << endl;
+        if(entry->child_symbol_table) {
+            entry->child_symbol_table->print_st();
+        }
     }
 }
 

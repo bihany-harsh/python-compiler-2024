@@ -237,7 +237,10 @@ typedef struct node {
     // to parse tree
     void generate_dot_script();
 
-    //
+    // symbol table handling
+    void setup_new_st_env();
+    void create_block_st(const char* block_name);   // to create symbol_table for a block scope
+                                                    // only called when a block has a declaration within it 
 } node;
 
 void prune_custom_nodes(node* parent, node* child);

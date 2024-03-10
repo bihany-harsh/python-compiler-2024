@@ -21,6 +21,8 @@ extern node* AST_ROOT;
 extern symbol_table* SYMBOL_TABLE;
 extern stack<symbol_table*> ST_STACK;
 extern st_entry* dummy_entry;
+extern stack<int> OFFSET_STACK;
+extern int OFFSET;
 // void make_root_node() {
 //     AST_ROOT = new node(FILE_INPUT, "root", false, NULL);
 // }
@@ -52,16 +54,15 @@ int main(int argc, const char** argv) {
         // verbose has been passed
         verbose_flag = true;
     }
-
     INDENT_STACK.push(0);
-    if(verbose_flag) {
-        cout << "Calling the parser routine..." << endl;
-    }
+    OFFSET_STACK.push(-1); // -1 should always be at the bottom of the stack
+    ST_STACK.push(nullptr); // nullptr will denote bottom of the stack
     SYMBOL_TABLE = new symbol_table(GLOBAL, "GLOBAL", NULL);
     dummy_entry = new st_entry("print", D_FUNCTION, -8, -1, SYMBOL_TABLE->scope);
     SYMBOL_TABLE->add_entry(dummy_entry);
-    // dummy_entry = new st_entry("self", )
-    ST_STACK.push(nullptr); // nullptr will denote bottom of the stack
+    if(verbose_flag) {
+        cout << "Calling the parser routine..." << endl;
+    }
     yyparse();
     cout << "Symbol table created" << endl;
     SYMBOL_TABLE->print_st();

@@ -21,6 +21,10 @@
     extern symbol_table* SYMBOL_TABLE;
     extern stack<symbol_table*> ST_STACK;
 
+    extern stack<int> OFFSET_STACK;
+    extern int OFFSET;
+    extern int block_counter;
+
     extern char* yytext;
 
     int yylex(void);
@@ -84,6 +88,7 @@
 file_input                  :   multiple_lines {
                                     $$ = $1;
                                     $$->name = "FILE_INPUT";
+                                    $$->st = SYMBOL_TABLE;
                                     AST_ROOT = $$;
                                     AST_ROOT->clean_tree();
                                     if(verbose_flag) {
@@ -157,8 +162,11 @@ expr_stmt                   :   test annassign {
                                     $$->add_parent_child_relation($2);
                                     node* terminal = sem_lval_check($1);
                                     base_data_type b_type = sem_rval_check(SYMBOL_TABLE, $2);
-                                    st_entry* new_entry = new st_entry(terminal->name, b_type, SYMBOL_TABLE->offset, terminal->line_no, SYMBOL_TABLE->scope);
+                                    st_entry* new_entry = new st_entry(terminal->name, b_type, OFFSET, terminal->line_no, SYMBOL_TABLE->scope);
+                                    OFFSET += new_entry->size;
                                     SYMBOL_TABLE->add_entry(new_entry);
+                                    terminal->st = SYMBOL_TABLE;
+                                    terminal->st_entry = new_entry;
                             }
                             |   test augassign testlist {
                                     $$ = new node(EXPR_STMT, "EXPR_STMT", false, NULL);
@@ -861,46 +869,69 @@ compound_stmt               :   if_stmt {
                             }
                             ;
 
-if_stmt                     :   TOK_IF { strcpy(compound_stmt_type, "\'if\'"); } test TOK_COLON suite many_elif_stmts optional_else_stmt {
+if_stmt                     :   TOK_IF { strcpy(compound_stmt_type, "\'if\'"); } test TOK_COLON {
+                                        // change the scope. This is a new block
+                                        $1 = new node(KEYWORD, "if", true, NULL);
+                                        $4 = new node(DELIMITER, ":", true, NULL);
+                                        $1->add_parent_child_relation($3);
+                                        $1->add_parent_child_relation($4);
+                                        check_declare_before_use(SYMBOL_TABLE, $3);
+                                        // change the scope. This is a new block
+                                        $1->setup_new_st_env();
+                                    } suite
+                                    {
+                                        // change the scope back to the parent block
+                                        $1->create_block_st("IF_BLOCK");
+                                        $1->add_parent_child_relation($6);
+                                    }
+                                    many_elif_stmts optional_else_stmt {
                                     $$ = new node(IF_STMT, "IF_STMT", false, NULL);
-                                    $1 = new node(KEYWORD, "if", true, NULL);
-                                    $4 = new node(DELIMITER, ":", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                    $1->add_parent_child_relation($3);
-                                    $1->add_parent_child_relation($4);
-                                    $1->add_parent_child_relation($5);
-                                    prune_custom_nodes($$, $6);
-                                    prune_custom_nodes($$, $7);
-                                    check_declare_before_use(SYMBOL_TABLE, $3);
+                                    prune_custom_nodes($$, $8);
+                                    prune_custom_nodes($$, $9);
                             }
                             |   TOK_IF TOK_COLON {
                                     snprintf(error_string, sizeof(error_string), "SyntaxError: invalid syntax");
                                     yyerror(error_string);
                             }
                             ;
-many_elif_stmts             :   many_elif_stmts TOK_ELIF { strcpy(compound_stmt_type, "\'elif\'"); } test TOK_COLON suite {
-                                    $$ = new node(MANY_ELIF_STMTS, "MANY_ELIF_STMTS", false, NULL);
+many_elif_stmts             :   many_elif_stmts TOK_ELIF { strcpy(compound_stmt_type, "\'elif\'"); } test TOK_COLON {
                                     $2 = new node(KEYWORD, "elif", true, NULL);
                                     $5 = new node(DELIMITER, ":", true, NULL);
-                                    prune_custom_nodes($$, $1);
-                                    $$->add_parent_child_relation($2);
                                     $2->add_parent_child_relation($4);
                                     $2->add_parent_child_relation($5);
-                                    $2->add_parent_child_relation($6);
                                     check_declare_before_use(SYMBOL_TABLE, $4);
+                                    // change the scope. This is a new block
+                                    $2->setup_new_st_env();
+                                } suite {
+                                    // change the scope back to the parent block
+                                    $2->create_block_st("ELIF_BLOCK");
+
+                                    $$ = new node(MANY_ELIF_STMTS, "MANY_ELIF_STMTS", false, NULL);
+                                    prune_custom_nodes($$, $1);
+                                    $$->add_parent_child_relation($2);
+                                    $2->add_parent_child_relation($7);
                             }
                             |   {   $$ = NULL;  }
 optional_else_stmt          :   else_stmt {
                                     $$ = $1;
                             }
                             |   {   $$ = NULL;  }
-else_stmt                   :   TOK_ELSE { strcpy(compound_stmt_type, "\'else\'"); } TOK_COLON suite {
-                                    $$ = new node(ELSE_STMT, "ELSE_STMT", false, NULL);
-                                    $1 = new node(KEYWORD, "else", true, NULL);
-                                    $3 = new node(DELIMITER, ":", true, NULL);
-                                    $$->add_parent_child_relation($1);
-                                    $1->add_parent_child_relation($3);
-                                    $1->add_parent_child_relation($4);
+else_stmt                   :   TOK_ELSE { strcpy(compound_stmt_type, "\'else\'"); } TOK_COLON {
+                                        $1 = new node(KEYWORD, "else", true, NULL);
+                                        $3 = new node(DELIMITER, ":", true, NULL);
+                                        $1->add_parent_child_relation($3);
+
+                                        // create a new scope
+                                        $1->setup_new_st_env();
+                                    }
+                                    suite {
+                                        // restore the scope
+                                        $1->create_block_st("ELSE_BLOCK");
+
+                                        $$ = new node(ELSE_STMT, "ELSE_STMT", false, NULL);
+                                        $$->add_parent_child_relation($1);
+                                        $1->add_parent_child_relation($5);
                             }
                             ;
 suite                       :   simple_stmt {
@@ -930,45 +961,58 @@ at_least_one_stmt           :   at_least_one_stmt stmt {
                                     $$->add_parent_child_relation($1);
                             }
                             ;
-while_stmt                  :   TOK_WHILE { strcpy(compound_stmt_type, "\'while\'"); } test TOK_COLON suite optional_else_suite {
+while_stmt                  :   TOK_WHILE { strcpy(compound_stmt_type, "\'while\'"); } test TOK_COLON {
+                                        check_declare_before_use(SYMBOL_TABLE, $3);
+                                        $1 = new node(KEYWORD, "while", true, NULL);
+                                        $4 = new node(DELIMITER, ":", true, NULL);
+                                        $1->add_parent_child_relation($3);
+                                        $1->add_parent_child_relation($4);
+                                        $1->setup_new_st_env();
+                                    } suite {
+                                        // change the scope back to the parent block
+                                        $1->create_block_st("WHILE_BLOCK");
+                                        $1->add_parent_child_relation($6);
+                                    } optional_else_suite {
                                     $$ = new node(WHILE_STMT, "WHILE_STMT", false, NULL);
-                                    $1 = new node(KEYWORD, "while", true, NULL);
-                                    $4 = new node(DELIMITER, ":", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                    $1->add_parent_child_relation($3);
-                                    $1->add_parent_child_relation($4);
-                                    $1->add_parent_child_relation($5);
-                                    prune_custom_nodes($$, $6);
-                                    check_declare_before_use(SYMBOL_TABLE, $3);
+                                    prune_custom_nodes($$, $8);
                             }
                             ;
-optional_else_suite         :   TOK_ELSE TOK_COLON suite {
-                                    $$ = new node(OPTIONAL_ELSE_SUITE, "OPTIONAL_ELSE_SUITE", false, NULL);
+optional_else_suite         :   TOK_ELSE TOK_COLON {
                                     $1 = new node(KEYWORD, "else", true, NULL);
                                     $2 = new node(DELIMITER, ":", true, NULL);
-                                    $$->add_parent_child_relation($1);
                                     $1->add_parent_child_relation($2);
-                                    $1->add_parent_child_relation($3);
+                                    
+                                    // change the scope. This is a new block
+                                    $1->setup_new_st_env();
+                                } suite {
+                                    // change the scope back to the parent block
+                                    $1->create_block_st("ELSE_BLOCK");
+                                    $1->add_parent_child_relation($4);
                             }
                             |   {   $$ = NULL;  }
                             ;
-for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'"); } exprlist TOK_IN testlist TOK_COLON suite optional_else_suite {
-                                    $$ = new node(FOR_STMT, "FOR_STMT", false, NULL);
-                                    node* temp = new node(TEST, "TEST", false, NULL);
+for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'"); } exprlist TOK_IN testlist TOK_COLON {
                                     $1 = new node(KEYWORD, "for", true, NULL);
+                                    node* temp = new node(TEST, "TEST", false, NULL);
                                     $4 = new node(KEYWORD, "in", true, NULL);
-                                    $$->add_parent_child_relation($1);
                                     $1->add_parent_child_relation(temp);
                                     temp->add_parent_child_relation($3);
                                     temp->add_parent_child_relation($4);
                                     temp->add_parent_child_relation($5);
-                                    $1->add_parent_child_relation($6);
-                                    $1->add_parent_child_relation($7);
-                                    prune_custom_nodes($$, $8);
+                                    $1->setup_new_st_env();
+                                } suite {
+                                    // change the scope back to the parent block
+                                    $1->create_block_st("FOR_BLOCK");
+                                    $1->add_parent_child_relation($8);
+                                } optional_else_suite {
+                                    $$ = new node(FOR_STMT, "FOR_STMT", false, NULL);
+                                    $$->add_parent_child_relation($1);
+                                    prune_custom_nodes($$, $10);
                                 }
                             ;
 
-funcdef                     :   TOK_DEF TOK_IDENTIFIER { 
+funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                     $2 = new node(IDENTIFIER, yytext, true, NULL);
                                     strcpy(compound_stmt_type, "\'function definition\'"); 
                                 }
@@ -1042,7 +1086,6 @@ tfpdef                      :   TOK_IDENTIFIER { $1 = new node(IDENTIFIER, yytex
                                     // for now, we can keep it as optional_tok_colon_test since ```self``` will not have a type specification
                                     $$ = new node(TFPDEF, "TFPDEF", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                //     $$->add_parent_child_relation($3);
                                     if($3 == NULL && $1->name != "self") {
                                         //TODO: add condition that if the current environment is class then self without type is fine
                                         //TODO: if the current environment is outside a class then self must have a type
