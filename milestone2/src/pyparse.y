@@ -56,6 +56,7 @@
 %token<tree_node> TOK_IN TOK_IS
 %token<tree_node> TOK_PASS
 %token<tree_node> TOK_FOR TOK_WHILE
+%token<tree_node> TOK_PRINT TOK_RANGE TOK_SELF
 
 %token<tree_node> TOK_INT TOK_FLOAT TOK_BOOL TOK_STR TOK_LIST
 
@@ -576,6 +577,15 @@ atom                        :   TOK_LPAR testlist_comp TOK_RPAR {
                             }
                             |   TOK_IDENTIFIER {
                                     $$ = new node(IDENTIFIER, yytext, true, NULL);
+                            }
+                            |   TOK_PRINT {
+                                    $$ = new node(KEYWORD, "print", true, NULL);
+                            }
+                            |   TOK_RANGE {
+                                    $$ = new node(KEYWORD, "range", true, NULL);
+                            }
+                            |   TOK_SELF {
+                                    $$ = new node(KEYWORD, "self", true, NULL);
                             }
                             |   data_type {
                                     $$ = $1;

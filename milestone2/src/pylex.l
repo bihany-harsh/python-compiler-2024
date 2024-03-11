@@ -52,7 +52,10 @@ NON_LOCAL               "nonlocal"
 NOT                     "not"
 OR                      "or"
 PASS                    "pass"
+PRINT                   "print"
+RANGE                   "range"
 RETURN                  "return"
+SELF                    "self"
 WHILE                   "while"
 
     // datatype
@@ -226,6 +229,9 @@ ERROR_CHAR              [$?`]
 {PASS}                  { return TOK_PASS; }
 {WHILE}                 { return TOK_WHILE; }
 {RETURN}                { return TOK_RETURN; }
+{SELF}                  { return TOK_SELF; }
+{PRINT}                 { return TOK_PRINT; }
+{RANGE}                 { return TOK_RANGE; }
 
 {INT}                   { return TOK_INT; }
 {FLOAT}                 { return TOK_FLOAT; }
