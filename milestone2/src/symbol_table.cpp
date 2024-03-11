@@ -66,8 +66,7 @@ void symbol_table::add_entry(st_entry* entry) {
                 }
             }
             else {
-                snprintf(sym_error_string, sizeof(sym_error_string), "Reconsider identifier name. Already declared on line no.: %d", present_entry->decl_line);
-                yyerror(sym_error_string);
+                yyerror(("Reconsider identifier name " + entry->name + ". Already declared on line no.:" + to_string(present_entry->decl_line)).c_str());
             }
         }
     }
@@ -158,6 +157,7 @@ symbol_table_entry::symbol_table_entry(string name, base_data_type b_type, int o
 // }
 
 void symbol_table_entry::set_size(int size) {
+    //FIXME: might have to be fixed for functions, blocks and classes
     this->size = size;
 }
 

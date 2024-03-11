@@ -241,8 +241,12 @@ typedef struct node {
     void setup_new_st_env();
     void create_block_st(const char* block_name);   // to create symbol_table for a block scope
                                                     // only called when a block has a declaration within it
-    void create_func_st(string func_name);     // to create symbol_table for a function scope
-    void exit_from_func(node* args); // sets the arguments and return type. Also, restores SYMBOL_TABLE and OFFSET
+    void create_func_st();     // to create symbol_table for a function scope
+    void exit_from_func(); // sets the arguments and return type. Also, restores SYMBOL_TABLE and OFFSET
+
+    void create_class_st();
+    void handle_inheritance(struct node* optional_arglist);
+    void exit_from_class();
 } node;
 
 void prune_custom_nodes(node* parent, node* child);
@@ -258,5 +262,7 @@ node* sem_lval_check(node* root);
 base_data_type sem_rval_check(symbol_table* st, node* root);
 
 void check_declare_before_use(symbol_table* st, node* root);
+
+void add_class_st_entry(node* test, base_data_type b_type);
 
 #endif

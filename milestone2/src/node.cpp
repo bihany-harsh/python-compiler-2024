@@ -286,17 +286,19 @@ void handle_annassign(node* root) {
 
 node* sem_lval_check(node* root) {
     node* tmp = root;
-
     while(tmp && (!tmp->is_terminal)) {
         if(tmp->children.size() > 1) {
-            yyerror("Not a vaid lvalue");
+            if(SYMBOL_TABLE->st_type == CLASS || (SYMBOL_TABLE->st_type == FUNCTION && SYMBOL_TABLE->parent->st_type == CLASS && SYMBOL_TABLE->st_name == "__init__")) {
+                return nullptr;
+            }
+            yyerror("Not a valid lvalue");
         }
         tmp = tmp->children[0];
     }
     if(!tmp) {
         yyerror("Not a valid lvalue");
     }
-    if(tmp->type != IDENTIFIER || (tmp->type == IDENTIFIER && tmp->name == "print")) {
+    if(tmp->type != IDENTIFIER && (tmp->name != "range" && tmp->name != "print")) {
         yyerror((tmp->name + " is not a valid lvalue").c_str());
     }
     return tmp;
@@ -402,7 +404,7 @@ void node::create_block_st(const char* block_name) {
     return;
 }
 
-void node::create_func_st(string func_name) {
+void node::create_func_st() {
     this->st = SYMBOL_TABLE;
     // for functions, we create the st_entry before executing the body so that we can add arguments
     this->st_entry = new symbol_table_entry(this->name, D_FUNCTION, OFFSET, this->line_no, SYMBOL_TABLE->scope);
@@ -411,12 +413,12 @@ void node::create_func_st(string func_name) {
     ST_STACK.push(SYMBOL_TABLE);
     OFFSET_STACK.push(OFFSET);
         // create a new symbol table
-    SYMBOL_TABLE = new symbol_table(FUNCTION, func_name, ST_STACK.top());
+    SYMBOL_TABLE = new symbol_table(FUNCTION, this->name, ST_STACK.top());
     OFFSET = 0;
     return;
 }
 
-void node::exit_from_func(node* args) {
+void node::exit_from_func() {
     cout << "exit from function called for function " << this->name << endl;
     // if TFPDEF has a single child, it can only be self and the current environment must be a class environment
     // in all other cases, TFPDEF has > 1 children. The type is specified by the descendent of TFPDEP->children[2] and the name is specified by TFPDEF->children[0]
@@ -439,5 +441,81 @@ void node::exit_from_func(node* args) {
     ST_STACK.pop();
     OFFSET_STACK.pop();
     cout << "Completed the function exit_from_func" << endl;
+    return;
+}
+
+void node::create_class_st() {
+    this->st = SYMBOL_TABLE;
+    this->st_entry = new symbol_table_entry(this->name, D_CLASS, OFFSET, this->line_no, SYMBOL_TABLE->scope);
+    // SYMBOL_TABLE->add_entry(this->st_entry);
+    ST_STACK.push(SYMBOL_TABLE);
+    OFFSET_STACK.push(OFFSET);
+    SYMBOL_TABLE = new symbol_table(CLASS, this->name, ST_STACK.top());
+    OFFSET = 0;
+}
+
+void add_class_st_entry(node* test, base_data_type b_type) {
+    // checks are done previosuly before the call to this function (like "__init__")
+    node* tmp = test;
+    while (tmp && tmp->children.size() == 1) {
+        tmp = tmp->children[0];
+    }
+    if (!tmp) {
+        yyerror("Unexpected error.");
+    }
+    if (tmp->type != ATOM_EXPR || tmp->children.size() != 2) {
+        yyerror("Not a valid lvalue.");
+    }
+    if (tmp->children[0]->name != "self") {
+        yyerror((tmp->children[0]->name + " is not a valid lvalue.").c_str());
+    }
+    if (tmp->children[1]->children[0]->name != ".") {
+        yyerror("SyntaxError: invalid usage of self.");
+    }
+    st_entry* entry = new st_entry(tmp->children[1]->children[1]->name, b_type, OFFSET, tmp->children[1]->children[1]->line_no, SYMBOL_TABLE->scope);
+    OFFSET += entry->size;
+    if (SYMBOL_TABLE->st_type == CLASS) {
+        SYMBOL_TABLE->add_entry(entry);
+    } else if (SYMBOL_TABLE->st_type == FUNCTION) {
+        SYMBOL_TABLE->parent->add_entry(entry);
+    } else {
+        yyerror("Unexpected error");
+    }
+}
+
+void node::handle_inheritance(node* optional_arglist) {
+    if(optional_arglist && optional_arglist->children.size() > 4) {
+        yyerror("CompilationError: multiple inheritances not supported.");
+    }
+    if (!optional_arglist || optional_arglist->children.size() == 2) {
+        // no inheritance
+        return;
+    }
+    check_declare_before_use(SYMBOL_TABLE->parent, optional_arglist);
+    node* tmp = optional_arglist->children[0]->children[0]; // optional_arglist-->arglist-->argument
+    while(tmp && !tmp->is_terminal) {
+        if (tmp->children.size() > 1) {
+            yyerror("SyntaxError: Invalid base class.");
+        }
+        tmp = tmp->children[0];
+    }
+    if (!tmp || tmp->type != IDENTIFIER || tmp->st_entry->b_type != D_CLASS) {
+        yyerror("SyntaxError: Inheritance should be from proper base class.");
+    }
+    // should be able to inherit base class attributes now
+    for(symbol_table_entry* inherit_entry: tmp->st->entries) {
+        // TODO: check for functions and inherit approprately.
+    }
+}
+
+void node::exit_from_class() {
+    this->st_entry->set_size(OFFSET);
+    this->st_entry->child_symbol_table = SYMBOL_TABLE;
+    SYMBOL_TABLE = ST_STACK.top();
+    OFFSET = OFFSET_STACK.top();
+    SYMBOL_TABLE->add_entry(this->st_entry);
+    OFFSET += this->st_entry->size;
+    ST_STACK.pop();
+    OFFSET_STACK.pop();
     return;
 }

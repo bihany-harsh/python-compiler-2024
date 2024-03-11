@@ -115,4 +115,5 @@ typedef struct symbol_table {
 
     void set_scope(); // set the scope of the symbol table
 } symbol_table;
+
 #endif

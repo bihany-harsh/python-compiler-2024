@@ -1,6 +1,6 @@
 # c: str = "abc"; a : list[bool] = 4.5
 # a : int = 4 if not 0 else 5
-
+a : list[b] = [1]
 # def f(a : int) -> None:
 #   print("This function")
 class A:

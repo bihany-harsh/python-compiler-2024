@@ -3,31 +3,63 @@
 
 # def f(a : int) -> None:
 #   print("This function")
+class A:
+  self.a : int
 
-def A()-> None:
-  print("A")
-def A(a:int) -> None:
-  print(a + 1)
-def f(a: int, b:list[int] = []) -> int:
-  a = a + 1
-  c : float
-  print("This function")
-a : str
-b : int
 
+class B(C,):
+  self.a : int
+  self.b: float
+  def __init__(a : int, d : str) -> None:
+    self.a = a
+    self.b = d
+    self.x : str = "obj"
+  def temp(a : bool) -> int:
+    # self.d : bool = a
+    return a
+a : list[int] = [1,2,3]
+a[2] = 1
+  #   print("This function")
+# b : int
+# a : list[B] = [1]
+# a : list[int] = [1, 2, 3]
+# a[2] = 1
+# print(a)
+# if a > 2:
+#   def A() -> True:
+#     print("A")
+#     def B() -> None:
+#       print("B")
+#       return
+#     return
+# def A() -> None:
+#   print("A")
+#   return
+# A()
+# def main():
+#   print("main")
+# # return a
+# def A(a:int) -> None:
+#   print(a + 1)
+# def f(a: int, b:list[int] = []) -> int:
+#   a = a + 1
+#   c : float
+#   print("This function")
+# # a : str
+# b : int
 # def A(a: int) -> int:
 #   return a + 1
-def A(a: float) -> float:
-  return a ** 2
+# def A(a: float) -> float:
+#   return a ** 2
 
-A(1)
-A(2.0)
+# A(1)
+# A(2.0)
 # class B:
 #   def __init__(self, a : int = 1) -> None:
 #     print("This function")
 #     # self.a = a
 
-c: int
+# c: int
 # def f(a: float, b: int) -> int:
 #   print("That function")
 #   return 1

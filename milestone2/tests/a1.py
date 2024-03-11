@@ -16,3 +16,8 @@ base_obj: Base = Base("Alice")
 derived_obj: Derived = Derived("Bob", 30)
 # Creating a list of integers with type annotation
 int_list: list[int] = [1, 2, 3, 4, 5]
+
+A = ((1,2), (3,4))
+
+for i,j in A:
+    print(i,j)

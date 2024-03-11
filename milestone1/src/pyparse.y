@@ -86,8 +86,8 @@ file_input                  :   multiple_lines {
                                     if(verbose_flag) {
                                         cout << "AST cleaning done!" << endl;
                                     }
-                                    AST_ROOT->delete_delimiters();
-                                    AST_ROOT->delete_single_child_nodes();
+                                //     AST_ROOT->delete_delimiters();
+                                //     AST_ROOT->delete_single_child_nodes();
                             }
                             ;
 multiple_lines              :   multiple_lines single_line {
@@ -686,7 +686,7 @@ trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_a
                                     $1 = new node(DELIMITER, "(", true, NULL);
                                     $4 = new node(DELIMITER, ")", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                //     $$->add_parent_child_relation($3);
+                                    // $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3); 
                                     $$->add_parent_child_relation($4);
                             }
@@ -696,8 +696,8 @@ trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_a
                                     $1 = new node(DELIMITER, "[", true, NULL);
                                     $4 = new node(DELIMITER, "]", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // prune_custom_nodes($$, $3);
-                                    $$->add_parent_child_relation($3);
+                                    prune_custom_nodes($$, $3);
+                                    // $$->add_parent_child_relation($3);
                                     $$->add_parent_child_relation($4);
                             }
                             |   TOK_DOT TOK_IDENTIFIER {
@@ -756,7 +756,9 @@ subscriptlist               :   subscript many_comma_subscript optional_comma {
                             }
                             ;
 subscript                   :   test {
-                                    $$ = $1;
+                                    $$ = new node(SUBSCRIPTLIST, "SUBSCRIPT", false, NULL);
+                                    // $$ = $1;
+                                    $$->add_parent_child_relation($1);
                             }
                             ;
 many_comma_subscript        :   many_comma_subscript TOK_COMMA subscript {

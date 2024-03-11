@@ -77,10 +77,10 @@
 %type<tree_node> expr_stmt many_equal_test annassign optional_assign_test augassign testlist many_comma_tok_test optional_comma
 %type<tree_node> test optional_if_else or_test many_or_tok_and_test and_test many_and_tok_not_test not_test comparison many_comparison_expr comp_op
 %type<tree_node> expr many_vbar_tok_xor_expr xor_expr many_cflex_tok_and_expr and_expr many_amper_tok_shift_expr shift_expr many_shift_op_arith_expr arith_expr many_arith_term
-%type<tree_node> term many_mod_factor factor power optional_dstar_tok_factor atom_expr atom data_type many_trailers trailer optional_arglist arglist
+%type<tree_node> term many_mod_factor factor power optional_dstar_tok_factor atom_expr atom data_type trailer optional_arglist arglist
 %type<tree_node> many_comma_argument argument subscriptlist subscript many_comma_subscript optional_comp_for comp_for exprlist many_comma_expr optional_comp_iter comp_iter
 %type<tree_node> comp_if testlist_comp pass_stmt flow_stmt break_stmt continue_stmt return_stmt optional_test global_stmt many_comma_tok_identifier nonlocal_stmt
-%type<tree_node> compound_stmt if_stmt many_elif_stmts optional_else_stmt else_stmt suite at_least_one_stmt while_stmt optional_else_suite for_stmt funcdef parameters
+%type<tree_node> compound_stmt if_stmt many_elif_stmts optional_else_stmt else_stmt suite at_least_one_stmt while_stmt optional_else_suite for_stmt funcdef optional_tok_rarrow_test parameters
 %type<tree_node> optional_typedargslist typedargslist optional_equal_test many_comma_tfpdef_optional_equal_test tfpdef optional_tok_colon_test classdef optional_paren_arglist
 
 %expect 1
@@ -96,8 +96,8 @@ file_input                  :   multiple_lines {
                                     if(verbose_flag) {
                                         cout << "AST cleaning done!" << endl;
                                     }
-                                    // AST_ROOT->delete_delimiters();
-                                    // AST_ROOT->delete_single_child_nodes();
+                                    AST_ROOT->delete_delimiters();
+                                    AST_ROOT->delete_single_child_nodes();
                             }
                             ;
 multiple_lines              :   multiple_lines single_line {
@@ -162,13 +162,24 @@ expr_stmt                   :   test annassign {
                                     $$ = new node(EXPR_STMT, "EXPR_STMT", false, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
-                                    node* terminal = sem_lval_check($1);
+                                    node* terminal = sem_lval_check($1); // returns nullptr if expecting a class variable declaration
+                                    // if invalid, calls yyerror and exits. if valid, returns non-nullptr
                                     base_data_type b_type = sem_rval_check(SYMBOL_TABLE, $2->children[1]);
-                                    st_entry* new_entry = new st_entry(terminal->name, b_type, OFFSET, terminal->line_no, SYMBOL_TABLE->scope);
-                                    OFFSET += new_entry->size;
-                                    SYMBOL_TABLE->add_entry(new_entry);
-                                    terminal->st = SYMBOL_TABLE;
-                                    terminal->st_entry = new_entry;
+                                    if(terminal == nullptr) {
+                                        // if condition already checked in sem_lval_check() function
+                                        // if(SYMBOL_TABLE->st_type != CLASS || (SYMBOL_TABLE->st_type == FUNCTION && SYMBOL_TABLE->st_name != "__init__")) {
+                                        //     // self can only be declared in these situations. In all other cases, it is assigned some value
+                                        //     yyerror("NameError: name 'self' is not defined");
+                                        // }
+                                        add_class_st_entry($1, b_type);
+                                    }
+                                    else {
+                                        st_entry* new_entry = new st_entry(terminal->name, b_type, OFFSET, terminal->line_no, SYMBOL_TABLE->scope);
+                                        OFFSET += new_entry->size;
+                                        SYMBOL_TABLE->add_entry(new_entry);
+                                        terminal->st = SYMBOL_TABLE;
+                                        terminal->st_entry = new_entry;
+                                    }
                             }
                             |   test augassign testlist {
                                     $$ = new node(EXPR_STMT, "EXPR_STMT", false, NULL);
@@ -188,11 +199,6 @@ expr_stmt                   :   test annassign {
                                     to_ast_operator($$, false, match);
                             }
                             ;
-// testlist_star_expr          :   test {
-//                                     $$ = $1;
-//                             }
-//                             |   star_expr
-//                             ;
 many_equal_test             :   many_equal_test TOK_EQUAL test {
                                     $$ = new node(MANY_EQUAL_TEST, "MANY_EQUAL_TEST", false, NULL);
                                     $2 = new node(ASSIGN, "=", true, NULL);
@@ -556,17 +562,22 @@ optional_dstar_tok_factor   :   TOK_DOUBLE_STAR factor {
                             }
                             |   {   $$ = NULL;  }
                             ;
-atom_expr                   :   atom many_trailers {
+atom_expr                   :   atom trailer {
+                                    //FIXME: originally was many_trailers but we only have to support 1D lists/single function calls
                                     $$ = new node(ATOM_EXPR, "ATOM_EXPR", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    prune_custom_nodes($$, $2);
+                                    $$->add_parent_child_relation($2);
+                                    // prune_custom_nodes($$, $2);
+                                }
+                            |   atom {
+                                    $$ = $1;
                             }
                             ;
 atom                        :   TOK_LPAR testlist_comp TOK_RPAR { 
-                                    // this production is assumed to only generate tuples (supposedly)
+                                    //FIXME: this production is assumed to only generate tuples (supposedly)
                                     yyerror("SyntaxError: Tuples not supported");
                             }
-                            |   TOK_LSQB { join_lines_implicitly++; } testlist_comp TOK_RSQB { 
+                            |   TOK_LSQB { join_lines_implicitly++; } testlist_comp TOK_RSQB {
                                     join_lines_implicitly--;
                                     $$ = new node(ATOM, "ATOM", false, NULL);
                                     $1 = new node(DELIMITER, "[", true, NULL);
@@ -594,6 +605,7 @@ atom                        :   TOK_LPAR testlist_comp TOK_RPAR {
                                     $$ = new node(NUMBER, yytext, true, NULL);
                             }
                             |   TOK_STRING_LITERAL {
+                                    // FIXME: originally was at_least_one_string (refer milestone1), now been removed
                                     string str_literal = "\\\"" + string(yytext).substr(1, strlen(yytext) - 2) + "\\\"";
                                     $$ = new node(STRING_LITERAL, str_literal.c_str(), true, NULL);
                             }
@@ -623,27 +635,6 @@ data_type                   :   TOK_INT {
                                     $$ = new node(LIST, "list", true, NULL);
                             }
                             ;
-// at_least_one_string         :   at_least_one_string TOK_STRING_LITERAL {
-//                                     $$ = new node(AT_LEAST_ONE_STRING, "AT_LEAST_ONE_STRING", false, NULL);
-//                                     // the string literal is "<text>", however we need that the val_repr as well as the name is <text>
-//                                     string str_literal = "\\\"" + string(yytext).substr(1, strlen(yytext) - 2) + "\\\"";
-//                                     $2 = new node(STRING_LITERAL, str_literal.c_str(), true, NULL);
-//                                 //     $$->add_parent_child_relation($1);
-//                                     prune_custom_nodes($$, $1);
-//                                     $$->add_parent_child_relation($2);
-//                             }
-//                             |   TOK_STRING_LITERAL {
-//                                     string str_literal = "\\\"" + string(yytext).substr(1, strlen(yytext) - 2) + "\\\"";
-//                                     $$ = new node(STRING_LITERAL, str_literal.c_str(), true, NULL);
-//                             }
-//                             ;
-many_trailers               :   many_trailers trailer {
-                                    $$ = new node(MANY_TRAILERS, "MANY_TRAILERS", false, NULL);
-                                    prune_custom_nodes($$, $1);
-                                    $$->add_parent_child_relation($2);
-                            }
-                            |   {   $$ = NULL;  }
-                            ;
 trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_arglist TOK_RPAR {
                                     join_lines_implicitly--;
                                     $$ = new node(TRAILER, "TRAILER", false, NULL);
@@ -652,8 +643,8 @@ trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_a
                                     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $3); 
                                     $$->add_parent_child_relation($4);
-                            }|
-                            TOK_LSQB { join_lines_implicitly++; } subscriptlist TOK_RSQB { 
+                            }
+                            |   TOK_LSQB { join_lines_implicitly++; } subscriptlist TOK_RSQB {
                                     join_lines_implicitly--;
                                     $$ = new node(TRAILER, "TRAILER", false, NULL);
                                     $1 = new node(DELIMITER, "[", true, NULL);
@@ -823,6 +814,12 @@ return_stmt                 :   TOK_RETURN optional_test {
                                     $1 = new node(KEYWORD, "return", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $2);
+                                    if(SYMBOL_TABLE->st_type != FUNCTION) {
+                                        yyerror("SyntaxError: 'return' outside function");
+                                    }
+                                    else {
+                                        // TODO: check that return type matches the function return type (can do in type checking also)
+                                    }
                             }
                             |   TOK_RETURN test TOK_COMMA testlist {
                                     yyerror("SyntaxError: Attempting to return multiple values from a function");
@@ -1003,7 +1000,8 @@ optional_else_suite         :   TOK_ELSE TOK_COLON {
                             }
                             |   {   $$ = NULL;  }
                             ;
-for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'"); } exprlist TOK_IN testlist TOK_COLON {
+for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'"); } expr TOK_IN test TOK_COLON {
+                                    // FIXME: changed from exprlist and testlist to expr and test (iterating over single variable only)
                                     $1 = new node(KEYWORD, "for", true, NULL);
                                     node* temp = new node(TEST, "TEST", false, NULL);
                                     $4 = new node(KEYWORD, "in", true, NULL);
@@ -1026,40 +1024,52 @@ for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'");
 funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                     $1 = new node(KEYWORD, "def", true, NULL);
                                     $2 = new node(IDENTIFIER, yytext, true, NULL);
+                                    if(SYMBOL_TABLE->st_type == FUNCTION) {
+                                        // trying to declare function inside another function/block
+                                        yyerror("SyntaxError: Nested functions are not supported");
+                                    }
+                                    else if(SYMBOL_TABLE->st_type == BLOCK) {
+                                        //FIXME: throw an error?
+                                    }
+                                    $2->create_func_st();
                                     strcpy(compound_stmt_type, "\'function definition\'");
-                                    $2->create_func_st($2->name);
                                 }
                                 parameters {
                                     $2->st_entry->set_num_args(num_args);
                                     num_args = 0;
-                                } TOK_RARROW test {
-                                    $2->st_entry->set_return_type(sem_rval_check(SYMBOL_TABLE, $7));
+                                } optional_tok_rarrow_test {
+                                    if($6 == NULL) {
+                                        // currently in function environment, we have to look at the parent environment
+                                        if((SYMBOL_TABLE->parent->st_type == GLOBAL && $2->name != "main") || (SYMBOL_TABLE->parent->st_type == CLASS && $2->name != "__init__")) {
+                                            yyerror("Function must have a return type");
+                                        }
+                                        // else we would want to set the return type to void : set by default
+                                    }
+                                    else {
+                                        $2->st_entry->set_return_type(sem_rval_check(SYMBOL_TABLE, $6->children[1]));
+                                    }
                                 } TOK_COLON suite {
                                     $$ = new node(FUNCDEF, "FUNCDEF", false, NULL);
-                                    $6 = new node(RARROW, "->", true, NULL);
-                                    $9 = new node(DELIMITER, ":", true, NULL);
-                                    $2->exit_from_func($4); // sets the argument types of the function and restores scope
+                                    $8 = new node(DELIMITER, ":", true, NULL);
+                                    $2->exit_from_func(); // sets the argument types of the function and restores scope
 
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($4);
-                                    $$->add_parent_child_relation($6);
-                                    $$->add_parent_child_relation($7);
+                                    prune_custom_nodes($$, $6);
+                                    $$->add_parent_child_relation($8);
                                     $$->add_parent_child_relation($9);
-                                    $$->add_parent_child_relation($10);
                             }
                             ;
-                            // FIXME: based on piazza clarification of function return type, ensure that either TOK_RARROW is present or not
-                            // return type is compulsory so no longer ```optional```_tok_rarrow_test
-// optional_tok_rarrow_test    :   TOK_RARROW test {
-//                                     $$ = new node(OPTIONAL_TOK_RARROW_TEST, "OPTIONAL_TOK_RARROW_TEST", false, NULL);
-//                                     $1 = new node(RARROW, "->", true, NULL);
-//                                     $$->add_parent_child_relation($1);
-//                                     $$->add_parent_child_relation($2);
-//                                     check_declare_before_use(SYMBOL_TABLE, $2);
-//                             }
-//                             |   {   $$ = NULL;  }
-//                             ;
+optional_tok_rarrow_test    :   TOK_RARROW test {
+                                    $$ = new node(OPTIONAL_TOK_RARROW_TEST, "OPTIONAL_TOK_RARROW_TEST", false, NULL);
+                                    $1 = new node(RARROW, "->", true, NULL);
+                                    $$->add_parent_child_relation($1);
+                                    $$->add_parent_child_relation($2);
+                                    check_declare_before_use(SYMBOL_TABLE, $2);
+                            }
+                            |   {   $$ = NULL;  }
+                            ;
 parameters                  :   TOK_LPAR  {join_lines_implicitly++;} optional_typedargslist TOK_RPAR {
                                     join_lines_implicitly--;
                                     $$ = new node(PARAMETERS, "PARAMETERS", false, NULL);
@@ -1130,16 +1140,14 @@ optional_tok_colon_test     :   TOK_COLON test {
 classdef                    :   TOK_CLASS TOK_IDENTIFIER {
                                     $2 = new node(IDENTIFIER, yytext, true, NULL);
                                     strcpy(compound_stmt_type, "\'class definition\'");
-                                    st_entry* new_entry = new st_entry(yytext, D_CLASS, SYMBOL_TABLE->offset, yylineno, SYMBOL_TABLE->scope);
-                                    SYMBOL_TABLE->add_entry(new_entry);
-                                    // $2->st_entry = new_entry;
-                                    // $2->st = SYMBOL_TABLE;
-                                    // ST_STACK.push(SYMBOL_TABLE);
-                                    // SYMBOL_TABLE = new symbol_table(CLASS, yytext, ST_STACK.top());
-                                    // SYMBOL_TABLE->set_scope();
+                                    if(SYMBOL_TABLE->st_type != GLOBAL) {
+                                        yyerror("SyntaxError: class declared inside another block");
+                                    }
+                                    $2->create_class_st();
+                                    cout << "created class symbol table" << endl;
                                 }
                                 optional_paren_arglist TOK_COLON suite {
-                                    //TODO: handle inheritance later
+                                    cout << "Reached end of class defn of " << $2->name << endl;
                                     //TODO: update size of the CLASS node once calculated
                                     //TODO: add offset according to what is calculated within this class
                                     $$ = new node(CLASSDEF, "CLASSDEF", false, NULL);
@@ -1151,10 +1159,11 @@ classdef                    :   TOK_CLASS TOK_IDENTIFIER {
                                     // prune_custom_nodes($$, $4);
                                     $$->add_parent_child_relation($5);
                                     $$->add_parent_child_relation($6);
-                                    // $2->st_entry->set_size(SYMBOL_TABLE->offset);
-                                    // SYMBOL_TABLE = ST_STACK.top();
-                                    // ST_STACK.pop();
-                                    // SYMBOL_TABLE->add_entry($2->st_entry);
+
+                                    $2->handle_inheritance($4);
+                                    $2->exit_from_class();
+
+                                    //TODO: if inheritance, add base class st_entries to derived
                             }
                             ;
 optional_paren_arglist      :   TOK_LPAR { join_lines_implicitly++; } optional_arglist TOK_RPAR { 
