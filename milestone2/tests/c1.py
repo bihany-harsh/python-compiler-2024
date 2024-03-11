@@ -8,15 +8,15 @@ def A()-> None:
   print("A")
 def A(a:int) -> None:
   print(a + 1)
-def f(self, a: int, b:list[int] = []) -> int:
+def f(a: int, b:list[int] = []) -> int:
   a = a + 1
   c : float
   print("This function")
 a : str
 b : int
 
-def A(a: int) -> int:
-  return a + 1
+# def A(a: int) -> int:
+#   return a + 1
 def A(a: float) -> float:
   return a ** 2
 
