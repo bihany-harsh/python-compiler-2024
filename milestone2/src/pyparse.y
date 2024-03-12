@@ -44,7 +44,7 @@
     struct node* tree_node;
 }
 
-%token<tree_node> TOK_IDENTIFIER TOK_NUMBER TOK_STRING_LITERAL
+%token<tree_node> TOK_IDENTIFIER TOK_INTEGER_NUMBER TOK_FLOAT_NUMBER TOK_IMAG_NUMBER TOK_STRING_LITERAL
 
 %token<tree_node> TOK_NEWLINE TOK_INDENT TOK_DEDENT
 
@@ -77,7 +77,7 @@
 %type<tree_node> expr_stmt many_equal_test annassign optional_assign_test augassign testlist many_comma_tok_test optional_comma
 %type<tree_node> test optional_if_else or_test many_or_tok_and_test and_test many_and_tok_not_test not_test comparison many_comparison_expr comp_op
 %type<tree_node> expr many_vbar_tok_xor_expr xor_expr many_cflex_tok_and_expr and_expr many_amper_tok_shift_expr shift_expr many_shift_op_arith_expr arith_expr many_arith_term
-%type<tree_node> term many_mod_factor factor power optional_dstar_tok_factor atom_expr atom data_type trailer optional_arglist arglist
+%type<tree_node> term many_mod_factor factor power optional_dstar_tok_factor atom_expr atom numeric_strings data_type trailer optional_arglist arglist
 %type<tree_node> many_comma_argument argument subscriptlist subscript many_comma_subscript optional_comp_for comp_for exprlist many_comma_expr optional_comp_iter comp_iter
 %type<tree_node> comp_if testlist_comp pass_stmt flow_stmt break_stmt continue_stmt return_stmt optional_test global_stmt many_comma_tok_identifier nonlocal_stmt
 %type<tree_node> compound_stmt if_stmt many_elif_stmts optional_else_stmt else_stmt suite at_least_one_stmt while_stmt optional_else_suite for_stmt funcdef optional_tok_rarrow_test parameters
@@ -601,8 +601,9 @@ atom                        :   TOK_LPAR testlist_comp TOK_RPAR {
                             |   data_type {
                                     $$ = $1;
                             }
-                            |   TOK_NUMBER {
-                                    $$ = new node(NUMBER, yytext, true, NULL);
+                            |   numeric_strings {
+                                    //  $$ = new node(NUMBER, yytext, true, NULL);
+                                    $$ = $1;
                             }
                             |   TOK_STRING_LITERAL {
                                     // FIXME: originally was at_least_one_string (refer milestone1), now been removed
@@ -617,6 +618,13 @@ atom                        :   TOK_LPAR testlist_comp TOK_RPAR {
                             }
                             |   TOK_FALSE {
                                     $$ = new node(KEYWORD, "False", true, NULL);
+                            }
+                            ;
+numeric_strings             :   TOK_INTEGER_NUMBER {
+                                    $$ = new node(INT_NUMBER, yytext, true, NULL);
+                            }
+                            |   TOK_FLOAT_NUMBER {
+                                    $$ = new node(FLOAT_NUMBER, yytext, true, NULL);
                             }
                             ;
 data_type                   :   TOK_INT {

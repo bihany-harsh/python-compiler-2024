@@ -28,7 +28,9 @@ typedef enum {
     // misc
     IDENTIFIER,
     STRING_LITERAL,
-    NUMBER,
+    // NUMBER,
+    INT_NUMBER,
+    FLOAT_NUMBER,
 
     // operators
     // PLUS,
@@ -181,7 +183,9 @@ const map<node_type, string> type_map = {
     // misc
     {IDENTIFIER, "IDENTIFIER"},
     {STRING_LITERAL, "STRING_LITERAL"},
-    {NUMBER, "NUMBER"},
+    // {NUMBER, "NUMBER"},
+    {INT_NUMBER, "INT_NUMBER"},
+    {FLOAT_NUMBER, "FLOAT_NUMBER"},
 
     {BIN_OP, "BIN_OP"},
     {COMPARE, "COMPARE"},

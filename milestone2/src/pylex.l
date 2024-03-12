@@ -246,7 +246,9 @@ ERROR_CHAR              [$?`]
 {ERROR_SHORT_STRING}    { yyerror("SyntaxError: unterminated string literal"); }
 {ERROR_LONG_STRING}     { yyerror("SyntaxError: unterminated triple-quoted string literal"); }
 
-{NUMBER}                { return TOK_NUMBER; }
+{INTEGER}               { return TOK_INTEGER_NUMBER; }
+{FLOAT_NUMBER}          { return TOK_FLOAT_NUMBER; }
+{IMAG_NUMBER}           { return TOK_IMAG_NUMBER; }
 
 {PLUS}                  { return TOK_PLUS; }
 {MINUS}                 { return TOK_MINUS; }

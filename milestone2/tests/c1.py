@@ -133,3 +133,6 @@ class B(A,):
         self.e:int = a + 1
     def print_(a:float) -> None:
         print("print B")
+
+a:int = 1
+b:float = 1
