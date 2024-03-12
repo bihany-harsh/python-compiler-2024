@@ -484,6 +484,7 @@ void add_class_st_entry(node* test, base_data_type b_type) {
 }
 
 void node::handle_inheritance(node* optional_arglist) {
+    // optional_arglist->traverse_tree();
     if(optional_arglist && optional_arglist->children.size() > 4) {
         yyerror("CompilationError: multiple inheritances not supported.");
     }
@@ -492,19 +493,52 @@ void node::handle_inheritance(node* optional_arglist) {
         return;
     }
     check_declare_before_use(SYMBOL_TABLE->parent, optional_arglist);
-    node* tmp = optional_arglist->children[0]->children[0]; // optional_arglist-->arglist-->argument
-    while(tmp && !tmp->is_terminal) {
+    cout << "checking decl before use" << endl;
+    node* tmp = optional_arglist->children[1]->children[0]; // optional_paren_arglist-->argument->test
+    tmp->traverse_tree();
+    while (tmp && !tmp->is_terminal) {
         if (tmp->children.size() > 1) {
             yyerror("SyntaxError: Invalid base class.");
         }
         tmp = tmp->children[0];
     }
-    if (!tmp || tmp->type != IDENTIFIER || tmp->st_entry->b_type != D_CLASS) {
+    symbol_table_entry* tmp_entry = SYMBOL_TABLE->parent->get_entry(tmp->name);
+    if (!tmp || tmp->type != IDENTIFIER || tmp_entry->b_type != D_CLASS) {
         yyerror("SyntaxError: Inheritance should be from proper base class.");
     }
     // should be able to inherit base class attributes now
-    for(symbol_table_entry* inherit_entry: tmp->st->entries) {
-        // TODO: check for functions and inherit approprately.
+    for(symbol_table_entry* inherit_entry: tmp_entry->child_symbol_table->entries) {
+        if (inherit_entry->b_type == D_FUNCTION && inherit_entry->name != "__init__") {
+            // check if the function is already defined in the current class
+            symbol_table_entry* present_entry = SYMBOL_TABLE->get_entry(inherit_entry->name);
+            if (!present_entry) {
+                SYMBOL_TABLE->add_entry(inherit_entry);
+            } else {
+                if (present_entry->b_type == D_FUNCTION) {
+                    if (inherit_entry->f_attr.num_args != present_entry->f_attr.num_args) {
+                        SYMBOL_TABLE->add_entry(inherit_entry);
+                    } else {
+                        bool to_inherit = false;
+                        for(int i = 0; i < inherit_entry->f_attr.num_args; i++) {
+                            if (inherit_entry->f_attr.args[i] != present_entry->f_attr.args[i]) {
+                                to_inherit = true;
+                                break;
+                            }
+                        }
+                        if (to_inherit) {
+                            SYMBOL_TABLE->add_entry(inherit_entry);
+                        }
+                    }
+                }
+            }
+        } else if (inherit_entry->b_type == D_CLASS) {
+            // TODO: throw an incomapatibilty error whenever a member of a class is a some other class 
+        } else {
+            if (!SYMBOL_TABLE->get_entry(inherit_entry->name)) {
+                SYMBOL_TABLE->add_entry(inherit_entry);
+            }
+            // else ignore, as the member is now overwritten for this class
+        }
     }
 }
 

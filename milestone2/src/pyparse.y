@@ -1029,6 +1029,7 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                         yyerror("SyntaxError: Nested functions are not supported");
                                     }
                                     else if(SYMBOL_TABLE->st_type == BLOCK) {
+                                        yyerror("SyntaxError: Improper function declaration.");
                                         //FIXME: throw an error?
                                     }
                                     $2->create_func_st();
@@ -1119,12 +1120,16 @@ tfpdef                      :   TOK_IDENTIFIER { $1 = new node(IDENTIFIER, yytex
                                     }
                                     $$ = new node(TFPDEF, "TFPDEF", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    if($3 == NULL && $1->name != "self") {
-                                        //TODO: add condition that if the current environment is class then self without type is fine
-                                        //TODO: if the current environment is outside a class then self must have a type
+                                    if($3 == NULL) {
                                         yyerror(("SyntaxError: missing type specification for function argument " + $1->name).c_str());
-                                    }
+                                    } 
                                     prune_custom_nodes($$, $3);
+                            }
+                            |   TOK_SELF {
+                                if (SYMBOL_TABLE->parent->st_type != CLASS) {
+                                    yyerror("SyntaxError: `self` not defined.");
+                                }
+                                $$ = new node(KEYWORD, "self", true, NULL);
                             }
                             ;
 optional_tok_colon_test     :   TOK_COLON test {
@@ -1134,7 +1139,7 @@ optional_tok_colon_test     :   TOK_COLON test {
                                     $$->add_parent_child_relation($2);
                                     check_declare_before_use(SYMBOL_TABLE, $2);
                             }
-                            |   {   $$ = NULL;  }
+                            |   { $$ = NULL; }
                             ;
 
 classdef                    :   TOK_CLASS TOK_IDENTIFIER {
@@ -1160,10 +1165,10 @@ classdef                    :   TOK_CLASS TOK_IDENTIFIER {
                                     $$->add_parent_child_relation($5);
                                     $$->add_parent_child_relation($6);
 
-                                    $2->handle_inheritance($4);
-                                    $2->exit_from_class();
-
                                     //TODO: if inheritance, add base class st_entries to derived
+                                    $2->handle_inheritance($4);
+                                    cout << "handle ingeritance " << endl;
+                                    $2->exit_from_class();
                             }
                             ;
 optional_paren_arglist      :   TOK_LPAR { join_lines_implicitly++; } optional_arglist TOK_RPAR { 

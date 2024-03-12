@@ -3,22 +3,38 @@
 
 # def f(a : int) -> None:
 #   print("This function")
-class A:
-  self.a : int
+# class A:
+#   self.a : int
+
+###############################################
+# IDEALLY NOT SUPPORTED BY OUR COMPILER #######
+# def f1():
+#     print("f1")
 
 
-class B(C,):
-  self.a : int
-  self.b: float
-  def __init__(a : int, d : str) -> None:
-    self.a = a
-    self.b = d
-    self.x : str = "obj"
-  def temp(a : bool) -> int:
-    # self.d : bool = a
-    return a
-a : list[int] = [1,2,3]
-a[2] = 1
+# class A:
+#     def __init__(self):
+#         self.f: function = f1
+
+# obj = A()
+# obj.f()
+
+#################################################
+
+
+# class B(C,):
+#   self.a : int
+#   self.b: float
+#   def __init__(a : int, d : str) -> None:
+#     self.a = a
+#     self.b = d
+#     self.x : str = "obj"
+#   def temp(a : bool) -> int:
+#     # self.d : bool = a
+#     return a
+# a : list[int] = [1,2,3]
+# a[2] = 1
+
   #   print("This function")
 # b : int
 # a : list[B] = [1]
@@ -102,3 +118,18 @@ a[2] = 1
 #   return a
 # # myFunc(1, "a", 2)
 # # a = a + 1
+
+class A():
+    def __init__(self, a: int, b: str, c: float):
+        self.a:int = a
+        self.b:str = b
+        self.c:float = c
+    def print_(a:int) -> None:
+        print("print A")
+
+class B(A,):
+    def __init__(self, a: float):
+        self.d:int = a
+        self.e:int = a + 1
+    def print_(a:float) -> None:
+        print("print B")

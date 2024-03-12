@@ -31,12 +31,12 @@ FORCE:
 
 # generating the output PDF
 $(GRAPH_DOT): $(BINARY) input-file-name verbose-flag
-	@(./$(BINARY) $(INPUT_FILE) $(VERBOSE) || echo "Error in executing the program. Cannot generate dot script. \nExiting...")
 	@rm input-file-name 
+	@(./$(BINARY) $(INPUT_FILE) $(VERBOSE) || echo "Error in executing the program. Cannot generate dot script. \nExiting...")
 
 $(GRAPH_PDF): $(GRAPH_DOT) input-file-name graph-file-name
-	@($(DOT) -Tpdf $(GRAPH_DOT) -o $(GRAPH_PDF))
 	@rm graph-file-name
+	@($(DOT) -Tpdf $(GRAPH_DOT) -o $(GRAPH_PDF))
 
 $(BINARY): lex.yy.c pyparse.tab.c $(CXX_SOURCES)
 	@$(CXX) $(CXX_FLAGS) $^ -ll
