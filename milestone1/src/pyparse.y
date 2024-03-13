@@ -47,7 +47,6 @@
 %token<tree_node> TOK_IN TOK_IS
 %token<tree_node> TOK_PASS
 %token<tree_node> TOK_FOR TOK_WHILE
-%token<tree_node> TOK_PRINT TOK_RANGE TOK_SELF
 
 %token<tree_node> TOK_INT TOK_FLOAT TOK_BOOL TOK_STR
 
@@ -86,8 +85,8 @@ file_input                  :   multiple_lines {
                                     if(verbose_flag) {
                                         cout << "AST cleaning done!" << endl;
                                     }
-                                //     AST_ROOT->delete_delimiters();
-                                //     AST_ROOT->delete_single_child_nodes();
+                                    AST_ROOT->delete_delimiters();
+                                    AST_ROOT->delete_single_child_nodes();
                             }
                             ;
 multiple_lines              :   multiple_lines single_line {
@@ -617,15 +616,6 @@ atom                        :   TOK_LPAR { join_lines_implicitly++; } testlist_c
                             |   TOK_IDENTIFIER {
                                     $$ = new node(IDENTIFIER, yytext, true, NULL);
                             }
-                            |   TOK_PRINT {
-                                    $$ = new node(KEYWORD, "print", true, NULL);
-                            }
-                            |   TOK_RANGE {
-                                    $$ = new node(KEYWORD, "range", true, NULL);
-                            }
-                            |   TOK_SELF {
-                                    $$ = new node(KEYWORD, "self", true, NULL);
-                            }
                             |   data_type {
                                     $$ = $1;
                             }
@@ -686,7 +676,7 @@ trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_a
                                     $1 = new node(DELIMITER, "(", true, NULL);
                                     $4 = new node(DELIMITER, ")", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                    // $$->add_parent_child_relation($3);
+                                //     $$->add_parent_child_relation($3);
                                     prune_custom_nodes($$, $3); 
                                     $$->add_parent_child_relation($4);
                             }
@@ -696,8 +686,8 @@ trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_a
                                     $1 = new node(DELIMITER, "[", true, NULL);
                                     $4 = new node(DELIMITER, "]", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                    prune_custom_nodes($$, $3);
-                                    // $$->add_parent_child_relation($3);
+                                    // prune_custom_nodes($$, $3);
+                                    $$->add_parent_child_relation($3);
                                     $$->add_parent_child_relation($4);
                             }
                             |   TOK_DOT TOK_IDENTIFIER {
@@ -756,9 +746,7 @@ subscriptlist               :   subscript many_comma_subscript optional_comma {
                             }
                             ;
 subscript                   :   test {
-                                    $$ = new node(SUBSCRIPTLIST, "SUBSCRIPT", false, NULL);
-                                    // $$ = $1;
-                                    $$->add_parent_child_relation($1);
+                                    $$ = $1;
                             }
                             ;
 many_comma_subscript        :   many_comma_subscript TOK_COMMA subscript {
