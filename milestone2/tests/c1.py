@@ -119,20 +119,31 @@
 # # myFunc(1, "a", 2)
 # # a = a + 1
 
-class A():
-    def __init__(self, a: int, b: str, c: float):
-        self.a:int = a
-        self.b:str = b
-        self.c:float = c
-    def print_(a:int) -> None:
-        print("print A")
+# class A():
+#     def __init__(self, a: int, b: str, c: float):
+#         self.a:int = a
+#         self.b:str = b
+#         self.c:float = c
+#     def print_(a:int) -> None:
+#         print("print A")
 
-class B(A,):
-    def __init__(self, a: float):
-        self.d:int = a
-        self.e:int = a + 1
-    def print_(a:float) -> None:
-        print("print B")
+# class B(A,):
+#     def __init__(self, a: float):
+#         self.d:int = a
+#         self.e:int = a + 1
+#     def print_(a:float) -> None:
+#         print("print B")
 
-a:int = 1
-b:float = 1
+def f()->None:
+    return 2
+
+a:int = f() + 3
+d : list[int] = [1, 2, 3]
+# b:float = 1
+a = 2
+# def f(a:int) -> None:
+#     while (a):
+#         b: int = 500
+#         a -= 1
+#     print(b)
+

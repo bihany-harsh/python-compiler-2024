@@ -229,6 +229,7 @@ typedef struct node {
     void assign_value(bool value);
     // add a child
     void add_parent_child_relation(node* child);
+    void handle_annassign();  
 
     // tree traversal
     void traverse_tree(); // recommended to be used only from root
@@ -259,7 +260,6 @@ void to_ast_operator(node* root, bool is_left_associative, set<string> matching_
 
 void comp_op_processing(node* root);
 
-void handle_annassign(node* root);
 
 node* sem_lval_check(node* root);
 

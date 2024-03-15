@@ -77,7 +77,7 @@
 %type<tree_node> expr_stmt many_equal_test annassign optional_assign_test augassign testlist many_comma_tok_test optional_comma
 %type<tree_node> test optional_if_else or_test many_or_tok_and_test and_test many_and_tok_not_test not_test comparison many_comparison_expr comp_op
 %type<tree_node> expr many_vbar_tok_xor_expr xor_expr many_cflex_tok_and_expr and_expr many_amper_tok_shift_expr shift_expr many_shift_op_arith_expr arith_expr many_arith_term
-%type<tree_node> term many_mod_factor factor power optional_dstar_tok_factor atom_expr atom numeric_strings data_type trailer optional_arglist arglist
+%type<tree_node> term many_mod_factor factor power optional_dstar_tok_factor atom_expr many_trailers atom numeric_strings data_type trailer optional_arglist arglist
 %type<tree_node> many_comma_argument argument subscriptlist subscript many_comma_subscript optional_comp_for comp_for exprlist many_comma_expr optional_comp_iter comp_iter
 %type<tree_node> comp_if testlist_comp pass_stmt flow_stmt break_stmt continue_stmt return_stmt optional_test global_stmt many_comma_tok_identifier nonlocal_stmt
 %type<tree_node> compound_stmt if_stmt many_elif_stmts optional_else_stmt else_stmt suite at_least_one_stmt while_stmt optional_else_suite for_stmt funcdef optional_tok_rarrow_test parameters
@@ -96,7 +96,7 @@ file_input                  :   multiple_lines {
                                     if(verbose_flag) {
                                         cout << "AST cleaning done!" << endl;
                                     }
-                                    AST_ROOT->delete_delimiters();
+                                    AST_ROOT->delete_delimiters();   
                                     AST_ROOT->delete_single_child_nodes();
                             }
                             ;
@@ -180,6 +180,7 @@ expr_stmt                   :   test annassign {
                                         terminal->st = SYMBOL_TABLE;
                                         terminal->st_entry = new_entry;
                                     }
+                                    $$->handle_annassign();
                             }
                             |   test augassign testlist {
                                     $$ = new node(EXPR_STMT, "EXPR_STMT", false, NULL);
@@ -562,20 +563,25 @@ optional_dstar_tok_factor   :   TOK_DOUBLE_STAR factor {
                             }
                             |   {   $$ = NULL;  }
                             ;
-atom_expr                   :   atom trailer {
+atom_expr                   :   atom many_trailers {
                                     //FIXME: originally was many_trailers but we only have to support 1D lists/single function calls
                                     $$ = new node(ATOM_EXPR, "ATOM_EXPR", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    $$->add_parent_child_relation($2);
-                                    // prune_custom_nodes($$, $2);
+                                    // $$->add_parent_child_relation($2);
+                                    prune_custom_nodes($$, $2);
                                 }
-                            |   atom {
-                                    $$ = $1;
-                            }
+                            // |   atom {
+                            //         $$ = $1;
+                            // }
                             ;
 atom                        :   TOK_LPAR testlist_comp TOK_RPAR { 
-                                    //FIXME: this production is assumed to only generate tuples (supposedly)
-                                    yyerror("SyntaxError: Tuples not supported");
+                                    $$ = new node(ATOM, "ATOM", false, NULL);
+                                    $1 = new node(DELIMITER, "(", true, NULL);
+                                    $3 = new node(DELIMITER, ")", true, NULL);
+                                    $$->add_parent_child_relation($1);
+                                    $$->add_parent_child_relation($2);
+                                    $$->add_parent_child_relation($3);
+                                //     yyerror("SyntaxError: Tuples not supported");
                             }
                             |   TOK_LSQB { join_lines_implicitly++; } testlist_comp TOK_RSQB {
                                     join_lines_implicitly--;
@@ -642,6 +648,14 @@ data_type                   :   TOK_INT {
                             |   TOK_LIST {
                                     $$ = new node(LIST, "list", true, NULL);
                             }
+                            ;
+many_trailers               :   many_trailers trailer {
+                                    $$ = new node(MANY_TRAILERS, "MANY_TRAILERS", false, NULL);
+                                    // $$->add_parent_child_relation($1);
+                                    prune_custom_nodes($$, $1);
+                                    $$->add_parent_child_relation($2);
+                            }
+                            |   {   $$ = NULL;  }
                             ;
 trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_arglist TOK_RPAR {
                                     join_lines_implicitly--;
@@ -893,11 +907,11 @@ if_stmt                     :   TOK_IF { strcpy(compound_stmt_type, "\'if\'"); }
                                         $1->add_parent_child_relation($4);
                                         check_declare_before_use(SYMBOL_TABLE, $3);
                                         // change the scope. This is a new block
-                                        $1->setup_new_st_env();
+                                        // $1->setup_new_st_env();
                                     } suite
                                     {
                                         // change the scope back to the parent block
-                                        $1->create_block_st("IF_BLOCK");
+                                        // $1->create_block_st("IF_BLOCK");
                                         $1->add_parent_child_relation($6);
                                     }
                                     many_elif_stmts optional_else_stmt {
@@ -918,10 +932,10 @@ many_elif_stmts             :   many_elif_stmts TOK_ELIF { strcpy(compound_stmt_
                                     $2->add_parent_child_relation($5);
                                     check_declare_before_use(SYMBOL_TABLE, $4);
                                     // change the scope. This is a new block
-                                    $2->setup_new_st_env();
+                                //     $2->setup_new_st_env();
                                 } suite {
                                     // change the scope back to the parent block
-                                    $2->create_block_st("ELIF_BLOCK");
+                                //     $2->create_block_st("ELIF_BLOCK");
 
                                     $$ = new node(MANY_ELIF_STMTS, "MANY_ELIF_STMTS", false, NULL);
                                     prune_custom_nodes($$, $1);
@@ -939,11 +953,11 @@ else_stmt                   :   TOK_ELSE { strcpy(compound_stmt_type, "\'else\'"
                                         $1->add_parent_child_relation($3);
 
                                         // create a new scope
-                                        $1->setup_new_st_env();
+                                        // $1->setup_new_st_env();
                                     }
                                     suite {
                                         // restore the scope
-                                        $1->create_block_st("ELSE_BLOCK");
+                                        // $1->create_block_st("ELSE_BLOCK");
 
                                         $$ = new node(ELSE_STMT, "ELSE_STMT", false, NULL);
                                         $$->add_parent_child_relation($1);
@@ -983,10 +997,10 @@ while_stmt                  :   TOK_WHILE { strcpy(compound_stmt_type, "\'while\
                                         $4 = new node(DELIMITER, ":", true, NULL);
                                         $1->add_parent_child_relation($3);
                                         $1->add_parent_child_relation($4);
-                                        $1->setup_new_st_env();
+                                        // $1->setup_new_st_env();
                                     } suite {
                                         // change the scope back to the parent block
-                                        $1->create_block_st("WHILE_BLOCK");
+                                        // $1->create_block_st("WHILE_BLOCK");
                                         $1->add_parent_child_relation($6);
                                     } optional_else_suite {
                                     $$ = new node(WHILE_STMT, "WHILE_STMT", false, NULL);
@@ -1017,10 +1031,10 @@ for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'");
                                     temp->add_parent_child_relation($3);
                                     temp->add_parent_child_relation($4);
                                     temp->add_parent_child_relation($5);
-                                    $1->setup_new_st_env();
+                                //     $1->setup_new_st_env();
                                 } suite {
                                     // change the scope back to the parent block
-                                    $1->create_block_st("FOR_BLOCK");
+                                //     $1->create_block_st("FOR_BLOCK");
                                     $1->add_parent_child_relation($8);
                                 } optional_else_suite {
                                     $$ = new node(FOR_STMT, "FOR_STMT", false, NULL);

@@ -121,26 +121,28 @@ void node::delete_single_child_nodes() {
     }
 
     // terminals have 0 children
-    if(this->children.size() == 1 && unary_ops.find(this->type) == unary_ops.end()) { // it is not a unary operator
-        node* child = this->children.front();
+    if (!this->is_terminal) {
+        if(this->children.size() == 1 && unary_ops.find(this->type) == unary_ops.end()) { // it is not a unary operator
+            node* child = this->children.front();
 
-        // Check if this node is not the root node (it has a parent)
-        if(this->parent != nullptr) {
-            // Find this node among its siblings and replace it with its child
-            auto& siblings = this->parent->children;
-            auto it = std::find(siblings.begin(), siblings.end(), this);
-            if(it != siblings.end()) {
-                *it = child;
-                child->parent = this->parent;
+            // Check if this node is not the root node (it has a parent)
+            if(this->parent != nullptr) {
+                // Find this node among its siblings and replace it with its child
+                auto& siblings = this->parent->children;
+                auto it = std::find(siblings.begin(), siblings.end(), this);
+                if(it != siblings.end()) {
+                    *it = child;
+                    child->parent = this->parent;
+                }
+
+                // Clear children list to prevent deleting the child when this node is deleted
+                this->children.clear();
+
+                // Delete this node
+                delete this;
             }
-
-            // Clear children list to prevent deleting the child when this node is deleted
-            this->children.clear();
-
-            // Delete this node
-            delete this;
         }
-    }
+    }    
 }
 
 void node::generate_dot_script() {
@@ -258,30 +260,34 @@ void comp_op_processing(node* root) {
     }
 }
 
-void handle_annassign(node* root) {
-    if(root == nullptr) {
+void node::handle_annassign() {
+    this->delete_single_child_nodes();
+    
+    if (this == nullptr || this->children[1]->type != ANNASSIGN) {
+        cout << "SHOULD NOT HAPPEN in handle_annasign!!" << endl;
         return;
     }
-
-    if(root->type == ANNASSIGN) {
-        // if there is an ANNASSIGN node, its parent will DEFINITELY be expr_stmt
-        if(root->children.size() == 1) {
-            // if there is only 1 child, it has to be the specified type. Then, we simply add it in the place of annassign.
-            node* parent = root->parent;
-            for(int i = 0; i < parent->children.size(); i++) {
-                if(parent->children[i] == root) {
-                    parent->children[i] = root->children[0];    // establishing parent
-                    root->children[0]->parent = parent;         // child relationship
-                    delete root;
-                    return;
-                }
-            }
+    node* annassign = this->children[1];
+    node* ID = this->children[0];
+    ID->add_parent_child_relation(annassign->children[1]); // the first child is TOK_COLON (removed in post processing)
+    annassign->children[1] = nullptr;
+    if (annassign->children.size() != 2) { // delim and test
+        // when initialization
+        for(int i = 2; i < annassign->children.size(); i++) {
+            this->add_parent_child_relation(annassign->children[i]);
+            annassign->children[i] = nullptr;
         }
     }
+    this->children[1] = nullptr;
+    auto newEnd = remove(this->children.begin(), this->children.end(), nullptr);
+    this->children.erase(newEnd, children.end()); 
+    set<string> match = {"="};
 
-    for(int i = 0; i < root->children.size(); i++) {
-        handle_annassign(root->children[i]);
-    }
+    // delete annassign to avoid mem-leak
+    delete annassign->children[0];
+    delete annassign;
+
+    to_ast_operator(this, false, match);
 }
 
 node* sem_lval_check(node* root) {
