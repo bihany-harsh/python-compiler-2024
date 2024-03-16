@@ -22,6 +22,9 @@ extern stack<int> OFFSET_STACK;
 extern int OFFSET;
 extern int block_counter;
 
+extern vector<Quadruple*> INTERMEDIATE_CODE;
+extern long long int INTERMEDIATE_COUNTER;
+
 node::node(node_type type, string name, bool is_terminal, node* parent) {
     this->type = type;
     this->name = name;
@@ -319,25 +322,26 @@ base_data_type sem_rval_check(symbol_table* st, node* root) {
                 yyerror("Not a valid rvalue");
             }
             else {
-                if(tmp->children[1]->children[1]->type == INT) {
-                    return D_LIST_INT;
-                } else if(tmp->children[1]->children[1]->type == FLOAT) {
-                    return D_LIST_FLOAT;
-                } else if(tmp->children[1]->children[1]->type == BOOL) {
-                    return D_LIST_BOOL;
-                } else if(tmp->children[1]->children[1]->type == STR) {
-                    return D_LIST_STRING;
-                } else if(tmp->children[1]->children[1]->type == IDENTIFIER) {
-                    //TODO: verify if correct (we can have a list of objects of user defined classes)
-                    st_entry* entry = st->get_entry(tmp->children[1]->children[1]->name);
-                    if(entry && entry->b_type == D_CLASS) {
-                        return D_LIST_CLASS;
-                    } else {
-                        yyerror("Not a valid rvalue");
-                    }
-                } else {
-                    yyerror("Not a valid rvalue");
-                }
+                return D_LIST;
+                // if(tmp->children[1]->children[1]->type == INT) {
+                //     return D_LIST_INT;
+                // } else if(tmp->children[1]->children[1]->type == FLOAT) {
+                //     return D_LIST_FLOAT;
+                // } else if(tmp->children[1]->children[1]->type == BOOL) {
+                //     return D_LIST_BOOL;
+                // } else if(tmp->children[1]->children[1]->type == STR) {
+                //     return D_LIST_STRING;
+                // } else if(tmp->children[1]->children[1]->type == IDENTIFIER) {
+                //     //TODO: verify if correct (we can have a list of objects of user defined classes)
+                //     st_entry* entry = st->get_entry(tmp->children[1]->children[1]->name);
+                //     if(entry && entry->b_type == D_CLASS) {
+                //         return D_LIST_CLASS;
+                //     } else {
+                //         yyerror("Not a valid rvalue");
+                //     }
+                // } else {
+                //     yyerror("Not a valid rvalue");
+                // }
             }
         }
         tmp = tmp->children[0];
@@ -378,6 +382,64 @@ void check_declare_before_use(symbol_table* st, node* root) {
     }
     for(int i = 0; i < root->children.size(); i++) {
         check_declare_before_use(st, root->children[i]);
+    }
+}
+
+void node::set_list_attributes(node* annassign) {
+    node* tmp = annassign->children[1]; // points to ```test```
+    while(tmp && tmp->children.size() != 2) {
+        tmp = tmp->children[0];
+    }
+    if(!tmp || tmp->type != ATOM_EXPR) {
+        cout << "Unexpected error when setting list attributes.\nExiting";
+        return;
+    }
+    // this->st_entry->l_attr.list_elem_type = tmp->children[1]->children[1]
+    if(tmp->children[1]->children[1]->type == IDENTIFIER) {
+        // trying to declare a list of classes
+        symbol_table_entry* entry = st->get_entry(tmp->children[1]->children[1]->name);
+        if(entry && entry->b_type == D_CLASS) {
+            this->st_entry->l_attr.list_elem_type = D_CLASS;
+            this->st_entry->l_attr.class_name = entry->name;
+        }
+        else {
+            yyerror("TypeError: Not a valid type for a list");
+        }
+    }
+    else {
+        // list of basic data type
+        switch(tmp->children[1]->children[1]->type) {
+            case INT:
+                this->st_entry->l_attr.list_elem_type = D_INT;
+            break;
+            case FLOAT:
+                this->st_entry->l_attr.list_elem_type = D_FLOAT;
+            break;
+            case BOOL:
+                this->st_entry->l_attr.list_elem_type = D_BOOL;
+            break;
+            case STRING_LITERAL:
+                this->st_entry->l_attr.list_elem_type = D_STRING;
+            break;
+            default:
+                yyerror("TypeError: Not a valid type for a list");
+            break;
+        }
+    }
+    if(annassign->children.size() > 2) {
+        // list has an initialization
+        tmp = annassign->children[3]; // this also points to ```test```
+        while(tmp && tmp->children.size() == 1) {
+            tmp = tmp->children[0];
+        }
+        if(!tmp || tmp->type != ATOM || tmp->children[0]->name != "[") {
+            yyerror("TypeError: Not a valid rvalue");
+        }
+        int children_size = tmp->children[1]->children.size();
+        this->st_entry->l_attr.num_of_elems = (children_size + (children_size % 2)) / 2;
+    }
+    else {
+        this->st_entry->l_attr.num_of_elems = 0; // no initialization
     }
 }
 
@@ -558,4 +620,74 @@ void node::exit_from_class() {
     ST_STACK.pop();
     OFFSET_STACK.pop();
     return;
+}
+
+string node::get_lhs_operand() {
+    if(this->type != ASSIGN) {
+        yyerror("Unexpected error: get_lvalue_operand called on a non-ASSIGN node");
+    }
+    if(this->children.size() != 2) {
+        yyerror("Unexpected error: ASSIGN node does not have 2 children");
+    }
+    return this->children[0]->name;
+}
+
+string node::get_rhs_operand() {
+    if(this->type != ASSIGN) {
+        yyerror("Unexpected error: get_rvalue_operand called on a non-ASSIGN node");
+    }
+    if(this->children.size() != 2) {
+        yyerror("Unexpected error: ASSIGN node does not have 2 children");
+    }
+    // if(this->children[1]->type != IDENTIFIER) {
+    //     // recursively find rvalue by first evaluating at children nodes
+    //     return "";
+    // }
+    // else {
+    //     return this->children[1]->name;
+    // }
+    return this->children[1]->name;
+}
+
+void node::generate_3ac() {
+    cout << "generate_3ac called for node " << this->name << endl;
+    for(auto child: this->children) {
+        if(child != nullptr) {
+            if(this->type == FILE_INPUT) {
+                INTERMEDIATE_COUNTER = 0; // resetting it for each statement
+            }
+            child->generate_3ac();
+        }
+    }
+    string op1, op2, result, op;
+    Quadruple* q;
+    switch(this->type) {
+        case KEYWORD:
+        case INT:
+        case FLOAT:
+        case BOOL:
+        case STR:
+        case LIST:
+        case IDENTIFIER:
+        case STRING_LITERAL:
+        case INT_NUMBER:
+        case FLOAT_NUMBER:
+            return;
+        case ASSIGN:
+            op1 = this->get_lhs_operand();
+            op2 = this->get_rhs_operand();
+            q = new Quadruple("=", op2, "", op1, Q_ASSIGN);
+            INTERMEDIATE_CODE.push_back(q);
+            return;
+        case BIN_OP:
+            op1 = this->get_lhs_operand();
+            op2 = this->get_rhs_operand();
+            result = ;
+            q = new Quadruple(result, op1, op2, result, Q_BINARY);
+            INTERMEDIATE_CODE.push_back(q);
+            return;
+        default:
+            // yyerror("Unexpected error: generate_3ac called on a non-terminal node");
+            break;
+    }
 }

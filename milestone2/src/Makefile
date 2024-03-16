@@ -8,7 +8,7 @@ DOT = dot
 # Source and object files
 LEX_SOURCE = pylex.l
 BISON_SOURCE = pyparse.y
-CXX_SOURCES = main.cpp node.cpp symbol_table.cpp
+CXX_SOURCES = main.cpp node.cpp symbol_table.cpp _3AC.cpp
 HEADER_FILE = include/node.hpp
 
 # Input, generated files and graph

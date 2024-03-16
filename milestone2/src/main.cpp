@@ -23,9 +23,8 @@ extern stack<symbol_table*> ST_STACK;
 extern st_entry* dummy_entry;
 extern stack<int> OFFSET_STACK;
 extern int OFFSET;
-// void make_root_node() {
-//     AST_ROOT = new node(FILE_INPUT, "root", false, NULL);
-// }
+
+extern vector<Quadruple*> INTERMEDIATE_CODE;
 
 void setup_dot() {
     dot_stream << "digraph ast {\n node [shape=rectangle]; \n";
@@ -66,8 +65,9 @@ int main(int argc, const char** argv) {
     yyparse();
     cout << "Symbol table created" << endl;
     SYMBOL_TABLE->print_st();
-    // handle_annassign(AST_ROOT);
-    // AST_ROOT->traverse_tree();
+    AST_ROOT->generate_3ac();
+    cout << "3AC generated" << endl;
+    print_3AC(INTERMEDIATE_CODE);
     if(verbose_flag) {
         cout << "Finished parsing!" << endl;
     }

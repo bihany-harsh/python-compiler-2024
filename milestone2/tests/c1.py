@@ -22,6 +22,15 @@
 #################################################
 
 
+# a : int
+# b : list[int]
+d : int
+d = 1 + 2
+# c : list[int] = [1, 2, 3]
+# d : float = 1.5
+# d = 1.5 + a
+# e : int = 1 + a * (2 + 4)
+
 # class B(C,):
 #   self.a : int
 #   self.b: float
@@ -134,16 +143,5 @@
 #     def print_(a:float) -> None:
 #         print("print B")
 
-def f()->None:
-    return 2
-
-a:int = f() + 3
-d : list[int] = [1, 2, 3]
+# a:int = 1
 # b:float = 1
-a = 2
-# def f(a:int) -> None:
-#     while (a):
-#         b: int = 500
-#         a -= 1
-#     print(b)
-

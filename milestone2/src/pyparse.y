@@ -175,10 +175,13 @@ expr_stmt                   :   test annassign {
                                     }
                                     else {
                                         st_entry* new_entry = new st_entry(terminal->name, b_type, OFFSET, terminal->line_no, SYMBOL_TABLE->scope);
-                                        OFFSET += new_entry->size;
-                                        SYMBOL_TABLE->add_entry(new_entry);
                                         terminal->st = SYMBOL_TABLE;
                                         terminal->st_entry = new_entry;
+                                        SYMBOL_TABLE->add_entry(new_entry);
+                                        OFFSET += new_entry->size;
+                                        if(b_type == D_LIST) {
+                                            terminal->set_list_attributes($2);
+                                        }
                                     }
                                     $$->handle_annassign();
                             }
@@ -1050,10 +1053,11 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                         // trying to declare function inside another function/block
                                         yyerror("SyntaxError: Nested functions are not supported");
                                     }
-                                    else if(SYMBOL_TABLE->st_type == BLOCK) {
-                                        yyerror("SyntaxError: Improper function declaration.");
-                                        //FIXME: throw an error?
-                                    }
+                                    // not considering block as another scope
+                                //     else if(SYMBOL_TABLE->st_type == BLOCK) {
+                                //         yyerror("SyntaxError: Improper function declaration.");
+                                //         //FIXME: throw an error?
+                                //     }
                                     $2->create_func_st();
                                     strcpy(compound_stmt_type, "\'function definition\'");
                                 }

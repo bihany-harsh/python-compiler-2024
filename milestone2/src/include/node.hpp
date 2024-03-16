@@ -7,6 +7,7 @@
 #include <map>
 #include <string>
 #include "symbol_table.hpp"
+#include "_3AC.hpp"
 using namespace std;
 
 typedef enum {
@@ -243,6 +244,8 @@ typedef struct node {
     void generate_dot_script();
 
     // symbol table handling
+
+    void set_list_attributes(struct node* annassign);
     void setup_new_st_env();
     void create_block_st(const char* block_name);   // to create symbol_table for a block scope
                                                     // only called when a block has a declaration within it
@@ -252,6 +255,11 @@ typedef struct node {
     void create_class_st();
     void handle_inheritance(struct node* optional_arglist);
     void exit_from_class();
+
+    // 3AC code
+    void generate_3ac();
+    string get_lhs_operand(); // to be used from node "ASSIGN" after processing of the tree
+    string get_rhs_operand(); // to be used from node "ASSIGN" after processing of the tree
 } node;
 
 void prune_custom_nodes(node* parent, node* child);

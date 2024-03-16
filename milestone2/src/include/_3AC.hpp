@@ -4,22 +4,24 @@
 using namespace std;
 
 typedef enum quad_type {
-    BINARY,
-    UNARY,
-    ASSIGN,
+    Q_BINARY,
+    Q_UNARY,
+    Q_ASSIGN,
 } quad_type;
 
-struct Quadruple {
+typedef struct Quadruple {
     string op;     // Operation
     string arg1;   // First argument
     string arg2;   // Second argument
     string result; // Result
-
     quad_type q_type;
+
+    string code = "";   // Code
 
     Quadruple(const string& op, const string& arg1, const string& arg2, const string& result, quad_type q_type);
 
-    void gen_3ac_code();
-};
+    string make_code();
+} Quadruple;
 
+void print_3AC(vector<Quadruple*> INTERMEDIATE_CODE);
 #endif

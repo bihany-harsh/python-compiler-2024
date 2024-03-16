@@ -10,11 +10,7 @@ typedef enum base_data_types {
     D_FLOAT,
     D_STRING,
     D_BOOL,
-    D_LIST_INT,
-    D_LIST_FLOAT,
-    D_LIST_STRING,
-    D_LIST_BOOL,
-    D_LIST_CLASS,
+    D_LIST,
     D_CLASS,
     D_FUNCTION,
     D_BLOCK,
@@ -32,10 +28,11 @@ typedef enum symbol_table_type {
 struct symbol_table;
 struct symbol_table_entry;
 
-// typedef struct list_attributes {
-//     base_data_type list_elem_type;
-//     long long num_of_elems = 0;
-// } list_attr;
+typedef struct list_attributes {
+    base_data_type list_elem_type;
+    string class_name = ""; // to be used only when we have a list of classes
+    long long num_of_elems = 0;
+} list_attr;
 
 typedef struct func_attributes {
     int num_args = 0; // stores the number of arguments
@@ -53,11 +50,7 @@ const map<base_data_type, int> base_data_type_size = {
     {D_STRING, 8},
     {D_BOOL, 1},
     //FIXME: verify the assumption that these are all pointers to the actual data structure (runtime support) 
-    {D_LIST_INT, 8},
-    {D_LIST_FLOAT, 8},
-    {D_LIST_STRING, 8},
-    {D_LIST_BOOL, 8},
-    {D_LIST_CLASS, 8},
+    {D_LIST, 8},
     {D_CLASS, 8},
     {D_FUNCTION, 8},
     {D_BLOCK, 8},
@@ -77,6 +70,7 @@ typedef struct symbol_table_entry {
     // bool is_function = false;
     // bool is_class = false;
 
+    list_attr l_attr;
     func_attr f_attr;
     class_attr c_attr;
 
