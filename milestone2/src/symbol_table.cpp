@@ -94,6 +94,9 @@ void symbol_table::print_st() {
         if(entry->b_type == D_FUNCTION) {
             cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", num_args = " << entry->f_attr.num_args << ", return_type = " << entry->f_attr.return_type << ", offset = " << entry->offset << endl;
         }
+        else if(entry->b_type == D_LIST) {
+            cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", offset = " << entry->offset << ", num_elements = " << entry->l_attr.num_of_elems << ", element_type = " << entry->l_attr.list_elem_type << endl;
+        }
         else {
             cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", offset = " << entry->offset << endl;
         }
@@ -131,21 +134,6 @@ symbol_table_entry::symbol_table_entry(string name, base_data_type b_type, int o
     this->decl_line = decl_line;
     this->scope = scope;
 }
-
-// symbol_table_entry::symbol_table_entry(string name, base_data_type b_type, int offset, int decl_line, int scope, bool is_list, bool is_function, bool is_class, extended_attr* xattr) {
-//     this->name = name;
-//     this->b_type = b_type;
-//     this->size = base_data_type_size.find(b_type)->second;
-//     this->offset = offset;
-//     this->decl_line = decl_line;
-//     this->scope = scope;
-
-//     //TODO: handle for list, function, class
-//     this->is_list = is_list;
-//     this->is_function = is_function;
-//     this->is_class = is_class;
-
-// }
 
 // symbol_table_entry::~symbol_table_entry() {
 //     symbol_table* descendents = this->child_symbol_table;

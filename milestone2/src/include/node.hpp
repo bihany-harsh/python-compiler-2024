@@ -29,7 +29,7 @@ typedef enum {
     // misc
     IDENTIFIER,
     STRING_LITERAL,
-    // NUMBER,
+    BOOL_NUMBER, // True or False
     INT_NUMBER,
     FLOAT_NUMBER,
 
@@ -172,6 +172,7 @@ const set<int> unary_ops = { // it is declared so that these nodes are retained 
 };
 
 const map<node_type, string> type_map = {
+    {FILE_INPUT, "FILE_INPUT"},
     {KEYWORD, "KEYWORD"},
     {BOOL_OP, "BOOL_OP"},
     {UNARY_OP, "UNARY_OP"},
@@ -184,7 +185,7 @@ const map<node_type, string> type_map = {
     // misc
     {IDENTIFIER, "IDENTIFIER"},
     {STRING_LITERAL, "STRING_LITERAL"},
-    // {NUMBER, "NUMBER"},
+    {BOOL_NUMBER, "BOOL_NUMBER"},
     {INT_NUMBER, "INT_NUMBER"},
     {FLOAT_NUMBER, "FLOAT_NUMBER"},
 
@@ -219,6 +220,10 @@ typedef struct node {
     // linking the nodes with symbol table and symbol table entries
     struct symbol_table* st = nullptr;
     struct symbol_table_entry* st_entry = nullptr;
+
+    // Used for generating 3ac code
+    Quadruple* _3acode;
+    base_data_type operand_type; // storing the data type of the operand, to check type compatibility
 
     // METHODS
     // constructor
@@ -260,6 +265,7 @@ typedef struct node {
     void generate_3ac();
     string get_lhs_operand(); // to be used from node "ASSIGN" after processing of the tree
     string get_rhs_operand(); // to be used from node "ASSIGN" after processing of the tree
+    void check_operand_type_compatibility();
 } node;
 
 void prune_custom_nodes(node* parent, node* child);

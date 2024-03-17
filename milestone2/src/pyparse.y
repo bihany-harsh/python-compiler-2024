@@ -56,7 +56,7 @@
 %token<tree_node> TOK_IN TOK_IS
 %token<tree_node> TOK_PASS
 %token<tree_node> TOK_FOR TOK_WHILE
-%token<tree_node> TOK_PRINT TOK_RANGE TOK_SELF
+%token<tree_node> TOK_PRINT TOK_RANGE TOK_SELF TOK_LEN
 
 %token<tree_node> TOK_INT TOK_FLOAT TOK_BOOL TOK_STR TOK_LIST
 
@@ -90,6 +90,7 @@
 file_input                  :   multiple_lines {
                                     $$ = $1;
                                     $$->name = "FILE_INPUT";
+                                    $$->type = FILE_INPUT;
                                     $$->st = SYMBOL_TABLE;
                                     AST_ROOT = $$;
                                     AST_ROOT->clean_tree();
@@ -567,15 +568,11 @@ optional_dstar_tok_factor   :   TOK_DOUBLE_STAR factor {
                             |   {   $$ = NULL;  }
                             ;
 atom_expr                   :   atom many_trailers {
-                                    //FIXME: originally was many_trailers but we only have to support 1D lists/single function calls
                                     $$ = new node(ATOM_EXPR, "ATOM_EXPR", false, NULL);
                                     $$->add_parent_child_relation($1);
                                     // $$->add_parent_child_relation($2);
                                     prune_custom_nodes($$, $2);
                                 }
-                            // |   atom {
-                            //         $$ = $1;
-                            // }
                             ;
 atom                        :   TOK_LPAR testlist_comp TOK_RPAR { 
                                     $$ = new node(ATOM, "ATOM", false, NULL);
@@ -597,6 +594,9 @@ atom                        :   TOK_LPAR testlist_comp TOK_RPAR {
                             }
                             |   TOK_IDENTIFIER {
                                     $$ = new node(IDENTIFIER, yytext, true, NULL);
+                            }
+                            |   TOK_LEN {
+                                    $$ = new node(KEYWORD, "len", true, NULL);
                             }
                             |   TOK_PRINT {
                                     $$ = new node(KEYWORD, "print", true, NULL);
@@ -623,10 +623,10 @@ atom                        :   TOK_LPAR testlist_comp TOK_RPAR {
                                     $$ = new node(KEYWORD, "None", true, NULL);
                             }
                             |   TOK_TRUE {
-                                    $$ = new node(KEYWORD, "True", true, NULL);
+                                    $$ = new node(BOOL_NUMBER, "True", true, NULL);
                             }
                             |   TOK_FALSE {
-                                    $$ = new node(KEYWORD, "False", true, NULL);
+                                    $$ = new node(BOOL_NUMBER, "False", true, NULL);
                             }
                             ;
 numeric_strings             :   TOK_INTEGER_NUMBER {

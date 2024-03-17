@@ -35,4 +35,5 @@
      * To handle annassign or to not handle it? If handled, assign would always be at the top, helps in 3AC generation. If not, 3AC needs cases for assign.
      * So handle it!
 * When a function is created, we store its num_params. When we have to perform type_checking of the parameters, we retrieve the first num_params symbol_table entries from its symbol table (since function parameters are the first thing that we will parse).
+* We are supporting the additional feature of **multiple assignments in a single statement.**
 *

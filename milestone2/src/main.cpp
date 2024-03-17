@@ -57,8 +57,6 @@ int main(int argc, const char** argv) {
     OFFSET_STACK.push(-1); // -1 should always be at the bottom of the stack
     ST_STACK.push(nullptr); // nullptr will denote bottom of the stack
     SYMBOL_TABLE = new symbol_table(GLOBAL, "GLOBAL", NULL);
-    dummy_entry = new st_entry("print", D_FUNCTION, -8, -1, SYMBOL_TABLE->scope);
-    SYMBOL_TABLE->add_entry(dummy_entry);
     if(verbose_flag) {
         cout << "Calling the parser routine..." << endl;
     }

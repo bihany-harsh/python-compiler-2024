@@ -5,7 +5,7 @@
 using namespace std;
 
 vector<Quadruple*> INTERMEDIATE_CODE;
-long long int INTERMEDIATE_COUNTER = 0; // the counter to generate intermediates like t1, t2 etc.
+long long int INTERMEDIATE_COUNTER = 1; // the counter to generate intermediates like t1, t2 etc.
 
 Quadruple::Quadruple(const string& op, const string& arg1, const string& arg2, const string& result, quad_type q_type) {
     this->op = op;
@@ -29,6 +29,11 @@ string Quadruple::make_code() {
         case Q_ASSIGN:
             code = this->result + " = " + this->arg1;
             break;
+        case Q_INDEX:
+            code = this->result + " = " + this->arg1 + "[" + this->arg2 + "]";
+            break;
+        case Q_PRINT:
+            code = "print " + this->arg1;
     }
     return code;
 }

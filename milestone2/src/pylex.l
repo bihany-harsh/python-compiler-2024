@@ -48,6 +48,7 @@ GLOBAL                  "global"
 IF                      "if"
 IN                      "in"
 IS                      "is"
+LEN                     "len"
 NON_LOCAL               "nonlocal"
 NOT                     "not"
 OR                      "or"
@@ -223,6 +224,7 @@ ERROR_CHAR              [$?`]
 {IF}                    { return TOK_IF; }
 {IN}                    { return TOK_IN; }
 {IS}                    { return TOK_IS; }
+{LEN}                   { return TOK_LEN; }
 {NON_LOCAL}             { return TOK_NON_LOCAL; }
 {NOT}                   { return TOK_NOT; }
 {OR}                    { return TOK_OR; }

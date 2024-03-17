@@ -145,7 +145,7 @@ void node::delete_single_child_nodes() {
                 delete this;
             }
         }
-    }    
+    }
 }
 
 void node::generate_dot_script() {
@@ -386,6 +386,7 @@ void check_declare_before_use(symbol_table* st, node* root) {
 }
 
 void node::set_list_attributes(node* annassign) {
+    // TODO: to support: declaration followed by initialization
     node* tmp = annassign->children[1]; // points to ```test```
     while(tmp && tmp->children.size() != 2) {
         tmp = tmp->children[0];
@@ -435,7 +436,7 @@ void node::set_list_attributes(node* annassign) {
         if(!tmp || tmp->type != ATOM || tmp->children[0]->name != "[") {
             yyerror("TypeError: Not a valid rvalue");
         }
-        int children_size = tmp->children[1]->children.size();
+        int children_size = tmp->children[1]->children.size(); 
         this->st_entry->l_attr.num_of_elems = (children_size + (children_size % 2)) / 2;
     }
     else {
@@ -623,44 +624,156 @@ void node::exit_from_class() {
 }
 
 string node::get_lhs_operand() {
-    if(this->type != ASSIGN) {
-        yyerror("Unexpected error: get_lvalue_operand called on a non-ASSIGN node");
+    if(this->children.size() != 2 && this->type != UNARY_OP) {
+        yylineno = this->line_no;
+        yyerror("UnexpectedError: node does not have 2 children");
     }
-    if(this->children.size() != 2) {
-        yyerror("Unexpected error: ASSIGN node does not have 2 children");
+    switch(this->children[0]->type) {
+        case IDENTIFIER:
+            this->children[0]->operand_type = SYMBOL_TABLE->get_entry(this->children[0]->name)->b_type;
+            return this->children[0]->name;
+        case STRING_LITERAL:
+            this->children[0]->operand_type = D_STRING;
+            return this->children[0]->name;
+        case BOOL_NUMBER:
+            this->children[0]->operand_type = D_BOOL;
+            // return (this->children[0]->name == "True") ? "1" : "0";
+            return this->children[0]->name;
+        case INT_NUMBER:
+            this->children[0]->operand_type = D_INT;
+            return this->children[0]->name;
+        case FLOAT_NUMBER:
+            this->children[0]->operand_type = D_FLOAT;
+            return this->children[0]->name;
+        case UNARY_OP:
+            this->children[0]->operand_type = this->children[0]->children[0]->operand_type;
+            return this->children[0]->_3acode->result;
+        case BIN_OP:
+            this->children[0]->operand_type = this->children[0]->children[0]->operand_type; // operand type would be same as that of the child
+            return this->children[0]->_3acode->result;
+        case ATOM_EXPR:
+            if(this->children[0]->children[0]->name == "print" || this->children[0]->children[0]->name == "self" || this->children[0]->children[0]->name == "range" || this->children[0]->children[0]->name == "len") {
+                yyerror("not handling this yet");
+            }
+            if(!SYMBOL_TABLE->get_entry(this->children[0]->children[0]->name)) {
+                yyerror("UnexpectedError: Couldn't find entry of the list variable");
+            }
+            this->children[0]->operand_type = SYMBOL_TABLE->get_entry(this->children[0]->children[0]->name)->l_attr.list_elem_type;
+            return this->children[0]->_3acode->result;
+        case KEYWORD:
+            if(this->name != "print" || this->name != "self" || this->name != "range" || this->name != "len") {
+                yyerror("UnexpectedError: pyparse grammar is violated.");
+            }
+            
     }
-    return this->children[0]->name;
+    //TODO: clear up
+    return this->children[0]->_3acode->result;
 }
 
 string node::get_rhs_operand() {
-    if(this->type != ASSIGN) {
-        yyerror("Unexpected error: get_rvalue_operand called on a non-ASSIGN node");
-    }
     if(this->children.size() != 2) {
-        yyerror("Unexpected error: ASSIGN node does not have 2 children");
+        yylineno = this->line_no;
+        yyerror("UnexpectedError: node does not have 2 children");
     }
-    // if(this->children[1]->type != IDENTIFIER) {
-    //     // recursively find rvalue by first evaluating at children nodes
-    //     return "";
-    // }
-    // else {
-    //     return this->children[1]->name;
-    // }
-    return this->children[1]->name;
+    switch(this->children[1]->type) {
+        case IDENTIFIER:
+            this->children[1]->operand_type = SYMBOL_TABLE->get_entry(this->children[1]->name)->b_type;
+            return this->children[1]->name;
+        case FLOAT_NUMBER:
+            this->children[1]->operand_type = D_FLOAT;
+            return this->children[1]->name;
+        case INT_NUMBER:
+            this->children[1]->operand_type = D_INT;
+            return this->children[1]->name;
+        case STRING_LITERAL:
+            this->children[1]->operand_type = D_STRING;
+            return this->children[1]->name;
+        case BOOL_NUMBER:
+            this->children[1]->operand_type = D_BOOL;
+            // return (this->children[1]->name == "True") ? "1" : "0";
+            return this->children[1]->name;
+        case ATOM_EXPR:
+            if(this->children[1]->children[0]->name == "print" || this->children[1]->children[0]->name == "self" || this->children[1]->children[0]->name == "range" || this->children[1]->children[0]->name == "len") {
+                yyerror("not handling this yet");
+            }
+            if(!SYMBOL_TABLE->get_entry(this->children[1]->children[0]->name)) {
+                yyerror("UnexpectedError: Couldn't find entry of the list variable");
+            }
+            this->children[1]->operand_type = SYMBOL_TABLE->get_entry(this->children[1]->children[0]->name)->l_attr.list_elem_type;
+            return this->children[1]->_3acode->result;
+        case UNARY_OP:
+            this->children[1]->operand_type = this->children[1]->children[0]->operand_type;
+            return this->children[1]->_3acode->result;
+        case BIN_OP:
+            this->children[1]->operand_type = this->children[1]->children[1]->operand_type; // operand type would be same as that of the child
+            return this->children[1]->_3acode->result;
+        case ASSIGN:
+            this->children[1]->operand_type = this->children[1]->children[1]->operand_type;
+            return this->children[1]->_3acode->result;
+    }
+    //TODO: clear this up
+    return "";
+}
+
+void node::check_operand_type_compatibility() {
+    switch(this->_3acode->q_type) {
+        case Q_UNARY:
+            if(this->children[0]->operand_type == D_STRING) {
+                yylineno = this->children[0]->line_no;
+                yyerror("TypeError: Incompatible operation with string");
+            }
+        break;
+        case Q_INDEX:
+            if(this->children[1]->operand_type != D_INT && this->children[1]->operand_type != D_BOOL) {
+                // FIXME: can we index with True or False?
+                yyerror("IndexError: list index must be an integer");
+            }
+        break;
+        case Q_BINARY:
+        case Q_ASSIGN:
+            switch(this->children[0]->operand_type) {
+                case D_BOOL:
+                case D_INT:
+                case D_FLOAT:
+                    if(this->children[1]->operand_type == D_STRING) {
+                        yylineno = this->children[1]->line_no;
+                        yyerror("TypeError: Incompatible datatypes");
+                    }
+                    else {
+                        return;
+                    }
+                case D_STRING:
+                    if(this->children[1]->operand_type != D_STRING) {
+                        yylineno = this->children[1]->line_no;
+                        yyerror("TypeError: Incompatible datatypes");
+                    }
+                    else if(this->name == "+" || this->name == "+=") {
+                        yylineno = this->children[1]->line_no;
+                        yyerror("String concatenation not supported yet. Please wait for a newer version.");
+                    }
+                    else if(this->type != ASSIGN) {
+                        yylineno = this->children[1]->line_no;
+                        yyerror("TypeError: Incompatible operation with string");
+                    }
+                    else {
+                        return;
+                    }
+            }
+        break;
+    }
+    return;
 }
 
 void node::generate_3ac() {
-    cout << "generate_3ac called for node " << this->name << endl;
     for(auto child: this->children) {
         if(child != nullptr) {
             if(this->type == FILE_INPUT) {
-                INTERMEDIATE_COUNTER = 0; // resetting it for each statement
+                INTERMEDIATE_COUNTER = 1; // resetting it for each statement
             }
             child->generate_3ac();
         }
     }
     string op1, op2, result, op;
-    Quadruple* q;
     switch(this->type) {
         case KEYWORD:
         case INT:
@@ -671,23 +784,60 @@ void node::generate_3ac() {
         case IDENTIFIER:
         case STRING_LITERAL:
         case INT_NUMBER:
+        case BOOL_NUMBER:
         case FLOAT_NUMBER:
+            return;
+        case ATOM_EXPR:
+            if(this->children[0]->name == "print") {
+                op1 = this->get_rhs_operand();
+                this->_3acode = new Quadruple("", op1, "", "", Q_PRINT);
+                // TODO: any type checking here?
+                INTERMEDIATE_CODE.push_back(this->_3acode);
+
+            }
+            else if(this->children[0]->name == "self" || this->children[0]->name == "range" || this->children[0]->name == "len") {
+                yyerror("Not supporting this yet");
+            }
+            else if(this->children[0]->type == IDENTIFIER) {
+                op1 = this->get_lhs_operand();
+                op2 = this->get_rhs_operand();
+                result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+                this->_3acode = new Quadruple("", op1, op2, result, Q_INDEX);
+                this->check_operand_type_compatibility();
+                INTERMEDIATE_CODE.push_back(this->_3acode);
+            }
+            return;
+        case UNARY_OP:
+            op1 = this->get_lhs_operand();
+            result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+            this->_3acode = new Quadruple(this->name, op1, "", result, Q_UNARY);
+            INTERMEDIATE_CODE.push_back(this->_3acode);
             return;
         case ASSIGN:
             op1 = this->get_lhs_operand();
             op2 = this->get_rhs_operand();
-            q = new Quadruple("=", op2, "", op1, Q_ASSIGN);
-            INTERMEDIATE_CODE.push_back(q);
+            this->_3acode = new Quadruple(this->name, op2, "", op1, Q_ASSIGN);
+            this->check_operand_type_compatibility();
+            INTERMEDIATE_CODE.push_back(this->_3acode);
             return;
         case BIN_OP:
             op1 = this->get_lhs_operand();
             op2 = this->get_rhs_operand();
-            result = ;
-            q = new Quadruple(result, op1, op2, result, Q_BINARY);
-            INTERMEDIATE_CODE.push_back(q);
+            result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+            this->_3acode = new Quadruple(this->name, op1, op2, result, Q_BINARY);
+            this->check_operand_type_compatibility();
+            INTERMEDIATE_CODE.push_back(this->_3acode);
+            return;
+        case AUGASSIGN:
+            op1 = this->get_lhs_operand();
+            op2 = this->get_rhs_operand();
+            result = op1;
+            this->_3acode = new Quadruple(this->name.substr(0, this->name.length() - 1), op1, op2, result, Q_BINARY); // removing "=" from the name
+            this->check_operand_type_compatibility();
+            INTERMEDIATE_CODE.push_back(this->_3acode);
             return;
         default:
             // yyerror("Unexpected error: generate_3ac called on a non-terminal node");
-            break;
+            return;
     }
 }

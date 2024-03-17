@@ -7,6 +7,8 @@ typedef enum quad_type {
     Q_BINARY,
     Q_UNARY,
     Q_ASSIGN,
+    Q_INDEX, // a statement where list element is indexed
+    Q_PRINT,
 } quad_type;
 
 typedef struct Quadruple {
