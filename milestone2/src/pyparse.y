@@ -78,8 +78,8 @@
 %type<tree_node> test optional_if_else or_test many_or_tok_and_test and_test many_and_tok_not_test not_test comparison many_comparison_expr comp_op
 %type<tree_node> expr many_vbar_tok_xor_expr xor_expr many_cflex_tok_and_expr and_expr many_amper_tok_shift_expr shift_expr many_shift_op_arith_expr arith_expr many_arith_term
 %type<tree_node> term many_mod_factor factor power optional_dstar_tok_factor atom_expr many_trailers atom numeric_strings data_type trailer optional_arglist arglist
-%type<tree_node> many_comma_argument argument subscriptlist subscript many_comma_subscript optional_comp_for comp_for exprlist many_comma_expr optional_comp_iter comp_iter
-%type<tree_node> comp_if testlist_comp pass_stmt flow_stmt break_stmt continue_stmt return_stmt optional_test global_stmt many_comma_tok_identifier nonlocal_stmt
+%type<tree_node> many_comma_argument argument subscriptlist subscript many_comma_subscript comp_for exprlist many_comma_expr optional_comp_iter comp_iter
+%type<tree_node> comp_if testlist_comp pass_stmt flow_stmt break_stmt continue_stmt return_stmt optional_test global_stmt many_comma_tok_identifier
 %type<tree_node> compound_stmt if_stmt many_elif_stmts optional_else_stmt else_stmt suite at_least_one_stmt while_stmt optional_else_suite for_stmt funcdef optional_tok_rarrow_test parameters
 %type<tree_node> optional_typedargslist typedargslist optional_equal_test many_comma_tfpdef_optional_equal_test tfpdef optional_tok_colon_test classdef optional_paren_arglist
 
@@ -98,7 +98,7 @@ file_input                  :   multiple_lines {
                                         cout << "AST cleaning done!" << endl;
                                     }
                                     AST_ROOT->delete_delimiters();   
-                                    AST_ROOT->delete_single_child_nodes();
+                                    // AST_ROOT->delete_single_child_nodes();
                             }
                             ;
 multiple_lines              :   multiple_lines single_line {
@@ -143,9 +143,9 @@ small_stmt                  :   expr_stmt   {
                             |   global_stmt   {
                                     $$ = $1;
                             }
-                            |   nonlocal_stmt   {
-                                    $$ = $1;
-                            }
+                        //     |   nonlocal_stmt   {
+                        //             $$ = $1;
+                        //     }
                             ;
 indent_check_small_stmt     :   TOK_INDENT  {   snprintf(error_string, sizeof(error_string), "unexpected indent");
                                                 yyerror(error_string);
@@ -188,6 +188,9 @@ expr_stmt                   :   test annassign {
                             }
                             |   test augassign testlist {
                                     $$ = new node(EXPR_STMT, "EXPR_STMT", false, NULL);
+                                    
+                                    sem_lval_check($1);
+
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
@@ -198,8 +201,14 @@ expr_stmt                   :   test annassign {
                             |   test many_equal_test {
                                     $$ = new node(EXPR_STMT, "EXPR_STMT", false, NULL);
                                     $$->add_parent_child_relation($1);
+                                    // $$->add_parent_child_relation($2);                              
+
                                     prune_custom_nodes($$, $2);
                                     check_declare_before_use(SYMBOL_TABLE, $1); // to check that the LHS has been declared before use
+
+                                    $$->check_multi_assignment();
+                                    $$->update_list_param();
+                                    
                                     set<string> match = {"="};
                                     to_ast_operator($$, false, match);
                             }
@@ -208,6 +217,7 @@ many_equal_test             :   many_equal_test TOK_EQUAL test {
                                     $$ = new node(MANY_EQUAL_TEST, "MANY_EQUAL_TEST", false, NULL);
                                     $2 = new node(ASSIGN, "=", true, NULL);
                                     prune_custom_nodes($$, $1);
+                                    // $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
                                     check_declare_before_use(SYMBOL_TABLE, $3); // to check that the RHS has been declared before use
@@ -574,7 +584,7 @@ atom_expr                   :   atom many_trailers {
                                     prune_custom_nodes($$, $2);
                                 }
                             ;
-atom                        :   TOK_LPAR testlist_comp TOK_RPAR { 
+atom                        :   TOK_LPAR test TOK_RPAR { // FIXME: updated test from testlist_comp 
                                     $$ = new node(ATOM, "ATOM", false, NULL);
                                     $1 = new node(DELIMITER, "(", true, NULL);
                                     $3 = new node(DELIMITER, ")", true, NULL);
@@ -669,7 +679,7 @@ trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_a
                                     prune_custom_nodes($$, $3); 
                                     $$->add_parent_child_relation($4);
                             }
-                            |   TOK_LSQB { join_lines_implicitly++; } subscriptlist TOK_RSQB {
+                            |   TOK_LSQB { join_lines_implicitly++; } test TOK_RSQB { // FIXME: TOK_LSQB subscriptlist TOK_RSQB
                                     join_lines_implicitly--;
                                     $$ = new node(TRAILER, "TRAILER", false, NULL);
                                     $1 = new node(DELIMITER, "[", true, NULL);
@@ -707,7 +717,7 @@ many_comma_argument         :   many_comma_argument TOK_COMMA argument {
                             }
                             |   {   $$ = NULL;  }
                             ;
-argument                    :   test optional_comp_for {
+argument                    :   test { // removed the optional_comp_for here (FIXME: previously: test optional_comp_for)
                                     $$ = new node(ARGUMENT, "ARGUMENT", false, NULL);
                                     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $2);
@@ -720,34 +730,34 @@ argument                    :   test optional_comp_for {
                                     $$->add_parent_child_relation($3);
                             }
                             ;
-subscriptlist               :   subscript many_comma_subscript optional_comma {
-                                    $$ = new node(SUBSCRIPTLIST, "SUBSCRIPTLIST", false, NULL);
-                                    $$->add_parent_child_relation($1);
-                                //     $$->add_parent_child_relation($2);
-                                    prune_custom_nodes($$, $2);
-                                //     $$->add_parent_child_relation($3);
-                                    prune_custom_nodes($$, $3);
-                            }
-                            ;
-subscript                   :   test {
-                                    $$ = $1;
-                            }
-                            ;
-many_comma_subscript        :   many_comma_subscript TOK_COMMA subscript {
-                                    $$ = new node(MANY_COMMA_SUBSCRIPT, "MANY_COMMA_SUBSCRIPT", false, NULL);
-                                    $2 = new node(DELIMITER, ",", true, NULL);
-                                    prune_custom_nodes($$, $1);
-                                    $$->add_parent_child_relation($2);
-                                    $$->add_parent_child_relation($3);
-                            }
-                            |   {   $$ = NULL;  }
-                            ;
-optional_comp_for           :   comp_for {
-                                    $$ = $1;
-                            }
-                            |   {   $$ = NULL;  }
-                            ;
-comp_for                    :   TOK_FOR exprlist TOK_IN or_test optional_comp_iter {
+// subscriptlist               :   subscript many_comma_subscript optional_comma {
+//                                     $$ = new node(SUBSCRIPTLIST, "SUBSCRIPTLIST", false, NULL);
+//                                     $$->add_parent_child_relation($1);
+//                                 //     $$->add_parent_child_relation($2);
+//                                     prune_custom_nodes($$, $2);
+//                                 //     $$->add_parent_child_relation($3);
+//                                     prune_custom_nodes($$, $3);
+//                             }
+//                             ;
+// subscript                   :   test {
+//                                     $$ = $1;
+//                             }
+//                             ;
+// many_comma_subscript        :   many_comma_subscript TOK_COMMA subscript {
+//                                     $$ = new node(MANY_COMMA_SUBSCRIPT, "MANY_COMMA_SUBSCRIPT", false, NULL);
+//                                     $2 = new node(DELIMITER, ",", true, NULL);
+//                                     prune_custom_nodes($$, $1);
+//                                     $$->add_parent_child_relation($2);
+//                                     $$->add_parent_child_relation($3);
+//                             }
+//                             |   {   $$ = NULL;  }
+//                             ;
+// optional_comp_for           :   comp_for {
+//                                     $$ = $1;
+//                             }
+//                             |   {   $$ = NULL;  }
+//                             ;
+comp_for                    :   TOK_FOR expr TOK_IN or_test optional_comp_iter {  // (FIXME: previously: TOK_FOR exprlist TOK_IN or_test optional_comp_iter)
                                     $$ = new node(COMP_FOR, "COMP_FOR", false, NULL);
                                     $1 = new node(KEYWORD, "for", true, NULL);
                                     $3 = new node(KEYWORD, "in", true, NULL);
@@ -844,6 +854,7 @@ return_stmt                 :   TOK_RETURN optional_test {
                                     }
                                     else {
                                         // TODO: check that return type matches the function return type (can do in type checking also)
+                                        // HOPEFULLY will be done while type-checking
                                     }
                             }
                             |   TOK_RETURN test TOK_COMMA testlist {
@@ -863,6 +874,8 @@ global_stmt                 :   TOK_GLOBAL TOK_IDENTIFIER {
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($4);
+
+                                    // handle_global_stmt($$); TODO: kar lena isse! 
                             }
                             ;
 many_comma_tok_identifier   :   many_comma_tok_identifier TOK_COMMA TOK_IDENTIFIER {
@@ -876,14 +889,14 @@ many_comma_tok_identifier   :   many_comma_tok_identifier TOK_COMMA TOK_IDENTIFI
                             |   {   $$ = NULL; }
                             ;
 
-nonlocal_stmt               :   TOK_NON_LOCAL TOK_IDENTIFIER { $2 = new node(IDENTIFIER, yytext, true, NULL); } many_comma_tok_identifier {
-                                    $$ = new node(NONLOCAL_STMT, "NONLOCAL_STMT", false, NULL);
-                                    $1 = new node(KEYWORD, "nonlocal", true, NULL);
-                                    $$->add_parent_child_relation($1);
-                                    $$->add_parent_child_relation($2);
-                                    prune_custom_nodes($$, $4);
-                            }
-                            ;
+// nonlocal_stmt               :   TOK_NON_LOCAL TOK_IDENTIFIER { $2 = new node(IDENTIFIER, yytext, true, NULL); } many_comma_tok_identifier {
+//                                     $$ = new node(NONLOCAL_STMT, "NONLOCAL_STMT", false, NULL);
+//                                     $1 = new node(KEYWORD, "nonlocal", true, NULL);
+//                                     $$->add_parent_child_relation($1);
+//                                     $$->add_parent_child_relation($2);
+//                                     prune_custom_nodes($$, $4);
+//                             }
+//                             ;
 
 compound_stmt               :   if_stmt {
                                     $$ = $1;

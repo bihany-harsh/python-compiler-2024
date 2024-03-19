@@ -29,9 +29,10 @@ struct symbol_table;
 struct symbol_table_entry;
 
 typedef struct list_attributes {
+
     base_data_type list_elem_type;
     string class_name = ""; // to be used only when we have a list of classes
-    long long num_of_elems = 0;
+    long long num_of_elems = -1; // when not initialized it is -1.
 } list_attr;
 
 typedef struct func_attributes {

@@ -1,23 +1,10 @@
-class Base:
-    def __init__(self, name: str) -> None:
-        self.name = name
+global x
+x = 1
 
-    def greet(self) -> str:
-        return "Hello, from the Base class!"
-class Derived(Base):
-    def __init__(self, name: str, age: int) -> None:
-        super().__init__(name)
-        self.age = age
+def f():
+    global x
+    x = 3
+    print(x)
 
-# Creating an object of the Base class
-base_obj: Base = Base("Alice")
-
-# Creating an object of the Derived class
-derived_obj: Derived = Derived("Bob", 30)
-# Creating a list of integers with type annotation
-int_list: list[int] = [1, 2, 3, 4, 5]
-
-A = ((1,2), (3,4))
-
-for i,j in A:
-    print(i,j)
+f()
+print(x)

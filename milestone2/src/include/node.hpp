@@ -247,6 +247,8 @@ typedef struct node {
 
     // to parse tree
     void generate_dot_script();
+    void check_multi_assignment();
+    void update_list_param();
 
     // symbol table handling
 
@@ -280,6 +282,8 @@ node* sem_lval_check(node* root);
 base_data_type sem_rval_check(symbol_table* st, node* root);
 
 void check_declare_before_use(symbol_table* st, node* root);
+
+void return_type_check(node* test);
 
 void add_class_st_entry(node* test, base_data_type b_type);
 

@@ -181,6 +181,84 @@ void node::generate_dot_script() {
     return;
 }
 
+void node::check_multi_assignment() {
+    // `this` is expr_stmt and it is before it is converted into an AST
+    node* tmp;
+
+    for(int i = 0; i < this->children.size() - 1; i++) {
+        tmp = this->children[i];
+        if (tmp->type == TEST) {
+            // check_declare_before_use(SYMBOL_TABLE, this->children[i]);
+            while(tmp && tmp->children.size() == 1) {
+                tmp = tmp->children[0];
+            }
+            if (!tmp) {
+                yyerror("UnexpectedError: tmp is nullptr.");
+            }
+            if (tmp->type != IDENTIFIER) {
+                yyerror(("SyntaxError: " + tmp->name + " is not a valid lvalue.").c_str());
+            }
+        }
+    }
+
+    return;
+}
+
+void node::update_list_param() {
+    // `this` is expr_stmt
+    node* tmp;
+    symbol_table_entry* list_entry;
+    int children_size; 
+    node* rval = this->children[this->children.size() - 1];
+    while(rval && !rval->is_terminal && rval->type != ATOM) {
+        rval = rval->children[0];
+    }
+    if (!rval) {
+        yyerror("SyntaxError: not a valid assignment.");
+    }
+    if (rval->is_terminal) {
+        return; // non-list assignment
+    }
+    // rval is now ATOM
+    if (rval->children[0]->name != "[") {
+        yyerror("SyntaxError: Improper list declaration.");
+    }
+    children_size = rval->children[1]->children.size();
+    children_size = (children_size + (children_size % 2)) / 2; // because of commas
+
+    for(int i = 0; i < this->children.size() - 1; i++) {
+        tmp = this->children[i];
+        if (tmp->type == TEST) {
+            while(tmp && tmp->children.size() == 1) {
+                tmp = tmp->children[0];
+            }
+            if (!tmp) {
+                yyerror("UnexpectedError: tmp is nullptr.");
+            }
+            // if (tmp->type == ATOM_EXPR) {
+            //     // array assignment not to be hindered!
+            //     return; // already returned near the beginning of the function
+            // }
+            if (tmp->type != IDENTIFIER) {
+                yyerror(("SyntaxError: " + tmp->name + " is not a valid lvalue.").c_str());
+            }
+            list_entry = SYMBOL_TABLE->get_entry(tmp->name); 
+            if (list_entry->b_type == D_LIST) {
+                if (list_entry->l_attr.num_of_elems != -1) {
+                    yyerror("Re-initialization of lists not supported. Please wait for a newer version.");
+                }
+                // initialization
+                list_entry->l_attr.num_of_elems = children_size;
+            }
+            else { // type checking: LHS is not a list but RHS is
+                yyerror("TypeError: Not a valid list assignment.");
+            }
+        }
+    }
+    return;
+}
+
+
 void prune_custom_nodes(node* parent, node* child) {
     if (child) {
         for (auto child_: child->children) {
@@ -307,7 +385,7 @@ node* sem_lval_check(node* root) {
     if(!tmp) {
         yyerror("Not a valid lvalue");
     }
-    if(tmp->type != IDENTIFIER && (tmp->name != "range" && tmp->name != "print")) {
+    if(tmp->type != IDENTIFIER && (tmp->name != "range" && tmp->name != "print" && tmp->name != "len")) {
         yyerror((tmp->name + " is not a valid lvalue").c_str());
     }
     return tmp;
@@ -386,16 +464,18 @@ void check_declare_before_use(symbol_table* st, node* root) {
 }
 
 void node::set_list_attributes(node* annassign) {
-    // TODO: to support: declaration followed by initialization
     node* tmp = annassign->children[1]; // points to ```test```
     while(tmp && tmp->children.size() != 2) {
         tmp = tmp->children[0];
     }
+    
     if(!tmp || tmp->type != ATOM_EXPR) {
-        cout << "Unexpected error when setting list attributes.\nExiting";
-        return;
+        yyerror("Unexpected error when setting list attributes.\nExiting");
     }
     // this->st_entry->l_attr.list_elem_type = tmp->children[1]->children[1]
+    if (tmp->children[1]->children[0]->name != "[") {
+        yyerror("SyntaxError: Improper list declaration.");
+    }
     if(tmp->children[1]->children[1]->type == IDENTIFIER) {
         // trying to declare a list of classes
         symbol_table_entry* entry = st->get_entry(tmp->children[1]->children[1]->name);
@@ -440,7 +520,7 @@ void node::set_list_attributes(node* annassign) {
         this->st_entry->l_attr.num_of_elems = (children_size + (children_size % 2)) / 2;
     }
     else {
-        this->st_entry->l_attr.num_of_elems = 0; // no initialization
+        this->st_entry->l_attr.num_of_elems = -1; // no initialization
     }
 }
 
@@ -522,6 +602,12 @@ void node::create_class_st() {
     SYMBOL_TABLE = new symbol_table(CLASS, this->name, ST_STACK.top());
     OFFSET = 0;
 }
+
+// void return_type_check(node* test) {
+//     base_data_type return_type = SYMBOL_TABLE->parent->get_entry(SYMBOL_TABLE->st_name)->f_attr.return_type;
+//     // the current scope is that of a function and hence finding it in the parent
+//     node* tmp = test;
+// } 
 
 void add_class_st_entry(node* test, base_data_type b_type) {
     // checks are done previosuly before the call to this function (like "__init__")

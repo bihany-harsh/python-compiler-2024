@@ -63,9 +63,9 @@ int main(int argc, const char** argv) {
     yyparse();
     cout << "Symbol table created" << endl;
     SYMBOL_TABLE->print_st();
-    AST_ROOT->generate_3ac();
+    // AST_ROOT->generate_3ac();
     cout << "3AC generated" << endl;
-    print_3AC(INTERMEDIATE_CODE);
+    // print_3AC(INTERMEDIATE_CODE);
     if(verbose_flag) {
         cout << "Finished parsing!" << endl;
     }
