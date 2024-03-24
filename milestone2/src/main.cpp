@@ -24,7 +24,7 @@ extern st_entry* dummy_entry;
 extern stack<int> OFFSET_STACK;
 extern int OFFSET;
 
-extern vector<Quadruple*> INTERMEDIATE_CODE;
+extern vector<Quadruple*> IR;
 
 void setup_dot() {
     dot_stream << "digraph ast {\n node [shape=rectangle]; \n";
@@ -63,9 +63,9 @@ int main(int argc, const char** argv) {
     yyparse();
     cout << "Symbol table created" << endl;
     SYMBOL_TABLE->print_st();
-    // AST_ROOT->generate_3ac();
+    AST_ROOT->generate_3ac();
     cout << "3AC generated" << endl;
-    // print_3AC(INTERMEDIATE_CODE);
+    print_3AC(IR);
     if(verbose_flag) {
         cout << "Finished parsing!" << endl;
     }

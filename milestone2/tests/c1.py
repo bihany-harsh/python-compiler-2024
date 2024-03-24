@@ -20,24 +20,25 @@
 # obj.f()
 
 #################################################
-def f(a: int)-> None:
-    print(1)
-f(1)
+# def f(a: int)-> None:
+#     print(1)
+# f(1)
 
-a : list[int] = [1, 2, 3]
+# a : list[int] = [1, 2, 3]
 
 3
 
-x : list[float]
-x = [1.5, 2, 2.5]
+# x : list[float]
+# i : int
+# x = [i for i in range(10)]
 
 b: int
+a: list[int] = [1, 2, 3]
+b = 1 * +True
+a[1] = 1
+# c:int = 3
 
-b = 1
-
-c:int = 3
-
-e: int
+# e: int
 
 d : int
 

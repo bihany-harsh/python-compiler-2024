@@ -73,14 +73,13 @@
 %token<tree_node> TOK_SEMICOLON TOK_COLON TOK_COMMA TOK_DOT
 %token<tree_node> TOK_RARROW
 
-%type<tree_node> file_input multiple_lines single_line stmt simple_stmt small_stmt many_small_stmts
-%type<tree_node> expr_stmt many_equal_test annassign optional_assign_test augassign testlist many_comma_tok_test optional_comma
-%type<tree_node> test optional_if_else or_test many_or_tok_and_test and_test many_and_tok_not_test not_test comparison many_comparison_expr comp_op
-%type<tree_node> expr many_vbar_tok_xor_expr xor_expr many_cflex_tok_and_expr and_expr many_amper_tok_shift_expr shift_expr many_shift_op_arith_expr arith_expr many_arith_term
-%type<tree_node> term many_mod_factor factor power optional_dstar_tok_factor atom_expr many_trailers atom numeric_strings data_type trailer optional_arglist arglist
-%type<tree_node> many_comma_argument argument subscriptlist subscript many_comma_subscript comp_for exprlist many_comma_expr optional_comp_iter comp_iter
-%type<tree_node> comp_if testlist_comp pass_stmt flow_stmt break_stmt continue_stmt return_stmt optional_test global_stmt many_comma_tok_identifier
-%type<tree_node> compound_stmt if_stmt many_elif_stmts optional_else_stmt else_stmt suite at_least_one_stmt while_stmt optional_else_suite for_stmt funcdef optional_tok_rarrow_test parameters
+%type<tree_node> file_input multiple_lines single_line stmt simple_stmt small_stmt many_small_stmts expr_stmt many_equal_test annassign optional_assign_test
+%type<tree_node> augassign testlist many_comma_tok_test optional_comma test optional_if_else or_test many_or_tok_and_test and_test many_and_tok_not_test
+%type<tree_node> not_test comparison many_comparison_expr comp_op expr many_vbar_tok_xor_expr xor_expr many_cflex_tok_and_expr and_expr many_amper_tok_shift_expr
+%type<tree_node> shift_expr many_shift_op_arith_expr arith_expr many_arith_term term many_mod_factor factor power optional_dstar_tok_factor atom_expr many_trailers
+%type<tree_node> atom numeric_strings data_type trailer optional_arglist arglist many_comma_argument argument comp_for optional_comp_iter comp_iter comp_if testlist_comp
+%type<tree_node> pass_stmt flow_stmt break_stmt continue_stmt return_stmt optional_test global_stmt many_comma_tok_identifier compound_stmt if_stmt many_elif_stmts
+%type<tree_node> optional_else_stmt else_stmt suite at_least_one_stmt while_stmt optional_else_suite for_stmt funcdef optional_tok_rarrow_test parameters
 %type<tree_node> optional_typedargslist typedargslist optional_equal_test many_comma_tfpdef_optional_equal_test tfpdef optional_tok_colon_test classdef optional_paren_arglist
 
 %expect 1
@@ -98,7 +97,7 @@ file_input                  :   multiple_lines {
                                         cout << "AST cleaning done!" << endl;
                                     }
                                     AST_ROOT->delete_delimiters();   
-                                    // AST_ROOT->delete_single_child_nodes();
+                                    AST_ROOT->delete_single_child_nodes();
                             }
                             ;
 multiple_lines              :   multiple_lines single_line {
@@ -584,13 +583,14 @@ atom_expr                   :   atom many_trailers {
                                     prune_custom_nodes($$, $2);
                                 }
                             ;
-atom                        :   TOK_LPAR test TOK_RPAR { // FIXME: updated test from testlist_comp 
+atom                        :   TOK_LPAR {join_lines_implicitly++; } test TOK_RPAR { // FIXME: updated test from testlist_comp 
+                                    join_lines_implicitly--;
                                     $$ = new node(ATOM, "ATOM", false, NULL);
                                     $1 = new node(DELIMITER, "(", true, NULL);
                                     $3 = new node(DELIMITER, ")", true, NULL);
                                     $$->add_parent_child_relation($1);
-                                    $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($3);
+                                    $$->add_parent_child_relation($4);
                                 //     yyerror("SyntaxError: Tuples not supported");
                             }
                             |   TOK_LSQB { join_lines_implicitly++; } testlist_comp TOK_RSQB {
@@ -718,9 +718,10 @@ many_comma_argument         :   many_comma_argument TOK_COMMA argument {
                             |   {   $$ = NULL;  }
                             ;
 argument                    :   test { // removed the optional_comp_for here (FIXME: previously: test optional_comp_for)
-                                    $$ = new node(ARGUMENT, "ARGUMENT", false, NULL);
-                                    $$->add_parent_child_relation($1);
-                                    prune_custom_nodes($$, $2);
+                                //     $$ = new node(ARGUMENT, "ARGUMENT", false, NULL);
+                                //     $$->add_parent_child_relation($1);
+                                //     prune_custom_nodes($$, $2);
+                                $$ = $1;
                             }
                             |   test TOK_EQUAL test {
                                     $$ = new node(ARGUMENT, "ARGUMENT", false, NULL);
@@ -768,21 +769,21 @@ comp_for                    :   TOK_FOR expr TOK_IN or_test optional_comp_iter {
                                     prune_custom_nodes($$, $5);
                             }
                             ;
-exprlist                    :   expr many_comma_expr optional_comma {
-                                    $$ = new node(EXPRLIST, "EXPRLIST", false, NULL);
-                                    $$->add_parent_child_relation($1);
-                                    prune_custom_nodes($$, $2);
-                                    prune_custom_nodes($$, $3);
-                            }
-                            ;
-many_comma_expr             :   many_comma_expr TOK_COMMA expr {
-                                    $$ = new node(MANY_COMMA_EXPR, "MANY_COMMA_EXPR", false, NULL);
-                                    $2 = new node(DELIMITER, ",", true, NULL);
-                                    prune_custom_nodes($$, $1);
-                                    $$->add_parent_child_relation($2);
-                                    $$->add_parent_child_relation($3);
-                            }
-                            |   {   $$ = NULL;  }
+// exprlist                    :   expr many_comma_expr optional_comma {
+//                                     $$ = new node(EXPRLIST, "EXPRLIST", false, NULL);
+//                                     $$->add_parent_child_relation($1);
+//                                     prune_custom_nodes($$, $2);
+//                                     prune_custom_nodes($$, $3);
+//                             }
+//                             ;
+// many_comma_expr             :   many_comma_expr TOK_COMMA expr {
+//                                     $$ = new node(MANY_COMMA_EXPR, "MANY_COMMA_EXPR", false, NULL);
+//                                     $2 = new node(DELIMITER, ",", true, NULL);
+//                                     prune_custom_nodes($$, $1);
+//                                     $$->add_parent_child_relation($2);
+//                                     $$->add_parent_child_relation($3);
+//                             }
+//                             |   {   $$ = NULL;  }
 optional_comp_iter          :   comp_iter {
                                     $$ = $1;
                             }
@@ -875,7 +876,7 @@ global_stmt                 :   TOK_GLOBAL TOK_IDENTIFIER {
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($4);
 
-                                    // handle_global_stmt($$); TODO: kar lena isse! 
+                                //     handle_global_stmt($$); TODO: kar lena isse!
                             }
                             ;
 many_comma_tok_identifier   :   many_comma_tok_identifier TOK_COMMA TOK_IDENTIFIER {
@@ -888,15 +889,6 @@ many_comma_tok_identifier   :   many_comma_tok_identifier TOK_COMMA TOK_IDENTIFI
                             }
                             |   {   $$ = NULL; }
                             ;
-
-// nonlocal_stmt               :   TOK_NON_LOCAL TOK_IDENTIFIER { $2 = new node(IDENTIFIER, yytext, true, NULL); } many_comma_tok_identifier {
-//                                     $$ = new node(NONLOCAL_STMT, "NONLOCAL_STMT", false, NULL);
-//                                     $1 = new node(KEYWORD, "nonlocal", true, NULL);
-//                                     $$->add_parent_child_relation($1);
-//                                     $$->add_parent_child_relation($2);
-//                                     prune_custom_nodes($$, $4);
-//                             }
-//                             ;
 
 compound_stmt               :   if_stmt {
                                     $$ = $1;
@@ -1069,7 +1061,6 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                     // not considering block as another scope
                                 //     else if(SYMBOL_TABLE->st_type == BLOCK) {
                                 //         yyerror("SyntaxError: Improper function declaration.");
-                                //         //FIXME: throw an error?
                                 //     }
                                     $2->create_func_st();
                                     strcpy(compound_stmt_type, "\'function definition\'");

@@ -22,7 +22,7 @@ extern stack<int> OFFSET_STACK;
 extern int OFFSET;
 extern int block_counter;
 
-extern vector<Quadruple*> INTERMEDIATE_CODE;
+extern vector<Quadruple*> IR;
 extern long long int INTERMEDIATE_COUNTER;
 
 node::node(node_type type, string name, bool is_terminal, node* parent) {
@@ -182,6 +182,9 @@ void node::generate_dot_script() {
 }
 
 void node::check_multi_assignment() {
+    if(this->children.size() == 3) {
+        return; // only a single assignment
+    }
     // `this` is expr_stmt and it is before it is converted into an AST
     node* tmp;
 
@@ -709,6 +712,25 @@ void node::exit_from_class() {
     return;
 }
 
+base_data_type max_operand_type(base_data_type lhs, base_data_type rhs) {
+    if(lhs == D_FLOAT || rhs == D_FLOAT) {
+        return D_FLOAT;
+    }
+    else if(lhs == D_INT || rhs == D_INT) {
+        return D_INT;
+    }
+    else if(lhs == D_BOOL || rhs == D_BOOL) {
+        return D_BOOL;
+    }
+    else if(lhs == D_STRING || rhs == D_STRING) {
+        return D_STRING;
+    }
+    else {
+        yyerror("UnexpectedTypeError: Invalid operand types.");
+    }
+    return D_VOID; //gcc shutup!
+}
+
 string node::get_lhs_operand() {
     if(this->children.size() != 2 && this->type != UNARY_OP) {
         yylineno = this->line_no;
@@ -723,7 +745,6 @@ string node::get_lhs_operand() {
             return this->children[0]->name;
         case BOOL_NUMBER:
             this->children[0]->operand_type = D_BOOL;
-            // return (this->children[0]->name == "True") ? "1" : "0";
             return this->children[0]->name;
         case INT_NUMBER:
             this->children[0]->operand_type = D_INT;
@@ -735,7 +756,7 @@ string node::get_lhs_operand() {
             this->children[0]->operand_type = this->children[0]->children[0]->operand_type;
             return this->children[0]->_3acode->result;
         case BIN_OP:
-            this->children[0]->operand_type = this->children[0]->children[0]->operand_type; // operand type would be same as that of the child
+            this->children[0]->operand_type = max_operand_type(this->children[0]->children[0]->operand_type, this->children[0]->children[1]->operand_type); // operand type would be same as that of the child
             return this->children[0]->_3acode->result;
         case ATOM_EXPR:
             if(this->children[0]->children[0]->name == "print" || this->children[0]->children[0]->name == "self" || this->children[0]->children[0]->name == "range" || this->children[0]->children[0]->name == "len") {
@@ -776,7 +797,6 @@ string node::get_rhs_operand() {
             return this->children[1]->name;
         case BOOL_NUMBER:
             this->children[1]->operand_type = D_BOOL;
-            // return (this->children[1]->name == "True") ? "1" : "0";
             return this->children[1]->name;
         case ATOM_EXPR:
             if(this->children[1]->children[0]->name == "print" || this->children[1]->children[0]->name == "self" || this->children[1]->children[0]->name == "range" || this->children[1]->children[0]->name == "len") {
@@ -791,10 +811,11 @@ string node::get_rhs_operand() {
             this->children[1]->operand_type = this->children[1]->children[0]->operand_type;
             return this->children[1]->_3acode->result;
         case BIN_OP:
-            this->children[1]->operand_type = this->children[1]->children[1]->operand_type; // operand type would be same as that of the child
+            this->children[1]->operand_type = max_operand_type(this->children[1]->children[0]->operand_type, this->children[1]->children[1]->operand_type);
+            // this->children[1]->operand_type = this->children[1]->children[1]->operand_type; // operand type would be same as that of the child
             return this->children[1]->_3acode->result;
         case ASSIGN:
-            this->children[1]->operand_type = this->children[1]->children[1]->operand_type;
+            this->children[1]->operand_type = this->children[1]->children[0]->operand_type;
             return this->children[1]->_3acode->result;
     }
     //TODO: clear this up
@@ -802,50 +823,238 @@ string node::get_rhs_operand() {
 }
 
 void node::check_operand_type_compatibility() {
+    string temp_result; // stores the temporary result attr of a Quadruple (for coercion)
+    Quadruple* q; // temporary, for adding coercion statements to the Intermediate code
     switch(this->_3acode->q_type) {
         case Q_UNARY:
             if(this->children[0]->operand_type == D_STRING) {
                 yylineno = this->children[0]->line_no;
-                yyerror("TypeError: Incompatible operation with string");
+                yyerror("TypeError: Incompatible operation with string.");
+            }
+            else if(this->children[0]->operand_type == D_FLOAT) {
+                if(this->name == "~") {
+                    yylineno = this->children[0]->line_no;
+                    yyerror("TypeError: unsupported operand type for ~: 'float'");
+                }
+            }
+            else if(this->children[0]->operand_type == D_BOOL) {
+                temp_result = "t" + to_string(INTERMEDIATE_COUNTER++);
+                if(this->children[0]->_3acode != nullptr) {
+                    // there is some temporary result stored, that has to be coerced
+                    q = new Quadruple("=", "int", this->children[0]->_3acode->result, temp_result, Q_COERCION);
+                } else {
+                    q = new Quadruple("=", "int", this->children[0]->name, temp_result, Q_COERCION);
+                }
+                this->children[0]->operand_type = D_INT;
+                IR.push_back(q);
+                this->_3acode->rename_attribute(ARG1, temp_result);
             }
         break;
         case Q_INDEX:
-            if(this->children[1]->operand_type != D_INT && this->children[1]->operand_type != D_BOOL) {
-                // FIXME: can we index with True or False?
+            if(this->children[1]->operand_type == D_BOOL) {
+                temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+                if(this->children[1]->_3acode != nullptr) {
+                    // there is some temporary result stored, that has to be coerced
+                    q = new Quadruple("=", "int", this->children[1]->_3acode->result, temp_result, Q_COERCION);
+                } else {
+                    q = new Quadruple("=", "int", this->children[1]->name, temp_result, Q_COERCION);
+                }
+                this->children[1]->operand_type = D_INT;
+                IR.push_back(q);
+                this->_3acode->rename_attribute(ARG2, temp_result); //FIXME: check that the correct attr is renamed
+            }
+            else if(this->children[1]->operand_type != D_INT) {
+                yylineno = this->children[0]->line_no;
                 yyerror("IndexError: list index must be an integer");
             }
         break;
         case Q_BINARY:
-        case Q_ASSIGN:
             switch(this->children[0]->operand_type) {
                 case D_BOOL:
+                    if(this->children[1]->operand_type == D_INT) {
+                        temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+                        if(this->children[0]->_3acode != nullptr) {
+                            // there is some temporary result stored, that has to be coerced
+                            q = new Quadruple("=", "int", this->children[0]->_3acode->result, temp_result, Q_COERCION);
+                        } else {
+                            q = new Quadruple("=", "int", this->children[0]->name, temp_result, Q_COERCION);
+                        }
+                        this->children[0]->operand_type = D_INT;
+                        IR.push_back(q);
+                        this->_3acode->rename_attribute(ARG1, temp_result);
+                    }
+                    else if(this->children[1]->operand_type == D_FLOAT) {
+                        temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+                        if(this->children[0]->_3acode != nullptr) {
+                            // there is some temporary result stored, that has to be coerced
+                            q = new Quadruple("=", "float", this->children[0]->_3acode->result, temp_result, Q_COERCION);
+                        } else {
+                            q = new Quadruple("=", "float", this->children[0]->name, temp_result, Q_COERCION);
+                        }
+                        this->children[0]->operand_type = D_FLOAT;
+                        IR.push_back(q);
+                        this->_3acode->rename_attribute(ARG1, temp_result);
+                    }
+                    else if(this->children[1]->operand_type != D_BOOL) {
+                        yylineno = this->children[0]->line_no;
+                        yyerror("TypeError: Incompatible datatyes");
+                    }
+                break;
                 case D_INT:
+                    if(this->children[1]->operand_type == D_BOOL) {
+                        cout << "This is the correct place" << endl;
+                        temp_result = "t" + to_string(INTERMEDIATE_COUNTER++);
+                        if(this->children[1]->_3acode != nullptr) {
+                            // there is some temporary result stored, that has to be coerced
+                            q = new Quadruple("=", "int", this->children[1]->_3acode->result, temp_result, Q_COERCION);
+                        } else {
+                            q = new Quadruple("=", "int", this->children[1]->name, temp_result, Q_COERCION);
+                        }
+                        this->children[1]->operand_type = D_INT;
+                        IR.push_back(q);
+                        this->_3acode->rename_attribute(ARG2, temp_result);
+                    }
+                    else if(this->children[1]->operand_type == D_FLOAT) {
+                        temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+                        // q = new Quadruple("=", "float", this->children[0]->name, temp_result, Q_COERCION);
+                        if(this->children[0]->_3acode != nullptr) {
+                            // there is some temporary result stored, that has to be coerced
+                            q = new Quadruple("=", "float", this->children[0]->_3acode->result, temp_result, Q_COERCION);
+                        } else {
+                            q = new Quadruple("=", "float", this->children[0]->name, temp_result, Q_COERCION);
+                        }
+                        this->children[0]->operand_type = D_FLOAT;
+                        IR.push_back(q);
+                        // this->_3acode->arg1 = temp_result;
+                        this->_3acode->rename_attribute(ARG1, temp_result);
+                    }
+                    else if(this->children[1]->operand_type != D_INT) {
+                        yylineno = this->children[0]->line_no;
+                        yyerror("TypeError: Incompatible datatypes");
+                    }
+                break;
                 case D_FLOAT:
-                    if(this->children[1]->operand_type == D_STRING) {
-                        yylineno = this->children[1]->line_no;
+                    if(this->children[1]->operand_type == D_BOOL) {
+                        temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+                        // q = new Quadruple("=", "float", this->children[1]->name, temp_result, Q_COERCION);
+                        if(this->children[1]->_3acode != nullptr) {
+                            // there is some temporary result stored, that has to be coerced
+                            q = new Quadruple("=", "float", this->children[1]->_3acode->result, temp_result, Q_COERCION);
+                        } else {
+                            q = new Quadruple("=", "float", this->children[1]->name, temp_result, Q_COERCION);
+                        }
+                        this->children[1]->operand_type = D_FLOAT;
+                        IR.push_back(q);
+                        this->_3acode->rename_attribute(ARG2, temp_result);
+                    }
+                    else if(this->children[1]->operand_type == D_INT) {
+                        temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+                        // q = new Quadruple("=", "float", this->children[1]->name, temp_result, Q_COERCION);
+                        if(this->children[1]->_3acode != nullptr) {
+                            // there is some temporary result stored, that has to be coerced
+                            q = new Quadruple("=", "float", this->children[1]->_3acode->result, temp_result, Q_COERCION);
+                        } else {
+                            q = new Quadruple("=", "float", this->children[1]->name, temp_result, Q_COERCION);
+                        }
+                        this->children[1]->operand_type = D_FLOAT;
+                        IR.push_back(q);
+                        this->_3acode->rename_attribute(ARG2, temp_result);
+                    }
+                    else if(this->children[1]->operand_type != D_FLOAT) {
+                        yylineno = this->children[0]->line_no;
                         yyerror("TypeError: Incompatible datatypes");
                     }
-                    else {
-                        return;
-                    }
+                break;
                 case D_STRING:
-                    if(this->children[1]->operand_type != D_STRING) {
-                        yylineno = this->children[1]->line_no;
-                        yyerror("TypeError: Incompatible datatypes");
-                    }
-                    else if(this->name == "+" || this->name == "+=") {
+                    if(this->name == "+" || this->name == "+=") {
                         yylineno = this->children[1]->line_no;
                         yyerror("String concatenation not supported yet. Please wait for a newer version.");
                     }
-                    else if(this->type != ASSIGN) {
+                    else {
                         yylineno = this->children[1]->line_no;
                         yyerror("TypeError: Incompatible operation with string");
                     }
-                    else {
-                        return;
-                    }
+                break;
+                default:
+                //TODO: Assigning value to an array index?
+                    yylineno = this->children[0]->line_no;
+                    yyerror("TypeError: Incompatible datatypes");
+                break;
             }
         break;
+        case Q_ASSIGN:
+            // cout << "---------------" << endl;
+            // cout << this->name << endl;
+            // cout << this->children[0]->operand_type << " " << this->children[1]->operand_type << endl;
+            switch(this->children[0]->operand_type) {
+                case D_BOOL:
+                    if(this->children[1]->operand_type == D_STRING) {
+                        yylineno = this->children[0]->line_no;
+                        yyerror("TypeError: Cannot assign a string to a boolean");
+                    }
+                    else if(this->children[1]->operand_type == D_INT || this->children[1]->operand_type == D_FLOAT) {
+                        temp_result = "t" + to_string(INTERMEDIATE_COUNTER++);
+                        // q = new Quadruple("=", "bool", this->children[1]->name, temp_result, Q_COERCION);
+                        if(this->children[1]->_3acode != nullptr) {
+                            // there is some temporary result stored, that has to be coerced
+                            q = new Quadruple("=", "bool", this->children[1]->_3acode->result, temp_result, Q_COERCION);
+                        } else {
+                            q = new Quadruple("=", "bool", this->children[1]->name, temp_result, Q_COERCION);
+                        }
+                        this->children[1]->operand_type = D_BOOL;
+                        IR.push_back(q);
+                        this->_3acode->rename_attribute(ARG2, temp_result);
+                    }
+                    else if(this->children[1]->operand_type != D_BOOL) {
+                        yylineno = this->children[0]->line_no;
+                        yyerror("TypeError: Incompatible datatypes");
+                    }
+                break;
+                case D_INT:
+                    if(this->children[1]->operand_type == D_BOOL || this->children[1]->operand_type == D_FLOAT) {
+                        temp_result = "t" + to_string(INTERMEDIATE_COUNTER++);
+                        // q = new Quadruple("=", "int", this->children[1]->name, temp_result, Q_COERCION);
+                        if(this->children[1]->_3acode != nullptr) {
+                            // there is some temporary result stored, that has to be coerced
+                            q = new Quadruple("=", "int", this->children[1]->_3acode->result, temp_result, Q_COERCION);
+                        } else {
+                            q = new Quadruple("=", "int", this->children[1]->name, temp_result, Q_COERCION);
+                        }
+                        this->children[1]->operand_type = D_INT;
+                        IR.push_back(q);
+                        this->_3acode->rename_attribute(ARG2, temp_result);
+                    }
+                    else if(this->children[1]->operand_type != D_INT) {
+                        yylineno = this->children[0]->line_no;
+                        yyerror("TypeError: Incompatible datatypes");
+                    }
+                break;
+                case D_FLOAT:
+                    if(this->children[1]->operand_type == D_BOOL || this->children[1]->operand_type == D_INT) {
+                        temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+                        // q = new Quadruple("=", "float", this->children[1]->name, temp_result, Q_COERCION);
+                        if(this->children[1]->_3acode != nullptr) {
+                            // there is some temporary result stored, that has to be coerced
+                            q = new Quadruple("=", "float", this->children[1]->_3acode->result, temp_result, Q_COERCION);
+                        } else {
+                            q = new Quadruple("=", "float", this->children[1]->name, temp_result, Q_COERCION);
+                        }
+                        this->children[1]->operand_type = D_FLOAT;
+                        IR.push_back(q);
+                        this->_3acode->rename_attribute(ARG2, temp_result);
+                    }
+                    else if(this->children[1]->operand_type != D_FLOAT) {
+                        yylineno = this->children[0]->line_no;
+                        yyerror("TypeError: Incompatible datatypes");
+                    }
+                break;
+                case D_STRING:
+                    if(this->children[1]->operand_type != D_STRING) {
+                        yylineno = this->children[0]->line_no;
+                        yyerror("TypeError: Cannot assign string to a non-string.");
+                    }
+                break;
+            }
     }
     return;
 }
@@ -853,6 +1062,7 @@ void node::check_operand_type_compatibility() {
 void node::generate_3ac() {
     for(auto child: this->children) {
         if(child != nullptr) {
+            // cout << "before calling " << child->name << ", IC = " << INTERMEDIATE_COUNTER << endl;
             if(this->type == FILE_INPUT) {
                 INTERMEDIATE_COUNTER = 1; // resetting it for each statement
             }
@@ -878,41 +1088,44 @@ void node::generate_3ac() {
                 op1 = this->get_rhs_operand();
                 this->_3acode = new Quadruple("", op1, "", "", Q_PRINT);
                 // TODO: any type checking here?
-                INTERMEDIATE_CODE.push_back(this->_3acode);
-
+                IR.push_back(this->_3acode);
             }
             else if(this->children[0]->name == "self" || this->children[0]->name == "range" || this->children[0]->name == "len") {
                 yyerror("Not supporting this yet");
             }
             else if(this->children[0]->type == IDENTIFIER) {
                 op1 = this->get_lhs_operand();
-                op2 = this->get_rhs_operand();
-                result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+                op2 = this->get_rhs_operand(); //TODO: multiply by width. 
+                result = "t" + to_string(INTERMEDIATE_COUNTER++);
                 this->_3acode = new Quadruple("", op1, op2, result, Q_INDEX);
                 this->check_operand_type_compatibility();
-                INTERMEDIATE_CODE.push_back(this->_3acode);
+                IR.push_back(this->_3acode);
+                //TODO: add instructions for dereferencing
             }
             return;
         case UNARY_OP:
             op1 = this->get_lhs_operand();
-            result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+            result = "t" + to_string(INTERMEDIATE_COUNTER++);
             this->_3acode = new Quadruple(this->name, op1, "", result, Q_UNARY);
-            INTERMEDIATE_CODE.push_back(this->_3acode);
+            this->check_operand_type_compatibility();
+            IR.push_back(this->_3acode);
             return;
         case ASSIGN:
             op1 = this->get_lhs_operand();
             op2 = this->get_rhs_operand();
             this->_3acode = new Quadruple(this->name, op2, "", op1, Q_ASSIGN);
             this->check_operand_type_compatibility();
-            INTERMEDIATE_CODE.push_back(this->_3acode);
+            // cout << "After assign, IC = " << INTERMEDIATE_COUNTER << endl;
+            IR.push_back(this->_3acode);
             return;
         case BIN_OP:
             op1 = this->get_lhs_operand();
             op2 = this->get_rhs_operand();
-            result = ("t" + to_string(INTERMEDIATE_COUNTER++)).c_str();
+            result = "t" + to_string(INTERMEDIATE_COUNTER++);
             this->_3acode = new Quadruple(this->name, op1, op2, result, Q_BINARY);
             this->check_operand_type_compatibility();
-            INTERMEDIATE_CODE.push_back(this->_3acode);
+            // cout << "After bin, IC = " << INTERMEDIATE_COUNTER << endl;
+            IR.push_back(this->_3acode);
             return;
         case AUGASSIGN:
             op1 = this->get_lhs_operand();
@@ -920,7 +1133,7 @@ void node::generate_3ac() {
             result = op1;
             this->_3acode = new Quadruple(this->name.substr(0, this->name.length() - 1), op1, op2, result, Q_BINARY); // removing "=" from the name
             this->check_operand_type_compatibility();
-            INTERMEDIATE_CODE.push_back(this->_3acode);
+            IR.push_back(this->_3acode);
             return;
         default:
             // yyerror("Unexpected error: generate_3ac called on a non-terminal node");

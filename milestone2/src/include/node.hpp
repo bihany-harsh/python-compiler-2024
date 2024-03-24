@@ -287,4 +287,5 @@ void return_type_check(node* test);
 
 void add_class_st_entry(node* test, base_data_type b_type);
 
+base_data_type max_operand_type(base_data_type type1, base_data_type type2);
 #endif

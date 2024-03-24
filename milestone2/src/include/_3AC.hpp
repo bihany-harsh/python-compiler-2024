@@ -3,9 +3,16 @@
 #include <string>
 using namespace std;
 
+typedef enum POS {
+    OP,
+    ARG1,
+    ARG2,
+    RESULT,
+} POS;
 typedef enum quad_type {
-    Q_BINARY,
     Q_UNARY,
+    Q_BINARY,
+    Q_COERCION,
     Q_ASSIGN,
     Q_INDEX, // a statement where list element is indexed
     Q_PRINT,
@@ -16,6 +23,7 @@ typedef struct Quadruple {
     string arg1;   // First argument
     string arg2;   // Second argument
     string result; // Result
+    string label; // used to label the statements, relevant for jumping
     quad_type q_type;
 
     string code = "";   // Code
@@ -23,7 +31,8 @@ typedef struct Quadruple {
     Quadruple(const string& op, const string& arg1, const string& arg2, const string& result, quad_type q_type);
 
     string make_code();
+    void rename_attribute(POS pos, string new_name); // op -> pos 0, arg1 -> pos 1, arg2 -> pos 2, result -> pos 3
 } Quadruple;
 
-void print_3AC(vector<Quadruple*> INTERMEDIATE_CODE);
+void print_3AC(vector<Quadruple*> IR);
 #endif
