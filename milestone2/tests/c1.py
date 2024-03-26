@@ -26,37 +26,15 @@
 
 # a : list[int] = [1, 2, 3]
 
-3
-
-# x : list[float]
-# i : int
-# x = [i for i in range(10)]
-
-b: int
-a: list[int] = [1, 2, 3]
-b = 1 * +True
-a[1] = 1
-# c:int = 3
-
-# e: int
-
-d : int
-
-d  = 1 and 2 + 3 ** 1 // 5
-
-# b : list[int] = [1,]
-# d = a[1] + -1
-# d = 1 + 2 << 3 ** True
-# b : float = 1 * 3
-# b >>= 3
-# c : str = "123"
-# d = b = 1 ** 2 >> 3 + 4
-# c = "4"
-print("Hello")
-# c : list[int] = [1, 2, 3]
-# d : float = 1.5
-# d = 1.5 + a
-# e : int = 1 + a * (2 + 4)
+# b : bool = True
+if 0:
+  print("abc")
+elif 3 > 1 or 2:
+  print("def")
+else:
+  print("xyz")
+# p: bool = True
+# a : int = 1
 
 # class B(C,):
 #   self.a : int

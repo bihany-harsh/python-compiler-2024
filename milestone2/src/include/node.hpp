@@ -222,8 +222,8 @@ typedef struct node {
     struct symbol_table_entry* st_entry = nullptr;
 
     // Used for generating 3ac code
-    Quadruple* _3acode;
-    base_data_type operand_type; // storing the data type of the operand, to check type compatibility
+    Quadruple* _3acode = nullptr;
+    base_data_type operand_type = D_VOID; // storing the data type of the operand, to check type compatibility
 
     // METHODS
     // constructor
@@ -265,6 +265,7 @@ typedef struct node {
 
     // 3AC code
     void generate_3ac();
+    void generate_3ac_keyword();
     string get_lhs_operand(); // to be used from node "ASSIGN" after processing of the tree
     string get_rhs_operand(); // to be used from node "ASSIGN" after processing of the tree
     void check_operand_type_compatibility();
@@ -286,6 +287,8 @@ void check_declare_before_use(symbol_table* st, node* root);
 void return_type_check(node* test);
 
 void add_class_st_entry(node* test, base_data_type b_type);
+
+void do_list_assignment(node* assign);
 
 base_data_type max_operand_type(base_data_type type1, base_data_type type2);
 #endif

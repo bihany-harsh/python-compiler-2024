@@ -14,9 +14,15 @@ typedef enum quad_type {
     Q_BINARY,
     Q_COERCION,
     Q_ASSIGN,
-    Q_INDEX, // a statement where list element is indexed
+    Q_DEREFERENCE,
     Q_PRINT,
+    Q_JUMP,
+    Q_COND_JUMP,
+    Q_LABEL,
+    Q_BLANK,
 } quad_type;
+
+const string IF_FALSE = "ifFalse ";
 
 typedef struct Quadruple {
     string op;     // Operation

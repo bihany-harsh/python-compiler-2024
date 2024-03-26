@@ -25,6 +25,7 @@ extern stack<int> OFFSET_STACK;
 extern int OFFSET;
 
 extern vector<Quadruple*> IR;
+extern stack<int> LABEL_CNT_STACK;
 
 void setup_dot() {
     dot_stream << "digraph ast {\n node [shape=rectangle]; \n";
@@ -56,6 +57,8 @@ int main(int argc, const char** argv) {
     INDENT_STACK.push(0);
     OFFSET_STACK.push(-1); // -1 should always be at the bottom of the stack
     ST_STACK.push(nullptr); // nullptr will denote bottom of the stack
+    LABEL_CNT_STACK.push(0);
+
     SYMBOL_TABLE = new symbol_table(GLOBAL, "GLOBAL", NULL);
     if(verbose_flag) {
         cout << "Calling the parser routine..." << endl;
