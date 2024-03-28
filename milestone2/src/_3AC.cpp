@@ -16,6 +16,7 @@ Quadruple::Quadruple(const string& op, const string& arg1, const string& arg2, c
     this->arg2 = arg2;
     this->result = result;
     this->q_type = q_type;
+    this->label = LABEL_COUNTER++;
 
     this->code = this->make_code();
 }
@@ -24,34 +25,31 @@ string Quadruple::make_code() {
     string code = "";
     switch(this->q_type) {
         case Q_UNARY:
-            code = this->result + " = " + this->op + " " + this->arg1;
+            code = to_string(this->label) + ":\t\t" + this->result + " = " + this->op + " " + this->arg1;
             break;
         case Q_BINARY:
-            code = this->result + " = " + this->arg1 + " " + this->op + " " + this->arg2;
+            code = to_string(this->label) + ":\t" + this->result + " = " + this->arg1 + " " + this->op + " " + this->arg2;
             break;
         case Q_COERCION:
-            code = this->result + " = (" + this->arg1 + ") " + this->arg2;
+            code = to_string(this->label) + ":\t" + this->result + " = (" + this->arg1 + ") " + this->arg2;
             break;
         case Q_ASSIGN:
-            code = this->result + " = " + this->arg1;
+            code = to_string(this->label) + ":\t" + this->result + " = " + this->arg1;
             break;
         case Q_DEREFERENCE:
-            code = this->result + " = *" + this->arg1;
+            code = to_string(this->label) + ":\t" + this->result + " = *" + this->arg1;
             break;
         case Q_PRINT:
-            code = "print " + this->arg1;
+            code = to_string(this->label) + ":\tprint " + this->arg1;
             break;
         case Q_JUMP:
-            code = "goto " + this->arg1;
+            code = to_string(this->label) + ":\tgoto " + this->result;
             break;
         case Q_COND_JUMP:
-            code = IF_FALSE + this->arg1 + " " + " goto " + this->result;
+            code = to_string(this->label) + ":\t" + IF_FALSE + this->arg1 + " " + " goto " + this->result;
             break;
         case Q_BLANK:
-            code = "";
-            break;
-        case Q_LABEL:
-            code = this->result + ":";
+            code = to_string(this->label) + ":\t";
             break;
     }
     return code;

@@ -40,7 +40,7 @@ void setup_dot() {
 }
 
 int main(int argc, const char** argv) {
-    cout << "Execution started" << endl;
+    // cout << "Execution started" << endl;
     if(argc != 3) {
         cout << "Something went terribly wrong." << endl;
         exit(-1);
@@ -64,10 +64,10 @@ int main(int argc, const char** argv) {
         cout << "Calling the parser routine..." << endl;
     }
     yyparse();
-    cout << "Symbol table created" << endl;
-    SYMBOL_TABLE->print_st();
+    // cout << "Symbol table created" << endl;
+    // SYMBOL_TABLE->print_st();
     AST_ROOT->generate_3ac();
-    cout << "3AC generated" << endl;
+    // cout << "3AC generated" << endl;
     print_3AC(IR);
     if(verbose_flag) {
         cout << "Finished parsing!" << endl;

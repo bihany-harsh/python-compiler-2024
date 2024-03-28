@@ -81,6 +81,7 @@ typedef enum {
     TESTLIST,
     MANY_COMMA_TOK_TEST,
 
+    CONDITION, // for loop/if-elif conditions
     TEST,
     OPTIONAL_IF_ELSE,
     OR_TEST,
@@ -169,6 +170,11 @@ const set<int> unary_ops = { // it is declared so that these nodes are retained 
     ANNASSIGN,
     OPTIONAL_PAREN_ARGLIST,
     SUITE,
+    // TEST,
+    CONDITION, // we need it for 3AC generation so shouldn't be deleted
+    IF_STMT,
+    WHILE_STMT,
+    FOR_STMT,
 };
 
 const map<node_type, string> type_map = {
@@ -183,6 +189,7 @@ const map<node_type, string> type_map = {
     {LIST, "LIST"},
 
     // misc
+    // {CONDITION, "CONDITION"},
     {IDENTIFIER, "IDENTIFIER"},
     {STRING_LITERAL, "STRING_LITERAL"},
     {BOOL_NUMBER, "BOOL_NUMBER"},
@@ -224,6 +231,8 @@ typedef struct node {
     // Used for generating 3ac code
     Quadruple* _3acode = nullptr;
     base_data_type operand_type = D_VOID; // storing the data type of the operand, to check type compatibility
+    vector<node*> break_nodes; // to be used only for 'for' and 'while' nodes
+    vector<node*> continue_nodes; // to be used only for 'for' and 'while' nodes
 
     // METHODS
     // constructor
@@ -265,10 +274,12 @@ typedef struct node {
 
     // 3AC code
     void generate_3ac();
-    void generate_3ac_keyword();
+    void generate_3ac_keywords();
     string get_lhs_operand(); // to be used from node "ASSIGN" after processing of the tree
     string get_rhs_operand(); // to be used from node "ASSIGN" after processing of the tree
     void check_operand_type_compatibility();
+    void add_break_node(node* break_node);
+    void add_continue_node(node* continue_node);
 } node;
 
 void prune_custom_nodes(node* parent, node* child);
@@ -291,4 +302,6 @@ void add_class_st_entry(node* test, base_data_type b_type);
 void do_list_assignment(node* assign);
 
 base_data_type max_operand_type(base_data_type type1, base_data_type type2);
+
+node* find_loop_ancestor(node* root); // root would be a node pointing to "break" or "continue"
 #endif

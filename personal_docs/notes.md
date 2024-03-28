@@ -36,5 +36,6 @@
      * So handle it!
 * When a function is created, we store its num_params. When we have to perform type_checking of the parameters, we retrieve the first num_params symbol_table entries from its symbol table (since function parameters are the first thing that we will parse).
 * We are supporting the additional feature of **multiple assignments in a single statement.**
-* Ternary operators to be supported (additional feature)
+* Ternary operators to be supported (additional feature- write 3AC for this)
 * We want to support DOCSTRINGS!!! (additional feature)
+* We want to support `pass` statement!! (additional feature)

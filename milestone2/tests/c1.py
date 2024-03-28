@@ -27,14 +27,35 @@
 # a : list[int] = [1, 2, 3]
 
 # b : bool = True
-if 0:
+# if 1> 0:
+#   print("abc")
+# elif 3 > 1 or 2:
+#   print("def")
+# else:
+#   if 1:
+#     a : int = 1
+#   else :
+#     c : int = 2
+#   print("xyz")
+
+if 1:
+  print("xasd")
+p: bool = True
+d : int = 1
+a : int
+
+while d > 1 + 2:
   print("abc")
-elif 3 > 1 or 2:
-  print("def")
-else:
-  print("xyz")
-# p: bool = True
-# a : int = 1
+  p = False
+  if p:
+    break
+  else:
+    continue
+b:int = 1
+
+# for a in range(1, 2):
+#   print(a)
+
 
 # class B(C,):
 #   self.a : int

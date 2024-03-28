@@ -142,9 +142,6 @@ small_stmt                  :   expr_stmt   {
                             |   global_stmt   {
                                     $$ = $1;
                             }
-                        //     |   nonlocal_stmt   {
-                        //             $$ = $1;
-                        //     }
                             ;
 indent_check_small_stmt     :   TOK_INDENT  {   snprintf(error_string, sizeof(error_string), "unexpected indent");
                                                 yyerror(error_string);
@@ -185,7 +182,7 @@ expr_stmt                   :   test annassign {
                                     }
                                     $$->handle_annassign();
                             }
-                            |   test augassign testlist {
+                            |   test augassign test {
                                     $$ = new node(EXPR_STMT, "EXPR_STMT", false, NULL);
                                     
                                     sem_lval_check($1);
@@ -222,7 +219,7 @@ many_equal_test             :   many_equal_test TOK_EQUAL test {
                                     check_declare_before_use(SYMBOL_TABLE, $3); // to check that the RHS has been declared before use
                             }
                             |   many_equal_test TOK_EQUAL {
-                                    snprintf(error_string, sizeof(error_string), "SyntaxError: invalid syntax");
+                                    snprintf(error_string, sizeof(error_string), "SyntaxError: missing rvalue");
                                     yyerror(error_string);
                             }
                             |   {   $$ = NULL;  }
@@ -911,13 +908,16 @@ if_stmt                     :   TOK_IF { strcpy(compound_stmt_type, "\'if\'"); }
                                         // change the scope. This is a new block
                                         $1 = new node(KEYWORD, "if", true, NULL);
                                         $4 = new node(DELIMITER, ":", true, NULL);
-                                        $1->add_parent_child_relation($3);
+
+                                        node* tmp = new node(CONDITION, "CONDITION", false, NULL);
+                                        $1->add_parent_child_relation(tmp);
+                                        tmp->add_parent_child_relation($3);
+                                        
                                         $1->add_parent_child_relation($4);
                                         check_declare_before_use(SYMBOL_TABLE, $3);
                                         // change the scope. This is a new block
                                         // $1->setup_new_st_env();
-                                    } suite
-                                    {
+                                    } suite {
                                         // change the scope back to the parent block
                                         // $1->create_block_st("IF_BLOCK");
                                         $1->add_parent_child_relation($6);
@@ -936,7 +936,12 @@ if_stmt                     :   TOK_IF { strcpy(compound_stmt_type, "\'if\'"); }
 many_elif_stmts             :   many_elif_stmts TOK_ELIF { strcpy(compound_stmt_type, "\'elif\'"); } test TOK_COLON {
                                     $2 = new node(KEYWORD, "elif", true, NULL);
                                     $5 = new node(DELIMITER, ":", true, NULL);
-                                    $2->add_parent_child_relation($4);
+
+                                    // for 3AC generation of elif
+                                    node* tmp = new node(CONDITION, "CONDITION", false, NULL);
+                                    $2->add_parent_child_relation(tmp);
+                                    tmp->add_parent_child_relation($4);
+
                                     $2->add_parent_child_relation($5);
                                     check_declare_before_use(SYMBOL_TABLE, $4);
                                     // change the scope. This is a new block
@@ -1003,7 +1008,11 @@ while_stmt                  :   TOK_WHILE { strcpy(compound_stmt_type, "\'while\
                                         check_declare_before_use(SYMBOL_TABLE, $3);
                                         $1 = new node(KEYWORD, "while", true, NULL);
                                         $4 = new node(DELIMITER, ":", true, NULL);
-                                        $1->add_parent_child_relation($3);
+
+                                        node* tmp = new node(CONDITION, "CONDITION", false, NULL);
+                                        $1->add_parent_child_relation(tmp);
+                                        tmp->add_parent_child_relation($3);
+
                                         $1->add_parent_child_relation($4);
                                         // $1->setup_new_st_env();
                                     } suite {
@@ -1013,7 +1022,7 @@ while_stmt                  :   TOK_WHILE { strcpy(compound_stmt_type, "\'while\
                                     } optional_else_suite {
                                     $$ = new node(WHILE_STMT, "WHILE_STMT", false, NULL);
                                     $$->add_parent_child_relation($1);
-                                    prune_custom_nodes($$, $8);
+                                    $$->add_parent_child_relation($8);
                             }
                             ;
 optional_else_suite         :   TOK_ELSE TOK_COLON {
@@ -1022,10 +1031,10 @@ optional_else_suite         :   TOK_ELSE TOK_COLON {
                                     $1->add_parent_child_relation($2);
                                     
                                     // change the scope. This is a new block
-                                    $1->setup_new_st_env();
+                                //     $1->setup_new_st_env();
                                 } suite {
                                     // change the scope back to the parent block
-                                    $1->create_block_st("ELSE_BLOCK");
+                                //     $1->create_block_st("ELSE_BLOCK");
                                     $1->add_parent_child_relation($4);
                             }
                             |   {   $$ = NULL;  }

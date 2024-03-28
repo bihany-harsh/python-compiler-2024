@@ -707,6 +707,27 @@ void node::exit_from_class() {
     OFFSET_STACK.pop();
     return;
 }
+
+void node::add_break_node(node* break_node) {
+    this->break_nodes.push_back(break_node);
+    return;
+}
+
+void node::add_continue_node(node* continue_node) {
+    this->continue_nodes.push_back(continue_node);
+    return;
+}
+
+node* find_loop_ancestor(node* root) {
+    if(root == nullptr || root->type == FILE_INPUT) {
+        return nullptr;
+    }
+    if(root->type == FOR_STMT || root->type == WHILE_STMT) {
+        return root->children[0];
+    }
+    return find_loop_ancestor(root->parent);
+}
+
 void do_list_assignment(node* assign) {
     // should be called from the node ASSIGN(=)
     string op1, temp_result, temp_value, size;
@@ -1160,36 +1181,58 @@ void node::check_operand_type_compatibility() {
 }
 
 
-void node::generate_3ac_keyword() {
-    cout << "in generate_3ac_keyword " << this->name << endl;
+void node::generate_3ac_keywords() {
+    // cout << "in generate_3ac_keyword " << this->name << endl;
     // catering to IF-ELIF-ELSE block
     string op1, op2, result;
     Quadruple* q;
-    if (this->name == "if") {
-        LABEL_CNT_STACK.push(LABEL_COUNTER++);
-        if (this->children[0]->_3acode == nullptr) {
-            q = new Quadruple("", this->children[0]->name, "", "L" + to_string(LABEL_CNT_STACK.top()), Q_COND_JUMP);
-        } else {
-            q = new Quadruple("", this->children[0]->_3acode->result, "", "L" + to_string(LABEL_CNT_STACK.top()), Q_COND_JUMP);
+    
+    if ((this->name == "if") || (this->name == "elif")) { // backpatching for if-elif-else block
+        this->children[0]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
+        return;
+    } else if ((this->name == "while")) { // backpatching for while block
+        this->children[0]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
+        if(this->break_nodes.size() > 0) {
+            for(auto break_node: this->break_nodes) {
+                break_node->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
+            }
         }
-    } else if (this->name == "elif") {
-        LABEL_CNT_STACK.push(LABEL_CNT_STACK.top() + 1);
-        if (this->children[0]->_3acode == nullptr) {
-            q = new Quadruple("", this->children[0]->name, "", "L" + to_string(LABEL_CNT_STACK.top()), Q_COND_JUMP);
-        } else {
-            q = new Quadruple("", this->children[0]->_3acode->result, "", "L" + to_string(LABEL_CNT_STACK.top()), Q_COND_JUMP);
+
+        this->children[1]->_3acode->rename_attribute(RESULT, to_string(LABEL_CNT_STACK.top()));
+        if(this->continue_nodes.size() > 0) {
+            for(auto continue_node: this->continue_nodes) {
+                continue_node->_3acode->rename_attribute(RESULT, to_string(LABEL_CNT_STACK.top()));
+            }
         }
-    } else if (this->name == "else") {
-        LABEL_CNT_STACK.push(LABEL_CNT_STACK.top() + 1);
-        q = new Quadruple("", "", "", "L" + to_string(LABEL_CNT_STACK.top()), Q_JUMP);
+        LABEL_CNT_STACK.pop();
+        return;
+    } else if ((this->name == "break") || this->name == "continue") {
+        // first need to ensure that this statement occured inside a loop
+        node* tmp = find_loop_ancestor(this);
+        if (tmp == nullptr) {
+            yylineno = this->line_no;
+            yyerror(("SyntaxError: '" + this->name + "' outside loop.").c_str());
+        }
+        if(this->name == "break") {
+            tmp->break_nodes.push_back(this);
+        }
+        else {
+            tmp->continue_nodes.push_back(this);
+        }
+        this->_3acode = new Quadruple("", "", "", "", Q_JUMP); // the label will be backpatched when we reach the end of the loop
+        IR.push_back(this->_3acode);
     }
 }
 
 void node::generate_3ac() {
+    //TODO: pending 3AC generation for functions, classes, for loop, return stmt, ternary operator
     symbol_table_entry* entry;
     Quadruple* q;
     string temp_result;
     map<base_data_type, int>::const_iterator iter;
+    if(this->name == "while") { // need to store this for backpatching
+        LABEL_CNT_STACK.push(LABEL_COUNTER);
+    }
     for(auto child: this->children) {
         if(child != nullptr) {
             // cout << "before calling " << child->name << ", IC = " << INTERMEDIATE_COUNTER << endl;
@@ -1200,10 +1243,19 @@ void node::generate_3ac() {
             child->generate_3ac();
         }
     }
+    // cout << "--------" << endl;
+    // cout << this->name << endl;
+    // for(auto q : IR) {
+    //     cout << q->code << endl;
+    // }
     string op1, op2, result, op;
     switch(this->type) {
+        case FILE_INPUT:
+            q = new Quadruple("", "", "", "", Q_BLANK);
+            IR.push_back(q);
+            return;
         case KEYWORD:
-            this->generate_3ac_keyword();
+            this->generate_3ac_keywords();
         case INT:
         case FLOAT:
         case BOOL:
@@ -1334,10 +1386,33 @@ void node::generate_3ac() {
             this->check_operand_type_compatibility();
             IR.push_back(this->_3acode);
             return;
+        case CONDITION:
+            if ((this->parent->name == "if") || (this->parent->name == "elif") || (this->parent->name == "while")) {
+                // LABEL_CNT_STACK.push(LABEL_COUNTER++);
+                if (this->children[0]->_3acode == nullptr) {
+                    this->_3acode = new Quadruple("", this->children[0]->name, "", "", Q_COND_JUMP); // backpatching 2A
+                } else {
+                    this->_3acode = new Quadruple("", this->children[0]->_3acode->result, "", "", Q_COND_JUMP); // backpatching 2B
+                }
+                IR.push_back(this->_3acode);
+            }
+            return;
         case SUITE:
-            q = new Quadruple("", "", "", "L" + to_string(LABEL_CNT_STACK.top()), Q_LABEL);
-            LABEL_CNT_STACK.pop();
-            IR.push_back(q);
+            if (this->parent->name != "else") {
+                this->_3acode = new Quadruple("", "", "", "", Q_JUMP); // arg1 will be renamed later (backpatching 1)
+                IR.push_back(this->_3acode);
+            }
+            return;
+        case IF_STMT:
+            // we need to backpatch the labels at the ends of the body of if and elif: an unconditional jump to the end of the if-elif-else block
+            for(node* child: this->children) {
+                if(child->name == "if" || child->name == "elif") {
+                    if(child->children[1]->type != SUITE) {
+                        yyerror("UnexpectedError: Expected a suite after if/elif");
+                    }
+                    child->children[1]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER)); // (backpatching 1)
+                }
+            }
             return;
         default:
             // yyerror("Unexpected error: generate_3ac called on a non-terminal node");
