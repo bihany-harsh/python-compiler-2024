@@ -26,6 +26,7 @@ extern vector<Quadruple*> IR;
 extern long long int INTERMEDIATE_COUNTER;
 extern stack<int> LABEL_CNT_STACK;
 extern int LABEL_COUNTER;
+extern bool pending_return;
 
 node::node(node_type type, string name, bool is_terminal, node* parent) {
     this->type = type;
@@ -573,7 +574,6 @@ void node::create_func_st() {
 }
 
 void node::exit_from_func() {
-    cout << "exit from function called for function " << this->name << endl;
     // if TFPDEF has a single child, it can only be self and the current environment must be a class environment
     // in all other cases, TFPDEF has > 1 children. The type is specified by the descendent of TFPDEP->children[2] and the name is specified by TFPDEF->children[0]
     this->st_entry->set_size(OFFSET);
@@ -581,7 +581,6 @@ void node::exit_from_func() {
     //TODO: handle that non-default arguments appear before default args
     bool found_default_arg = false; // to check that typed (non-default arguments) are before typed (default) arguments
     // non-default arguments are arguments that do not have optional_equal_test
-    cout << "num_args = " << this->st_entry->f_attr.num_args << endl;
     for(int i = 0; i < this->st_entry->f_attr.num_args; i++) {
         symbol_table_entry* arg = SYMBOL_TABLE->entries[i];
         // cout << "obtained the argument entry" << endl;
@@ -594,7 +593,6 @@ void node::exit_from_func() {
     OFFSET += this->st_entry->size;
     ST_STACK.pop();
     OFFSET_STACK.pop();
-    cout << "Completed the function exit_from_func" << endl;
     return;
 }
 
@@ -728,6 +726,158 @@ node* find_loop_ancestor(node* root) {
     return find_loop_ancestor(root->parent);
 }
 
+string make_function_label(node* funcdef) {
+    string label = funcdef->children[1]->name;
+    node* parameters = funcdef->children[2];
+    for(node* tfpdef: parameters->children) {
+        label += "_";
+        label += tfpdef->children[1]->name;
+    }
+    return label;
+}
+
+string get_compatible_function_and_push_param(node* atom_expr) {
+    bool found = false;
+    for (st_entry* st_entry: SYMBOL_TABLE->entries) {
+        if ((st_entry->b_type == D_FUNCTION) && (st_entry->name == atom_expr->children[0]->name)) {
+            if (st_entry->f_attr.num_args )
+        }
+    }
+    if (!found) {
+        yyerror("SyntaxError: Function not defined.");
+    }
+}
+
+void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
+    if(!pending_return) {
+        yylineno = return_stmt->line_no;
+        yyerror("SyntaxError: Multiple return statements inside a single function");
+    }
+    pending_return = false; // encountered a return statement in a function, so this flag is again marked false
+
+    base_data_type return_type_formal = funcdef->children[1]->st_entry->f_attr.return_type; // funcdef->children[1] is the IDENTIFIER node
+    base_data_type return_type_actual;
+    Quadruple* q = nullptr;
+    if (return_stmt->children.size() != 1) {
+        switch (return_stmt->children[1]->type) {
+            case INT_NUMBER:
+            case FLOAT_NUMBER:
+            case BOOL_NUMBER:
+            case STRING_LITERAL:
+                return_type_actual = return_stmt->children[1]->operand_type;
+                break;
+            case IDENTIFIER:
+                return_type_actual = SYMBOL_TABLE->get_entry(return_stmt->children[1]->name)->b_type;
+                break;
+            default:
+                if (return_stmt->children[1]->_3acode != nullptr) {
+                    return_type_actual = return_stmt->children[1]->operand_type;
+                } else {
+                    yylineno = return_stmt->line_no;
+                    yyerror("UnexpectedError: Invalid return type.");
+                }
+        }
+    } else {
+        // no second child, only `return` keyword, returning void
+        return_type_actual = D_VOID;
+    }
+
+    switch (return_type_formal) {
+        case D_BOOL:
+            if (return_type_actual == D_INT || return_type_actual == D_FLOAT) {
+                if (return_stmt->children[1]->_3acode != nullptr) {
+                    q = new Quadruple("=", "bool", return_stmt->children[1]->_3acode->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                } else {
+                    q = new Quadruple("=", "bool", return_stmt->children[1]->name, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                }
+                IR.push_back(q);
+                funcdef->_3acode = new Quadruple("return", "", "", q->result, Q_JUMP);
+                IR.push_back(funcdef->_3acode);
+            }
+            else if (return_type_actual == D_BOOL) {
+                if (return_stmt->children[1]->_3acode != nullptr) {
+                    funcdef->_3acode = new Quadruple("return", "", "", return_stmt->children[1]->_3acode->result, Q_JUMP);
+                }
+                else {
+                    funcdef->_3acode = new Quadruple("return", "", "", return_stmt->children[1]->name, Q_JUMP);
+                }
+                IR.push_back(funcdef->_3acode);
+            }
+            else {
+                yylineno = return_stmt->line_no;
+                yyerror("TypeError: argument does not match return type.");
+            }
+            break;
+        case D_INT:
+            if (return_type_actual == D_FLOAT || return_type_actual == D_BOOL) {
+                if (return_stmt->children[1]->_3acode != nullptr) {
+                    q = new Quadruple("=", "int", return_stmt->children[1]->_3acode->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                } else {
+                    q = new Quadruple("=", "int", return_stmt->children[1]->name, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                }
+                IR.push_back(q);
+                funcdef->_3acode = new Quadruple("return", "", "", q->result, Q_JUMP);
+                IR.push_back(funcdef->_3acode);
+            }
+            else if (return_type_actual == D_INT) {
+                if (return_stmt->children[1]->_3acode != nullptr) {
+                    funcdef->_3acode = new Quadruple("return", "", "", return_stmt->children[1]->_3acode->result, Q_JUMP);
+                }
+                else {
+                    funcdef->_3acode = new Quadruple("return", "", "", return_stmt->children[1]->name, Q_JUMP);
+                }
+                IR.push_back(funcdef->_3acode);
+            }
+            else {
+                yylineno = return_stmt->line_no;
+                yyerror("TypeError: argument does not match return type.");
+            }
+            break;
+        case D_FLOAT:
+            if (return_type_actual == D_INT || return_type_actual == D_BOOL) {
+                if (return_stmt->children[1]->_3acode != nullptr) {
+                    q = new Quadruple("=", "float", return_stmt->children[1]->_3acode->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                } else {
+                    q = new Quadruple("=", "float", return_stmt->children[1]->name, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                }
+                IR.push_back(q);
+                funcdef->_3acode = new Quadruple("return", "", "", q->result, Q_JUMP);
+                IR.push_back(funcdef->_3acode);
+            }
+            else if (return_type_actual == D_FLOAT) {
+                if (return_stmt->children[1]->_3acode != nullptr) {
+                    funcdef->_3acode = new Quadruple("return", "", "", return_stmt->children[1]->_3acode->result, Q_JUMP);
+                }
+                else {
+                    funcdef->_3acode = new Quadruple("return", "", "", return_stmt->children[1]->name, Q_JUMP);
+                }
+                IR.push_back(funcdef->_3acode);
+            }
+            else {
+                yylineno = return_stmt->line_no;
+                yyerror("TypeError: argument does not match return type.");
+            }
+            break;
+        case D_STRING:
+            if (return_type_actual != D_STRING) {
+                yylineno = return_stmt->line_no;
+                yyerror("TypeError: argument does not match return type.");
+            }
+            funcdef->_3acode = new Quadruple("return", "", "", return_stmt->children[1]->name, Q_JUMP);
+            break;
+        case D_VOID:
+            if (return_type_actual != D_VOID) {
+                yylineno = return_stmt->line_no;
+                yyerror("TypeError: argument does not match return type.");
+            }
+            break;
+        // TODO: check for D_CLASS and D_LIST
+        default:
+            yyerror("UnexpectedError: Invalid return type.");
+            break;
+    }
+}
+
 void do_list_assignment(node* assign) {
     // should be called from the node ASSIGN(=)
     string op1, temp_result, temp_value, size;
@@ -852,6 +1002,7 @@ base_data_type max_operand_type(base_data_type lhs, base_data_type rhs) {
 
 string node::get_lhs_operand() {
     Quadruple* q;
+    symbol_table_entry* entry;
     if(this->children.size() != 2 && this->type != UNARY_OP) {
         yylineno = this->line_no;
         yyerror("UnexpectedError: node does not have 2 children");
@@ -886,19 +1037,26 @@ string node::get_lhs_operand() {
             if(this->children[0]->children[0]->name == "print" || this->children[0]->children[0]->name == "self" || this->children[0]->children[0]->name == "range" || this->children[0]->children[0]->name == "len") {
                 yyerror("not handling this yet");
             }
-            if(!SYMBOL_TABLE->get_entry(this->children[0]->children[0]->name)) {
+            entry = SYMBOL_TABLE->get_entry(this->children[0]->children[0]->name);
+            if(entry == nullptr) {
                 yyerror("UnexpectedError: Couldn't find entry of the list variable");
             }
-            this->children[0]->operand_type = SYMBOL_TABLE->get_entry(this->children[0]->children[0]->name)->l_attr.list_elem_type;
-            // return this->children[0]->_3acode->result;
-            if(this->type != ASSIGN) { // if not the LHS of an assign
-                q = new Quadruple("", this->children[0]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
-                IR.push_back(q);
-                return q->result;
+            if(entry->b_type == D_LIST) {
+                this->children[0]->operand_type = SYMBOL_TABLE->get_entry(this->children[0]->children[0]->name)->l_attr.list_elem_type;
+                // return this->children[0]->_3acode->result;
+                if(this->type != ASSIGN) { // if not the LHS of an assign
+                    q = new Quadruple("", this->children[0]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                    IR.push_back(q);
+                    return q->result;
+                }
+                else { // if the left side of an assign
+                    this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
+                    return this->children[0]->_3acode->result;
+                }
             }
-            else { // if the left side of an assign
-                this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
-                return this->children[0]->_3acode->result;
+            else if(entry->b_type == D_FUNCTION) {
+                this->children[0]->operand_type = entry->f_attr.return_type;
+                return this->children[0]->name; // FIXME: check this
             }
         case KEYWORD:
             if(this->name != "print" || this->name != "self" || this->name != "range" || this->name != "len") {
@@ -912,6 +1070,7 @@ string node::get_lhs_operand() {
 
 string node::get_rhs_operand() {
     Quadruple* q;
+    symbol_table_entry* entry;
     if(this->children.size() != 2) {
         yylineno = this->line_no;
         yyerror("UnexpectedError: node does not have 2 children");
@@ -936,14 +1095,20 @@ string node::get_rhs_operand() {
             if(this->children[1]->children[0]->name == "print" || this->children[1]->children[0]->name == "self" || this->children[1]->children[0]->name == "range" || this->children[1]->children[0]->name == "len") {
                 yyerror("not handling this yet");
             }
-            if(!SYMBOL_TABLE->get_entry(this->children[1]->children[0]->name)) {
+            entry = SYMBOL_TABLE->get_entry(this->children[1]->children[0]->name);
+            if(entry == nullptr) {
                 yyerror("UnexpectedError: Couldn't find entry of the list variable");
             }
-            this->children[1]->operand_type = SYMBOL_TABLE->get_entry(this->children[1]->children[0]->name)->l_attr.list_elem_type;
-            // return this->children[1]->_3acode->result;
-            q = new Quadruple("", this->children[1]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
-            IR.push_back(q);
-            return q->result;
+            if(entry->b_type == D_LIST) {
+                this->children[1]->operand_type = entry->l_attr.list_elem_type;
+                q = new Quadruple("", this->children[1]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                IR.push_back(q);
+                return q->result;
+            }
+            else if(entry->b_type == D_FUNCTION) {
+                this->children[1]->operand_type = entry->f_attr.return_type;
+                return this->children[1]->name; //FIXME: check this
+            }
         case UNARY_OP:
             this->children[1]->operand_type = this->children[1]->children[0]->operand_type;
             return this->children[1]->_3acode->result;
@@ -964,6 +1129,7 @@ string node::get_rhs_operand() {
 }
 
 void node::check_operand_type_compatibility() {
+    //FIXME: might need to typecast first before creating the 3ac of an expression: order of labels is inverted, might cause issues in goto jumps
     //TODO: check all the calls of the function rename_attribute() and ensure that correct attribute is renamed
     //TODO: ensure that all coercion cases are linked with a typecasting case
     string temp_result; // stores the temporary result attr of a Quadruple (for coercion)
@@ -1192,17 +1358,13 @@ void node::generate_3ac_keywords() {
         return;
     } else if ((this->name == "while")) { // backpatching for while block
         this->children[0]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
-        if(this->break_nodes.size() > 0) {
-            for(auto break_node: this->break_nodes) {
-                break_node->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
-            }
+        for(node* break_node: this->break_nodes) {
+            break_node->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
         }
 
         this->children[1]->_3acode->rename_attribute(RESULT, to_string(LABEL_CNT_STACK.top()));
-        if(this->continue_nodes.size() > 0) {
-            for(auto continue_node: this->continue_nodes) {
-                continue_node->_3acode->rename_attribute(RESULT, to_string(LABEL_CNT_STACK.top()));
-            }
+        for(node* continue_node: this->continue_nodes) {
+            continue_node->_3acode->rename_attribute(RESULT, to_string(LABEL_CNT_STACK.top()));
         }
         LABEL_CNT_STACK.pop();
         return;
@@ -1219,19 +1381,29 @@ void node::generate_3ac_keywords() {
         else {
             tmp->continue_nodes.push_back(this);
         }
-        this->_3acode = new Quadruple("", "", "", "", Q_JUMP); // the label will be backpatched when we reach the end of the loop
+        this->_3acode = new Quadruple("goto", "", "", "", Q_JUMP); // the label will be backpatched when we reach the end of the loop
+        IR.push_back(this->_3acode);
+    }
+    else if ((this->name == "def")) {
+        // function label creation
+        this->_3acode = new Quadruple("", "", "", "", Q_BLANK);
+        this->_3acode->rename_attribute(LABEL, make_function_label(this->parent));
         IR.push_back(this->_3acode);
     }
 }
 
 void node::generate_3ac() {
     //TODO: pending 3AC generation for functions, classes, for loop, return stmt, ternary operator
+    //TODO: update SYMBOL_TABLE variable to manage scope (that will be used in typechecking)
     symbol_table_entry* entry;
     Quadruple* q;
     string temp_result;
     map<base_data_type, int>::const_iterator iter;
     if(this->name == "while") { // need to store this for backpatching
         LABEL_CNT_STACK.push(LABEL_COUNTER);
+    }
+    if(this->type == FUNCDEF) {
+        pending_return = true;
     }
     for(auto child: this->children) {
         if(child != nullptr) {
@@ -1264,6 +1436,9 @@ void node::generate_3ac() {
             return;
         case IDENTIFIER:
             this->operand_type = SYMBOL_TABLE->get_entry(this->name)->b_type;
+            if(this->operand_type == D_FUNCTION) {
+                SYMBOL_TABLE = SYMBOL_TABLE->get_entry(this->name)->child_symbol_table;
+            }
             return;
         case STRING_LITERAL:
             this->operand_type = D_STRING;
@@ -1281,46 +1456,56 @@ void node::generate_3ac() {
             if(this->children[0]->name == "print") {
                 op1 = this->get_rhs_operand();
                 this->_3acode = new Quadruple("", op1, "", "", Q_PRINT);
-                // TODO: any type checking here?
+                // TODO: any type checking here? : yes, cannot print classes
                 IR.push_back(this->_3acode);
             }
             else if(this->children[0]->name == "self" || this->children[0]->name == "range" || this->children[0]->name == "len") {
                 yyerror("Not supporting this yet");
             }
             else if(this->children[0]->type == IDENTIFIER) {
-                op1 = this->get_lhs_operand();
-                op2 = this->get_rhs_operand();
-                entry = SYMBOL_TABLE->get_entry(op1);
-                if(this->children[1]->type == INT_NUMBER && atoi(op2.c_str()) > entry->l_attr.num_of_elems) {
-                    yyerror("IndexError: list index out of range");
-                }
-                iter = base_data_type_size.find(entry->l_attr.list_elem_type);
-                if (iter == base_data_type_size.end()) {
-                    yyerror("UnexpectedError: Invalid list element type");
-                }
-
-                // manual type checking
-                temp_result = op2;
-                if(this->children[1]->operand_type == D_BOOL) {
-                    temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++));
-                    if(this->children[1]->_3acode != nullptr) {
-                        // there is some temporary result stored, that has to be coerced
-                        q = new Quadruple("=", "int", this->children[1]->_3acode->result, temp_result, Q_COERCION);
-                    } else {
-                        q = new Quadruple("=", "int", this->children[1]->name, temp_result, Q_COERCION);
+                entry = SYMBOL_TABLE->get_entry(this->children[0]->name);
+                if(entry->b_type == D_LIST) {
+                    op1 = this->get_lhs_operand();
+                    op2 = this->get_rhs_operand();
+                    entry = SYMBOL_TABLE->get_entry(op1);
+                    if(this->children[1]->type == INT_NUMBER && atoi(op2.c_str()) > entry->l_attr.num_of_elems) {
+                        yyerror("IndexError: list index out of range");
                     }
-                    this->children[1]->operand_type = D_INT;
+                    iter = base_data_type_size.find(entry->l_attr.list_elem_type);
+                    if (iter == base_data_type_size.end()) {
+                        yyerror("UnexpectedError: Invalid list element type");
+                    }
+
+                    // manual type checking
+                    temp_result = op2;
+                    if(this->children[1]->operand_type == D_BOOL) {
+                        temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++));
+                        if(this->children[1]->_3acode != nullptr) {
+                            // there is some temporary result stored, that has to be coerced
+                            q = new Quadruple("=", "int", this->children[1]->_3acode->result, temp_result, Q_COERCION);
+                        } else {
+                            q = new Quadruple("=", "int", this->children[1]->name, temp_result, Q_COERCION);
+                        }
+                        this->children[1]->operand_type = D_INT;
+                        IR.push_back(q);
+                    }
+                    else if(this->children[1]->operand_type != D_INT) {
+                        yylineno = this->children[0]->line_no;
+                        yyerror("IndexError: list index must be an integer");
+                    }
+                    q = new Quadruple("*", temp_result, to_string(iter->second), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                    IR.push_back(q);
+                    q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                    IR.push_back(q);
+                    this->_3acode = q;
+                } 
+                else if(entry->b_type == D_FUNCTION) {
+                    this->operand_type = entry->f_attr.return_type;
+                    string func_label = get_compatible_function_and_push_param(this); // this is also ideally label
+                    q = new Quadruple("", func_label, to_string(this->children[1]->children.size()), "", Q_FUNC_CALL);
+                    cout << "ATOM_EXPR " << q->code << endl;
                     IR.push_back(q);
                 }
-                else if(this->children[1]->operand_type != D_INT) {
-                    yylineno = this->children[0]->line_no;
-                    yyerror("IndexError: list index must be an integer");
-                }
-                q = new Quadruple("*", temp_result, to_string(iter->second), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
-                IR.push_back(q);
-                q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
-                IR.push_back(q);
-                this->_3acode = q;
             }
             return;
         case UNARY_OP:
@@ -1398,8 +1583,8 @@ void node::generate_3ac() {
             }
             return;
         case SUITE:
-            if (this->parent->name != "else") {
-                this->_3acode = new Quadruple("", "", "", "", Q_JUMP); // arg1 will be renamed later (backpatching 1)
+            if (this->parent->name != "else" && this->parent->type != FUNCDEF) {
+                this->_3acode = new Quadruple("goto", "", "", "", Q_JUMP); // result will be renamed later (backpatching 1)
                 IR.push_back(this->_3acode);
             }
             return;
@@ -1414,6 +1599,23 @@ void node::generate_3ac() {
                 }
             }
             return;
+        case RETURN_STMT:
+            check_type_and_gen_3ac_return_stmt(this->parent->parent, this);
+            return;
+        case FUNCDEF:
+            if(pending_return) {
+                if(this->children[4]->name != "None") {
+                    yyerror(("SyntaxError: Function " + this->children[1]->name + " should return a value").c_str());
+                }
+                else {
+                    // create a Quadruple to simply return from the function
+                    q = new Quadruple("return", "", "", "", Q_JUMP);
+                    IR.push_back(q);
+                }
+            }
+            q = new Quadruple("", "", "", "", Q_BLANK); // inserting a blank statement at the end of each function
+            IR.push_back(q);
+            SYMBOL_TABLE = SYMBOL_TABLE->parent;
         default:
             // yyerror("Unexpected error: generate_3ac called on a non-terminal node");
             return;

@@ -8,6 +8,7 @@ typedef enum POS {
     ARG1,
     ARG2,
     RESULT,
+    LABEL,
 } POS;
 typedef enum quad_type {
     Q_UNARY,
@@ -18,6 +19,9 @@ typedef enum quad_type {
     Q_PRINT,
     Q_JUMP,
     Q_COND_JUMP,
+    Q_RETURN,
+    Q_FUNC_CALL,
+
     Q_BLANK,
 } quad_type;
 
@@ -28,7 +32,7 @@ typedef struct Quadruple {
     string arg1;   // First argument
     string arg2;   // Second argument
     string result; // Result
-    int label; // used to label the statements, relevant for jumping
+    string label; // used to label the statements, relevant for jumping
     quad_type q_type;
 
     string code = "";   // Code

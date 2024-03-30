@@ -1,2 +1,4 @@
-print(5 & 7)
-break
+def f() -> None:
+  return "abc"
+
+print(f())

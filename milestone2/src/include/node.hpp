@@ -175,6 +175,7 @@ const set<int> unary_ops = { // it is declared so that these nodes are retained 
     IF_STMT,
     WHILE_STMT,
     FOR_STMT,
+    TRAILER, // for function arguments passed while calling the function
 };
 
 const map<node_type, string> type_map = {
@@ -304,4 +305,10 @@ void do_list_assignment(node* assign);
 base_data_type max_operand_type(base_data_type type1, base_data_type type2);
 
 node* find_loop_ancestor(node* root); // root would be a node pointing to "break" or "continue"
+
+string make_function_label(node* funcdef);
+
+string get_compatible_function_and_push_param(node* atom_expr);
+
+void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt);
 #endif

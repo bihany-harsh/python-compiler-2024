@@ -38,23 +38,12 @@
 #     c : int = 2
 #   print("xyz")
 
-if 1:
-  print("xasd")
-p: bool = True
-d : int = 1
-a : int
-
-while d > 1 + 2:
-  print("abc")
-  p = False
-  if p:
-    break
-  else:
-    continue
-b:int = 1
-
+def f(a: int, b:int) -> int:
+  a = 1 + 2
+  return a * b
 # for a in range(1, 2):
 #   print(a)
+x : int = f(1, 2) + 2
 
 
 # class B(C,):

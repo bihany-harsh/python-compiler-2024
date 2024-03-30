@@ -9,6 +9,8 @@ vector<Quadruple*> IR;
 long long int INTERMEDIATE_COUNTER = 1; // the counter to generate intermediates like t1, t2 etc.
 stack<int> LABEL_CNT_STACK; // stack to keep track of the label count
 int LABEL_COUNTER = 1; // the counter to generate labels like L1, L2 etc.
+bool pending_return = false; // it is set to true when a function is started and the return statement has not been encountered yet
+// if at the end of a function (not returning void), this is true, then an error to be thrown
 
 Quadruple::Quadruple(const string& op, const string& arg1, const string& arg2, const string& result, quad_type q_type) {
     this->op = op;
@@ -16,7 +18,7 @@ Quadruple::Quadruple(const string& op, const string& arg1, const string& arg2, c
     this->arg2 = arg2;
     this->result = result;
     this->q_type = q_type;
-    this->label = LABEL_COUNTER++;
+    this->label = to_string(LABEL_COUNTER++);
 
     this->code = this->make_code();
 }
@@ -25,31 +27,34 @@ string Quadruple::make_code() {
     string code = "";
     switch(this->q_type) {
         case Q_UNARY:
-            code = to_string(this->label) + ":\t\t" + this->result + " = " + this->op + " " + this->arg1;
+            code = this->label + ":\t\t" + this->result + " = " + this->op + " " + this->arg1;
             break;
         case Q_BINARY:
-            code = to_string(this->label) + ":\t" + this->result + " = " + this->arg1 + " " + this->op + " " + this->arg2;
+            code = this->label + ":\t" + this->result + " = " + this->arg1 + " " + this->op + " " + this->arg2;
             break;
         case Q_COERCION:
-            code = to_string(this->label) + ":\t" + this->result + " = (" + this->arg1 + ") " + this->arg2;
+            code = this->label + ":\t" + this->result + " = (" + this->arg1 + ") " + this->arg2;
             break;
         case Q_ASSIGN:
-            code = to_string(this->label) + ":\t" + this->result + " = " + this->arg1;
+            code = this->label + ":\t" + this->result + " = " + this->arg1;
             break;
         case Q_DEREFERENCE:
-            code = to_string(this->label) + ":\t" + this->result + " = *" + this->arg1;
+            code = this->label + ":\t" + this->result + " = *" + this->arg1;
             break;
         case Q_PRINT:
-            code = to_string(this->label) + ":\tprint " + this->arg1;
+            code = this->label + ":\tprint " + this->arg1;
             break;
         case Q_JUMP:
-            code = to_string(this->label) + ":\tgoto " + this->result;
+            code = this->label + ":\t" + this->op + " " + this->result; // handles both goto and return (unconditional jumps)
             break;
         case Q_COND_JUMP:
-            code = to_string(this->label) + ":\t" + IF_FALSE + this->arg1 + " " + " goto " + this->result;
+            code = this->label + ":\t" + IF_FALSE + this->arg1 + " " + " goto " + this->result;
+            break;
+        case Q_FUNC_CALL:
+            code = this->label + ":\tcall " + this->arg1 + ", " + this->arg2;
             break;
         case Q_BLANK:
-            code = to_string(this->label) + ":\t";
+            code = this->label + ":\t";
             break;
     }
     return code;
@@ -57,17 +62,20 @@ string Quadruple::make_code() {
 
 void Quadruple::rename_attribute(POS code, string new_name) {
     switch(code) {
-        case 0:
+        case OP:
             this->op = new_name;
             break;
-        case 1:
+        case ARG1:
             this->arg1 = new_name;
             break;
-        case 2:
+        case ARG2:
             this->arg2 = new_name;
             break;
-        case 3:
+        case RESULT:
             this->result = new_name;
+            break;
+        case LABEL:
+            this->label = new_name;
             break;
     }
     this->code = this->make_code();
