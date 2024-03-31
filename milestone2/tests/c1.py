@@ -38,30 +38,34 @@
 #     c : int = 2
 #   print("xyz")
 
-a: int
-def f(a:int) -> float:
-    print(a)
-    return 87.87
-a = 1 + 2 * 3**4
-a = f(a)
+# a: int
+# def f(a:int) -> float:
+#     print(a)
+#     return 87.87
+# a = 1 + 2 * 3**4
+# a = f(a)
 
 # print(a)
 
 class A():
     def __init__(self, a: int, b: float):
         self.a:int = a
-        self.b:float = b
+        self.b:float = self.a * b
         self.x:float = 4
     def temp(self, a: int) -> float:
-        x: float = f(4)
+        x: float = a + 1
         return x
     
-a_: A
-b_: A
-lista_: list[A] = [a_, b_]
+a : A = A(1 * 2, 2.0)
+# b : A
+x: int = a.temp(4)
+# b = A(x, x / 2)
+# a_: A
+# b_: A
+# lista_: list[A] = [a_, b_]
 
-c : list[int] = [1,2,3]
-b: int = c[1] * 2
+# c : list[int] = [1,2,3]
+# b: int = c[1] * 2
 
 # print(a_.temp(4))
     

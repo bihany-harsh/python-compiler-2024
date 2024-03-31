@@ -69,6 +69,7 @@ typedef struct symbol_table_entry {
     string name = "";
     base_data_type b_type;
     string class_name = "";
+    string label = ""; // storing labels of functions
     int size = 0;
     int offset = 0;
     int decl_line = 0;

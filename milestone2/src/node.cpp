@@ -610,8 +610,6 @@ void node::create_func_st() {
 void node::exit_from_func() {
     // if TFPDEF has a single child, it can only be self and the current environment must be a class environment
     // in all other cases, TFPDEF has > 1 children. The type is specified by the descendent of TFPDEP->children[2] and the name is specified by TFPDEF->children[0]
-    this->st_entry->set_size(OFFSET);
-    this->st_entry->child_symbol_table = SYMBOL_TABLE;
     //TODO: handle that non-default arguments appear before default args
     bool found_default_arg = false; // to check that typed (non-default arguments) are before typed (default) arguments
     // non-default arguments are arguments that do not have optional_equal_test
@@ -638,6 +636,8 @@ void node::exit_from_func() {
             this->st_entry->f_attr.list_types.push_back("void");
         }
     }
+    this->st_entry->set_size(OFFSET);
+    this->st_entry->child_symbol_table = SYMBOL_TABLE;
 
     SYMBOL_TABLE = ST_STACK.top();
     OFFSET = OFFSET_STACK.top();
@@ -882,8 +882,231 @@ pair<bool,bool> check_coerce_required(pair<base_data_type, string> formal, pair<
     }
 }
 
+string call_class_init(node* atom_expr, symbol_table* class_st) {
+    st_entry* init_func;
+    node* class_name = atom_expr->children[0];
+    node* trailer = atom_expr->children[1];
+    pair<bool,bool> compatibility_result;
+    string data_type, result;
+    Quadruple* q;
+    for(st_entry* entry: class_st->entries) {
+        if(entry->name == "__init__") {
+            if(entry->b_type != D_FUNCTION) {
+                yyerror(("SematicError: __init__ cannot be a data member for class" + class_name->name).c_str());
+            }
+            init_func = entry;
+            break;
+        }
+    }
+    if(trailer->children.size() != init_func->f_attr.num_args) {
+        yylineno = atom_expr->line_no;
+        yyerror("SyntaxError: Could not find a suitable init function for the given arguments");
+    }
+    // we now have the init function. We need to check the compatibility of arguments
+    for(int i = 0; i < init_func->f_attr.num_args; i++) {
+        if(trailer->children[i]->operand_type == D_LIST) {
+            if(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type == D_CLASS) {
+                compatibility_result = check_coerce_required({init_func->f_attr.args[i], init_func->f_attr.list_types[i]}, {trailer->children[i]->operand_type, SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.class_name});
+            }
+            else {
+                compatibility_result = check_coerce_required({init_func->f_attr.args[i], init_func->f_attr.list_types[i]}, {trailer->children[i]->operand_type, base_data_type_map.find(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type)->second});
+            }
+        }
+        else {
+            compatibility_result = check_coerce_required({init_func->f_attr.args[i], init_func->f_attr.list_types[i]}, {trailer->children[i]->operand_type, "void"});
+        }
+        if(compatibility_result.first == false) {
+            yylineno = atom_expr->line_no;
+            yyerror("SyntaxError: Arguments cannot be coerced to the given definition of __init__ function.");
+        }
+    }
+    // arguments are compatible, pushing them on the stack now
+
+    for(int i = init_func->f_attr.num_args - 1; i >= 0; i--) {
+        if(trailer->children[i]->operand_type == D_LIST) {
+            if(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type == D_CLASS) {
+                compatibility_result = check_coerce_required({init_func->f_attr.args[i], init_func->f_attr.list_types[i]}, {trailer->children[i]->operand_type, SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.class_name});
+            }
+            else {
+                compatibility_result = check_coerce_required({init_func->f_attr.args[i], init_func->f_attr.list_types[i]}, {trailer->children[i]->operand_type, base_data_type_map.find(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type)->second});
+            }
+        }
+        else {
+            compatibility_result = check_coerce_required({init_func->f_attr.args[i], init_func->f_attr.list_types[i]}, {trailer->children[i]->operand_type, "void"});
+        }
+
+        if(init_func->f_attr.args[i] == D_BOOL) {
+            data_type = "bool";
+        }
+        else if (init_func->f_attr.args[i] == D_INT) {
+            data_type = "int";
+        }
+        else if (init_func->f_attr.args[i] == D_FLOAT) {
+            data_type = "float";
+        } else if (init_func->f_attr.args[i] == D_STRING) {
+            data_type = "string";
+        } else if (init_func->f_attr.args[i] == D_LIST) {
+            data_type = "list";
+            data_type += init_func->f_attr.list_types[i];
+        } else if (init_func->f_attr.args[i] == D_CLASS) {
+            data_type = "class";
+        } else if (init_func->f_attr.args[i] == D_VOID) {
+            data_type = "void";
+        }
+        else {
+            yyerror("UnexpectedError: cannot be coerced");
+        }
+
+        if (compatibility_result.second == true) { // coercion required
+            if(trailer->children[i]->_3acode != nullptr) {
+                q = new Quadruple("=", data_type, trailer->children[i]->_3acode->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                result = q->result;
+                IR.push_back(q);
+            }
+            else {
+                q = new Quadruple("=", data_type, trailer->children[i]->name, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                result = q->result;
+                IR.push_back(q);
+            }
+        } else {
+            if(trailer->children[i]->_3acode != nullptr) {
+                result = trailer->children[i]->_3acode->result;
+            }
+            else {
+                result = trailer->children[i]->name;
+            }
+        }
+        q = new Quadruple("", "", "", result, Q_PUSH_PARAM);
+        IR.push_back(q);
+    }
+    if(atom_expr->parent->type != ASSIGN) {
+        yylineno = atom_expr->line_no;
+        yyerror("SyntaxError: Class initiailization cannot be a part of the expression, it is the expression.");
+    }
+    q = new Quadruple("", "", "", atom_expr->parent->children[0]->name, Q_PUSH_PARAM);
+    IR.push_back(q);
+    return init_func->label;
+}
+
+string call_class_member_method(node* atom_expr, symbol_table* class_st) {
+    bool found = false;
+    bool incompatible_args = false;
+    node* func_name = atom_expr->children[1]->children[1];
+    node* trailer = atom_expr->children[2];
+    Quadruple* q;
+    string data_type, result;
+    st_entry* func_entry;
+    pair<bool, bool> compatibility_result;
+    symbol_table* st = SYMBOL_TABLE;
+
+    for(st_entry* st_entry: class_st->entries) {
+            if ((st_entry->b_type == D_FUNCTION) && (st_entry->name == func_name->name)) {
+            incompatible_args = false;
+            if (st_entry->f_attr.num_args == trailer->children.size()) {
+                for(int i = 0; i < trailer->children.size(); i++) {
+                    if(trailer->children[i]->operand_type == D_LIST) {
+                        if(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type == D_CLASS) {
+                            compatibility_result = check_coerce_required({st_entry->f_attr.args[i], st_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.class_name});
+                        }
+                        else {
+                            compatibility_result = check_coerce_required({st_entry->f_attr.args[i], st_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, base_data_type_map.find(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type)->second});
+                        }
+                    }
+                    else {
+                        compatibility_result = check_coerce_required({st_entry->f_attr.args[i], st_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, "void"});
+                    }
+                    if(compatibility_result.first == false) {
+                        incompatible_args = true;
+                        break;
+                    }
+                }
+            }
+            else {
+                incompatible_args = true;
+            }
+            if (incompatible_args == false) {
+                if (found) {
+                    yylineno = atom_expr->line_no;
+                    yyerror(("Call of function " + func_name->name + " is ambiguous").c_str());
+                }
+                else {
+                    found = true;
+                    func_entry = st_entry;
+                }
+            }
+        }
+    }
+    if(!found) {
+        yylineno = trailer->line_no;
+        yyerror("TypeError: Could not find a function matching this definition.");
+    }
+
+    atom_expr->operand_type = func_entry->f_attr.return_type;
+
+    for(int i = func_entry->f_attr.num_args - 1; i >= 0; i--) {
+        if(trailer->children[i]->operand_type == D_LIST) {
+            if(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type == D_CLASS) {
+                compatibility_result = check_coerce_required({func_entry->f_attr.args[i], func_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.class_name});
+            }
+            else {
+                compatibility_result = check_coerce_required({func_entry->f_attr.args[i], func_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, base_data_type_map.find(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type)->second});
+            }
+        }
+        else {
+            compatibility_result = check_coerce_required({func_entry->f_attr.args[i], func_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, "void"});
+        }
+
+        if(func_entry->f_attr.args[i] == D_BOOL) {
+            data_type = "bool";
+        }
+        else if (func_entry->f_attr.args[i] == D_INT) {
+            data_type = "int";
+        }
+        else if (func_entry->f_attr.args[i] == D_FLOAT) {
+            data_type = "float";
+        } else if (func_entry->f_attr.args[i] == D_STRING) {
+            data_type = "string";
+        } else if (func_entry->f_attr.args[i] == D_LIST) {
+            data_type = "list";
+            data_type += func_entry->f_attr.list_types[i];
+        } else if (func_entry->f_attr.args[i] == D_CLASS) {
+            data_type = "class";
+        } else if (func_entry->f_attr.args[i] == D_VOID) {
+            data_type = "void";
+        }
+        else {
+            yyerror("UnexpectedError: cannot be coerced");
+        }
+
+        if (compatibility_result.second == true) { // coercion required
+
+            if(trailer->children[i]->_3acode != nullptr) {
+                q = new Quadruple("=", data_type, trailer->children[i]->_3acode->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                result = q->result;
+                IR.push_back(q);
+            }
+            else {
+                q = new Quadruple("=", data_type, trailer->children[i]->name, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                result = q->result;
+                IR.push_back(q);
+            }
+        } else {
+            if(trailer->children[i]->_3acode != nullptr) {
+                result = trailer->children[i]->_3acode->result;
+            }
+            else {
+                result = trailer->children[i]->name;
+            }
+        }
+        q = new Quadruple("", "", "", result, Q_PUSH_PARAM);
+        IR.push_back(q);
+    }
+    q = new Quadruple("", "", "", atom_expr->children[0]->name, Q_PUSH_PARAM);
+    IR.push_back(q);
+    return func_entry->label;
+}
+
 string get_compatible_function_and_push_param(node* atom_expr) {
-    // TODO: will need to make changes for `self`
     bool found = false;
     bool incompatible_args = false;
     node* func_name = atom_expr->children[0];
@@ -940,8 +1163,7 @@ string get_compatible_function_and_push_param(node* atom_expr) {
         yylineno = trailer->line_no;
         yyerror("TypeError: Could not find a function matching this definition.");
     }
-    string f_label = func_entry->name;
-    for(int i = 0; i < func_entry->f_attr.num_args; i++) {
+    for(int i = func_entry->f_attr.num_args - 1; i >= 0; i--) {
         if(trailer->children[i]->operand_type == D_LIST) {
             if(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type == D_CLASS) {
                 compatibility_result = check_coerce_required({func_entry->f_attr.args[i], func_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.class_name});
@@ -976,8 +1198,6 @@ string get_compatible_function_and_push_param(node* atom_expr) {
             yyerror("UnexpectedError: cannot be coerced");
         }
 
-        f_label += "_" + data_type;
-
         if (compatibility_result.second == true) { // coercion required
 
             if(trailer->children[i]->_3acode != nullptr) {
@@ -1002,7 +1222,8 @@ string get_compatible_function_and_push_param(node* atom_expr) {
         IR.push_back(q);
     }
 
-    return f_label;
+    // return f_label;
+    return func_entry->label;
 }
 
 void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
@@ -1177,7 +1398,7 @@ void do_list_assignment(node* assign) {
                 }
                 else if(temp->operand_type != D_BOOL) {
                     yylineno = assign->children[0]->line_no;
-                    yyerror("TypeError: Incompatible datatypes");
+                    yyerror("TypeError: 1. Incompatible datatypes");
                 }
             break;
             case D_INT:
@@ -1195,7 +1416,7 @@ void do_list_assignment(node* assign) {
                 }
                 else if(temp->operand_type != D_INT) {
                     yylineno = assign->children[0]->line_no;
-                    yyerror("TypeError: Incompatible datatypes");
+                    yyerror("TypeError: 2. Incompatible datatypes");
                 }
             break;
             case D_FLOAT:
@@ -1212,7 +1433,7 @@ void do_list_assignment(node* assign) {
                 }
                 else if(temp->operand_type != D_FLOAT) {
                     yylineno = assign->children[0]->line_no;
-                    yyerror("TypeError: Incompatible datatypes");
+                    yyerror("TypeError: 3. Incompatible datatypes");
                 }
             break;
             case D_STRING:
@@ -1370,7 +1591,7 @@ string node::get_rhs_operand() {
                 yyerror("SyntaxError: print cannot be part of an expression.");
             }
             else if(this->children[1]->children[0]->name == "self") {
-                return this->children[0]->_3acode->result;
+                return this->children[1]->_3acode->result;
             }
             else if(this->children[1]->children[0]->name == "range" || this->children[1]->children[0]->name == "len") {
                 yyerror("not handling this yet");
@@ -1388,6 +1609,10 @@ string node::get_rhs_operand() {
             else if(entry->b_type == D_FUNCTION) {
                 this->children[1]->operand_type = entry->f_attr.return_type;
                 return this->children[1]->_3acode->result; //FIXME: check this
+            }
+            else if(entry->b_type == D_CLASS) {
+                // have called a member method of a class. operand_type is already set. simply return the result
+                return this->children[1]->_3acode->result;
             }
         case UNARY_OP:
             this->children[1]->operand_type = this->children[1]->children[0]->operand_type;
@@ -1415,7 +1640,6 @@ string node::get_rhs_operand() {
 }
 
 void node::check_operand_type_compatibility() {
-    //FIXME: might need to typecast first before creating the 3ac of an expression: order of labels is inverted, might cause issues in goto jumps
     //TODO: check all the calls of the function rename_attribute() and ensure that correct attribute is renamed
     //TODO: ensure that all coercion cases are linked with a typecasting case
     string temp_result; // stores the temporary result attr of a Quadruple (for coercion)
@@ -1507,7 +1731,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_INT) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: Incompatible datatypes");
+                        yyerror("TypeError: 4. Incompatible datatypes");
                     }
                 break;
                 case D_FLOAT:
@@ -1539,7 +1763,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_FLOAT) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: Incompatible datatypes");
+                        yyerror("TypeError: 5. Incompatible datatypes");
                     }
                 break;
                 case D_STRING:
@@ -1555,7 +1779,7 @@ void node::check_operand_type_compatibility() {
                 default:
                 //TODO: Assigning value to an array index?
                     yylineno = this->children[0]->line_no;
-                    yyerror("TypeError: Incompatible datatypes");
+                    yyerror("TypeError: 6. Incompatible datatypes");
                 break;
             }
         break;
@@ -1581,10 +1805,11 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_BOOL) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: Incompatible datatypes");
+                        yyerror("TypeError: 7. Incompatible datatypes");
                     }
                 break;
                 case D_INT:
+                    cout << "this->children[1]->operand_type = " << this->children[1]->operand_type << endl;
                     if(this->children[1]->operand_type == D_BOOL || this->children[1]->operand_type == D_FLOAT) {
                         temp_result = "t" + to_string(INTERMEDIATE_COUNTER++);
                         if(this->children[1]->_3acode != nullptr) {
@@ -1599,7 +1824,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_INT) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: Incompatible datatypes");
+                        yyerror("TypeError: 8. Incompatible datatypes");
                     }
                 break;
                 case D_FLOAT:
@@ -1673,10 +1898,11 @@ void node::generate_3ac_keywords() {
     else if ((this->name == "def")) {
         // function label creation
         this->_3acode = new Quadruple("", "", "", "", Q_BLANK);
+        SYMBOL_TABLE->get_entry(this->parent->children[1]->name)->label = make_function_label(this->parent);
         this->_3acode->rename_attribute(LABEL, make_function_label(this->parent));
         IR.push_back(this->_3acode);
         // to pop the params
-        for (int i = this->parent->children[2]->children.size() - 1; i >= 0 ; i--) {
+        for (int i = 0; i < this->parent->children[2]->children.size() ; i++) {
             if(this->parent->children[2]->children[i]->name == "self") {
                 q = new Quadruple("", "", "", "self", Q_POP_PARAM);
             }
@@ -1745,10 +1971,21 @@ void node::generate_3ac() {
                 entry = SYMBOL_TABLE->get_entry("self." + this->name);
             }
             if (!entry) {
+                // may be referring to a function/member of a class using an object.
+                if(this->parent->type == TRAILER && this->parent->children[0]->type == DOT) {
+                    entry = SYMBOL_TABLE->get_entry(this->parent->parent->children[0]->name); // getting the entry corresponding to the object of the class
+                    entry = SYMBOL_TABLE->get_entry(entry->class_name); // getting the entry corresponding to the class name
+                    entry = entry->child_symbol_table->get_entry(this->name); // trying to find the data member/member method from that class
+                }
+            }
+            if(!entry) {
                 yylineno = this->line_no;
                 yyerror("UnexpectedError: Identifier entry not found.");
             }
             this->operand_type = entry->b_type;
+            if(this->operand_type == D_CLASS) {
+                this->class_name = entry->name;
+            }
             if(this->operand_type == D_LIST && this->parent->type == ASSIGN) {
                 q = new Quadruple("", to_string(entry->l_attr.list_elem_size * entry->l_attr.num_of_elems), "", this->name, Q_ALLOC);
                 IR.push_back(q);
@@ -1757,16 +1994,16 @@ void node::generate_3ac() {
                 if(this->children[0]->type == IDENTIFIER) {
                     entry = SYMBOL_TABLE->get_entry(this->children[0]->name);
                     if (!entry || entry->child_symbol_table == nullptr || entry->b_type != D_CLASS) { // entry->child_symbol_table (only for class declarations)
-                        yyerror("TypeError: Undeclared type or erroneous type init.");
+                        yyerror("TypeError: Undeclared type or erroneous type initialization.");
                     }
                     q = new Quadruple("", to_string(entry->size), "", this->name, Q_ALLOC); // allocating memory for a class object
                     IR.push_back(q);
                 }
             }
-            if (this->name == "__init__" && SYMBOL_TABLE->parent->st_type == CLASS) {
+            if (this->name == "__init__" && SYMBOL_TABLE->parent && SYMBOL_TABLE->parent->st_type == CLASS) {
                 if(pending_init == false) {
                     yylineno = this->line_no;
-                    yyerror("SyntaxError: Class has multiple __init__ functions.");
+                    yyerror("SemanticError: Class has multiple __init__ functions.");
                 }
                 pending_init = false;
             }
@@ -1786,7 +2023,16 @@ void node::generate_3ac() {
         case ATOM_EXPR:
             if(this->children[0]->name == "print") {
                 op1 = this->get_rhs_operand();
-                this->_3acode = new Quadruple("", op1, "", "", Q_PRINT);
+                // FIXME: coercion to string for print?
+                // if(this->children[1]->operand_type != D_STRING) {
+                //     q = new Quadruple("=", "string", op1, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                //     IR.push_back(q);
+                //     temp_result = q->result;
+                // }
+                // else {
+                //     temp_result = op1;
+                // }
+                this->_3acode = new Quadruple("", temp_result, "", "", Q_PRINT);
                 // TODO: any type checking here? : yes, cannot print classes, function
                 IR.push_back(this->_3acode);
             }
@@ -1839,18 +2085,26 @@ void node::generate_3ac() {
                 } 
                 else if(entry->b_type == D_FUNCTION) {
                     this->operand_type = entry->f_attr.return_type;
-                    string func_label = get_compatible_function_and_push_param(this); // this is also ideally label
+                    string func_label = get_compatible_function_and_push_param(this);
                     this->_3acode = new Quadruple("", func_label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
                     IR.push_back(this->_3acode);
-                    // for (int i = 0; i < entry->f_attr.num_args; i++) {
-                    //     q = new Quadruple("", "", "", "", Q_POP_PARAM);
-                    //     IR.push_back(q);
-                    // }
                 }
                 else if(entry->b_type == D_CLASS) {
                     if(entry->child_symbol_table != nullptr) {
                         // only a class declaration will have a child_symbol_table, objects of that class will not
-                        
+                        this->operand_type = D_CLASS;
+                        this->class_name = entry->name;
+                        // push parameters of the __init__ function and call it
+                        string func_label = call_class_init(this, entry->child_symbol_table);
+                        this->_3acode = new Quadruple("", func_label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
+                        IR.push_back(this->_3acode);
+                    } else {
+                        entry = SYMBOL_TABLE->get_entry(entry->class_name); // getting the entry corresponding to the class name
+                        tmp = this->children[1]->children[1]; // this points to the name of the function called from the class obj
+                        string func_label = call_class_member_method(this, entry->child_symbol_table); // this->operand_type is set within this function itself
+                        cout << "atom_expr->operand_type = " << this->operand_type << endl;
+                        this->_3acode = new Quadruple("", func_label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
+                        IR.push_back(this->_3acode);
                     }
                 }
             }
@@ -1870,7 +2124,6 @@ void node::generate_3ac() {
                 yyerror("VersionError: multiple list assignment not supported yet. Please check for a later version.");
             }
             if(this->children[1]->type == TESTLIST_COMP) {
-                // TODO: will create memory on the stack when creating runtime support for lists
                 do_list_assignment(this);
             }
             else {

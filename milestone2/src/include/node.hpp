@@ -235,6 +235,7 @@ typedef struct node {
     base_data_type operand_type = D_VOID; // storing the data type of the operand, to check type compatibility
     vector<node*> break_nodes; // to be used only for 'for' and 'while' nodes
     vector<node*> continue_nodes; // to be used only for 'for' and 'while' nodes
+    string class_name = ""; // to be used only when we have a class node/ list of classes
 
     // METHODS
     // constructor
@@ -314,6 +315,8 @@ node* find_loop_ancestor(node* root); // root would be a node pointing to "break
 string make_function_label(node* funcdef);
 
 pair<bool,bool> check_coerce_required(base_data_type formal, base_data_type actual);
+
+string call_class_init(node* atom_expr, symbol_table* class_st);
 
 string get_compatible_function_and_push_param(node* atom_expr);
 
