@@ -584,11 +584,10 @@ atom                        :   TOK_LPAR {join_lines_implicitly++; } test TOK_RP
                                     join_lines_implicitly--;
                                     $$ = new node(ATOM, "ATOM", false, NULL);
                                     $1 = new node(DELIMITER, "(", true, NULL);
-                                    $3 = new node(DELIMITER, ")", true, NULL);
+                                    $4 = new node(DELIMITER, ")", true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($3);
                                     $$->add_parent_child_relation($4);
-                                //     yyerror("SyntaxError: Tuples not supported");
                             }
                             |   TOK_LSQB { join_lines_implicitly++; } testlist_comp TOK_RSQB {
                                     join_lines_implicitly--;
@@ -687,7 +686,7 @@ trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_a
                             }
                             |   TOK_DOT TOK_IDENTIFIER {
                                     $$ = new node(TRAILER, "TRAILER", false, NULL);
-                                    $1 = new node(DELIMITER, ".", true, NULL);
+                                    $1 = new node(DOT, ".", true, NULL);
                                     $2 = new node(IDENTIFIER, yytext, true, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
@@ -1083,6 +1082,14 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                         if((SYMBOL_TABLE->parent->st_type == GLOBAL && $2->name != "main") || (SYMBOL_TABLE->parent->st_type == CLASS && $2->name != "__init__")) {
                                             yyerror("Function must have a return type");
                                         }
+                                        else {
+                                            // `main` or `__init__` function
+                                            $6 = new node(OPTIONAL_TOK_RARROW_TEST, "OPTIONAL_TOK_RARROW_TEST", false, NULL);
+                                            node* tmp1 = new node(RARROW, "->", true, NULL);
+                                            node* tmp2 = new node(KEYWORD, "None", true, NULL);
+                                            $6->add_parent_child_relation(tmp1);
+                                            $6->add_parent_child_relation(tmp2);
+                                        }
                                         // else we would want to set the return type to void : set by default
                                     }
                                     else {
@@ -1152,6 +1159,11 @@ tfpdef                      :   TOK_IDENTIFIER { $1 = new node(IDENTIFIER, yytex
                                         num_args++;
                                         base_data_type b_type = sem_rval_check(SYMBOL_TABLE, $3->children[1]); // passing the node of ```test``` to rval_check
                                         st_entry* new_entry = new st_entry($1->name, b_type, OFFSET, $1->line_no, SYMBOL_TABLE->scope);
+
+                                        if (b_type == D_LIST) {
+                                            set_list_elem_type(SYMBOL_TABLE, $3->children[1], new_entry);
+                                        }
+
                                         OFFSET += new_entry->size;
                                         SYMBOL_TABLE->add_entry(new_entry);
                                         $1->st = SYMBOL_TABLE;
@@ -1161,10 +1173,11 @@ tfpdef                      :   TOK_IDENTIFIER { $1 = new node(IDENTIFIER, yytex
                                     $$->add_parent_child_relation($1);
                                     if($3 == NULL) {
                                         yyerror(("SyntaxError: missing type specification for function argument " + $1->name).c_str());
-                                    } 
+                                    }
                                     prune_custom_nodes($$, $3);
                             }
                             |   TOK_SELF {
+                                // num_args++;
                                 if (SYMBOL_TABLE->parent->st_type != CLASS) {
                                     yyerror("SyntaxError: `self` not defined.");
                                 }
@@ -1191,7 +1204,6 @@ classdef                    :   TOK_CLASS TOK_IDENTIFIER {
                                     cout << "created class symbol table" << endl;
                                 }
                                 optional_paren_arglist TOK_COLON suite {
-                                    cout << "Reached end of class defn of " << $2->name << endl;
                                     //TODO: update size of the CLASS node once calculated
                                     //TODO: add offset according to what is calculated within this class
                                     $$ = new node(CLASSDEF, "CLASSDEF", false, NULL);
@@ -1206,7 +1218,6 @@ classdef                    :   TOK_CLASS TOK_IDENTIFIER {
 
                                     //TODO: if inheritance, add base class st_entries to derived
                                     $2->handle_inheritance($4);
-                                    cout << "handle ingeritance " << endl;
                                     $2->exit_from_class();
                             }
                             ;

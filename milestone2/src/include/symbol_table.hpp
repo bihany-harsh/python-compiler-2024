@@ -28,15 +28,15 @@ typedef enum symbol_table_type {
 struct symbol_table;
 struct symbol_table_entry;
 
-// const map<base_data_type, string> type_name = {
-//     {D_BOOL, "bool"},
-//     {D_INT, "int"},
-//     {D_FLOAT, "float"},
-// }
+const map<base_data_type, string> base_data_type_map = {
+    {D_BOOL, "bool"},
+    {D_INT, "int"},
+    {D_FLOAT, "float"},
+};
 
 typedef struct list_attributes {
 
-    base_data_type list_elem_type;
+    base_data_type list_elem_type = D_VOID;
     string class_name = ""; // to be used only when we have a list of classes
     long long num_of_elems = -1; // when not initialized it is -1.
 } list_attr;
@@ -44,6 +44,7 @@ typedef struct list_attributes {
 typedef struct func_attributes {
     int num_args = 0; // stores the number of arguments
     vector<base_data_type> args = {}; // stores the datatypes of the arguments, in order
+    vector<string> list_types = {}; // stores the datatypes of the list element type, in order 
     base_data_type return_type = D_VOID; // stores the return type of the function
 } func_attr;
 
@@ -67,6 +68,7 @@ const map<base_data_type, int> base_data_type_size = {
 typedef struct symbol_table_entry {
     string name = "";
     base_data_type b_type;
+    string class_name = "";
     int size = 0;
     int offset = 0;
     int decl_line = 0;
@@ -111,8 +113,10 @@ typedef struct symbol_table {
     void add_entry(st_entry* entry);
     st_entry* get_entry(string name);
     int delete_entry(string name);
+
     void print_st();
 
+    void sort_class_entries();
 
     void set_scope(); // set the scope of the symbol table
 } symbol_table;

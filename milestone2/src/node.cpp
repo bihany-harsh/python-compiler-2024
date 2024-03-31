@@ -27,7 +27,7 @@ extern vector<Quadruple*> IR;
 extern long long int INTERMEDIATE_COUNTER;
 extern stack<int> LABEL_CNT_STACK;
 extern int LABEL_COUNTER;
-extern bool pending_return;
+extern bool pending_return, pending_init;
 
 node::node(node_type type, string name, bool is_terminal, node* parent) {
     this->type = type;
@@ -379,11 +379,13 @@ void node::handle_annassign() {
 }
 
 node* sem_lval_check(node* root) {
-    node* tmp = root;
+    node* tmp = root;  
     while(tmp && (!tmp->is_terminal)) {
         if(tmp->children.size() > 1) {
-            if(SYMBOL_TABLE->st_type == CLASS || (SYMBOL_TABLE->st_type == FUNCTION && SYMBOL_TABLE->parent->st_type == CLASS && SYMBOL_TABLE->st_name == "__init__")) {
+            if(SYMBOL_TABLE->st_type == FUNCTION && SYMBOL_TABLE->parent->st_type == CLASS) {
                 return nullptr;
+            } else if (SYMBOL_TABLE->st_type == CLASS) {
+                yyerror("IncompatiblityError: Stray code in class not supported.");
             }
             yyerror("Not a valid lvalue");
         }
@@ -445,7 +447,8 @@ base_data_type sem_rval_check(symbol_table* st, node* root) {
     } else if(tmp->type == IDENTIFIER) {
         st_entry* entry = st->get_entry(tmp->name);
         if(entry && entry->b_type == D_CLASS) {
-            return entry->b_type;
+            // return entry->b_type;
+            return D_CLASS;
         } else {
             yyerror((tmp->name + " is not defined").c_str());
         }
@@ -457,11 +460,48 @@ base_data_type sem_rval_check(symbol_table* st, node* root) {
     return D_VOID; // gcc shutup!
 }
 
+void set_list_elem_type(symbol_table* st, node* test, st_entry* new_entry) {
+    //  root points to the node of ```test``` in the grammar
+    node* tmp = test;
+    while(tmp && (!tmp->is_terminal)) {
+        cout << "set_lwrvnklw: " << tmp->name << endl; 
+        if(tmp->children.size() > 1) {
+            if(tmp->type != ATOM_EXPR) {
+                yyerror("Not a valid rvalue");
+            }
+            else {
+                cout << "set_lwrvnklw (child[1]): " << tmp->children[1]->children[1]->name << endl; // after the L_SQB 
+
+                if (tmp->children[1]->children[1]->name == "int") {
+                    new_entry->l_attr.list_elem_type = D_INT;
+                } else if (tmp->children[1]->children[1]->name == "float") {
+                    new_entry->l_attr.list_elem_type = D_FLOAT;
+                } else if (tmp->children[1]->children[1]->name == "bool") {
+                    new_entry->l_attr.list_elem_type = D_BOOL;
+                } else if (tmp->children[1]->children[1]->name == "string") {
+                    new_entry->l_attr.list_elem_type = D_STRING;
+                } else if (tmp->children[1]->children[1]->type == IDENTIFIER) {
+                    // list of clases
+                    if ((!SYMBOL_TABLE->get_entry(tmp->children[1]->children[1]->name)) || (SYMBOL_TABLE->get_entry(tmp->children[1]->children[1]->name)->b_type != D_CLASS)) {
+                        yyerror("TypeError: Not a valid list declaration.");    
+                    }
+                    new_entry->l_attr.list_elem_type = D_CLASS;
+                    new_entry->l_attr.class_name = tmp->children[1]->name;
+                } else {
+                    yyerror("TypeError: Not a valid list declaration.");
+                }
+            }
+        }
+        tmp = tmp->children[0];
+    }
+}
+
 void check_declare_before_use(symbol_table* st, node* root) {
+    // TODO: self.a should be declared before use
     if(root == nullptr)
         return;
     if(root->type == IDENTIFIER) {
-        if(!st->get_entry(root->name)) {
+        if(!st->get_entry(root->name) && root->parent->children[0]->name != ".") {
             yyerror((root->name + " is not defined").c_str());
         }
     }
@@ -586,6 +626,24 @@ void node::exit_from_func() {
         symbol_table_entry* arg = SYMBOL_TABLE->entries[i];
         // cout << "obtained the argument entry" << endl;
         this->st_entry->f_attr.args.push_back(arg->b_type);
+        if (arg->b_type == D_LIST) {
+            cout << arg->l_attr.list_elem_type << endl;
+            if(arg->l_attr.list_elem_type == D_BOOL) {
+                this->st_entry->f_attr.list_types.push_back("bool");
+            } else if(arg->l_attr.list_elem_type == D_INT) {
+                this->st_entry->f_attr.list_types.push_back("int");
+            } else if(arg->l_attr.list_elem_type == D_FLOAT) {
+                this->st_entry->f_attr.list_types.push_back("float");
+            } else if(arg->l_attr.list_elem_type == D_STRING) {
+                this->st_entry->f_attr.list_types.push_back("string");
+            } else if(arg->l_attr.list_elem_type == D_CLASS) {
+                this->st_entry->f_attr.list_types.push_back(SYMBOL_TABLE->get_entry(arg->l_attr.class_name)->name);
+            } else {
+                yyerror("UnexpectedError: List is not of a valid type");
+            }
+        } else {
+            this->st_entry->f_attr.list_types.push_back("void");
+        }
     }
 
     SYMBOL_TABLE = ST_STACK.top();
@@ -625,7 +683,7 @@ void add_class_st_entry(node* test, base_data_type b_type) {
     if (tmp->children[1]->children[0]->name != ".") {
         yyerror("SyntaxError: invalid usage of self.");
     }
-    st_entry* entry = new st_entry(tmp->children[1]->children[1]->name, b_type, OFFSET, tmp->children[1]->children[1]->line_no, SYMBOL_TABLE->scope);
+    st_entry* entry = new st_entry("self." + tmp->children[1]->children[1]->name, b_type, OFFSET, tmp->children[1]->children[1]->line_no, SYMBOL_TABLE->scope);
     OFFSET += entry->size;
     if (SYMBOL_TABLE->st_type == CLASS) {
         SYMBOL_TABLE->add_entry(entry);
@@ -676,6 +734,9 @@ void node::handle_inheritance(node* optional_arglist) {
                             if (inherit_entry->f_attr.args[i] != present_entry->f_attr.args[i]) {
                                 to_inherit = true;
                                 break;
+                            } else if(inherit_entry->f_attr.list_types[i] != present_entry->f_attr.list_types[i]) {
+                                to_inherit = true;
+                                break;
                             }
                         }
                         if (to_inherit) {
@@ -696,14 +757,16 @@ void node::handle_inheritance(node* optional_arglist) {
 }
 
 void node::exit_from_class() {
-    this->st_entry->set_size(OFFSET);
     this->st_entry->child_symbol_table = SYMBOL_TABLE;
+    this->st_entry->set_size(0);
     SYMBOL_TABLE = ST_STACK.top();
     OFFSET = OFFSET_STACK.top();
     SYMBOL_TABLE->add_entry(this->st_entry);
     OFFSET += this->st_entry->size;
     ST_STACK.pop();
     OFFSET_STACK.pop();
+
+    this->st_entry->child_symbol_table->sort_class_entries();
     return;
 }
 
@@ -728,23 +791,33 @@ node* find_loop_ancestor(node* root) {
 }
 
 string make_function_label(node* funcdef) {
-    string label = funcdef->children[1]->name;
+    string label = "";
     node* parameters = funcdef->children[2];
-    for(node* tfpdef: parameters->children) {
-        label += "_";
-        label += tfpdef->children[1]->name;
+    if (SYMBOL_TABLE->parent->st_type == CLASS) {
+        label = SYMBOL_TABLE->parent->st_name + "_" + funcdef->children[1]->name;; // name of the class
+        if(parameters->children[0]->name != "self") {
+            yyerror("IncompatibilityError: Class member methods must have a `self` argument.");
+        }
+        for (int i = 1; i < parameters->children.size(); i++) { // from 1 because 0 is self
+            label += "_" + parameters->children[i]->children[1]->name;
+        }
+    } else {
+        label = funcdef->children[1]->name;
+        for(node* tfpdef: parameters->children) {
+            label += "_" + tfpdef->children[1]->name;
+        }
     }
     return label;
 }
 
-pair<bool,bool> check_coerce_required(base_data_type formal, base_data_type actual) {
+pair<bool,bool> check_coerce_required(pair<base_data_type, string> formal, pair<base_data_type, string> actual) {
     // first bool will denote compatibility and second bool will denote requirement of coercion
-    switch(formal) {
+    switch(formal.first) {
         case D_BOOL:
-            if (actual == D_BOOL) {
+            if (actual.first == D_BOOL) {
                 return {true, false};
             }
-            else if (actual == D_INT || actual == D_FLOAT) {
+            else if (actual.first == D_INT || actual.first == D_FLOAT) {
                 return {true, true};
             }
             else {
@@ -752,10 +825,10 @@ pair<bool,bool> check_coerce_required(base_data_type formal, base_data_type actu
             }
         break;
         case D_INT:
-            if (actual == D_INT) {
+            if (actual.first == D_INT) {
                 return {true, false};
             }
-            else if (actual == D_FLOAT || actual == D_BOOL) {
+            else if (actual.first == D_FLOAT || actual.first == D_BOOL) {
                 return {true, true};
             }
             else {
@@ -763,10 +836,10 @@ pair<bool,bool> check_coerce_required(base_data_type formal, base_data_type actu
             }
         break;
         case D_FLOAT:
-            if (actual == D_FLOAT) {
+            if (actual.first == D_FLOAT) {
                 return {true, false};
             }
-            else if (actual == D_INT || actual == D_BOOL) {
+            else if (actual.first == D_INT || actual.first == D_BOOL) {
                 return {true, true};
             }
             else {
@@ -774,7 +847,7 @@ pair<bool,bool> check_coerce_required(base_data_type formal, base_data_type actu
             }
         break;
         case D_STRING:
-            if (actual == D_STRING) {
+            if (actual.first == D_STRING) {
                 return {true, false};
             }
             else {
@@ -782,15 +855,20 @@ pair<bool,bool> check_coerce_required(base_data_type formal, base_data_type actu
             }
         break;
         case D_LIST:
-            if (actual == D_LIST) {
-                return {true, false};
+            if (actual.first == D_LIST) {
+                if(formal.second == actual.second) {
+                    return {true, false};
+                }
+                else {
+                    return {false, true};
+                }
             }
             else {
                 return {false, true};
             }
         break;
         case D_CLASS:
-            if (actual == D_CLASS) {
+            if (actual.first == D_CLASS) {
                 return {true, false};
             }
             else {
@@ -798,7 +876,7 @@ pair<bool,bool> check_coerce_required(base_data_type formal, base_data_type actu
             }
         break;
         case D_VOID:
-            if (actual == D_VOID) {
+            if (actual.first == D_VOID) {
                 return {true, false};
             }
             else {
@@ -821,87 +899,128 @@ string get_compatible_function_and_push_param(node* atom_expr) {
     string data_type, result;
     st_entry* func_entry;
     pair<bool, bool> compatibility_result;
-    for (st_entry* st_entry: SYMBOL_TABLE->entries) {
-        if ((st_entry->b_type == D_FUNCTION) && (st_entry->name == func_name->name)) {
-            if (st_entry->f_attr.num_args == trailer->children.size()) {
-                for(int i = 0; i < trailer->children.size(); i++) {
-                    compatibility_result = check_coerce_required(st_entry->f_attr.args[i], trailer->children[i]->operand_type);
-                    if(compatibility_result.first == false) {
-                        incompatible_args = true;
-                        break;
+    symbol_table* st = SYMBOL_TABLE;
+    while(st) {
+        for (st_entry* st_entry: st->entries) {
+            incompatible_args = false;
+            if ((st_entry->b_type == D_FUNCTION) && (st_entry->name == func_name->name)) {
+                if (st_entry->f_attr.num_args == trailer->children.size()) {
+                    for(int i = 0; i < trailer->children.size(); i++) {
+                        if(trailer->children[i]->operand_type == D_LIST) {
+                            if(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type == D_CLASS) {
+                                compatibility_result = check_coerce_required({st_entry->f_attr.args[i], st_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.class_name});
+                            }
+                            else {
+                                compatibility_result = check_coerce_required({st_entry->f_attr.args[i], st_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, base_data_type_map.find(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type)->second});
+                            }
+                        }
+                        else {
+                            compatibility_result = check_coerce_required({st_entry->f_attr.args[i], st_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, "void"});
+                        }
+                        if(compatibility_result.first == false) {
+                            incompatible_args = true;
+                            break;
+                        }
+                    }
+                }
+                else {
+                    incompatible_args = true;
+                }
+                if (incompatible_args == false) {
+                    if (found) {
+                        yylineno = atom_expr->line_no;
+                        yyerror(("Call of function " + func_name->name + " is ambiguous").c_str());
+                    }
+                    else {
+                        found = true;
+                        func_entry = st_entry;
                     }
                 }
             }
-            else {
-                incompatible_args = true;
-            }
-            if (incompatible_args == false) {
-                if (found) {
-                    yylineno = atom_expr->line_no;
-                    yyerror(("Call of function " + func_name->name + " is ambiguous").c_str());
-                }
-                else {
-                    found = true;
-                    func_entry = st_entry;
-                }
-            }
         }
+        st = st->parent;
+        if (found) 
+            break;
     }
+
     if(!found) {
         yylineno = trailer->line_no;
         yyerror("TypeError: Could not find a function matching this definition.");
     }
+    string f_label = func_entry->name;
     for(int i = 0; i < func_entry->f_attr.num_args; i++) {
-        compatibility_result = check_coerce_required(func_entry->f_attr.args[i], trailer->children[i]->operand_type);
-        if (compatibility_result.second == true) { // coercion required
-            if(func_entry->f_attr.args[i] == D_BOOL) {
-                data_type = "bool";
-            }
-            else if (func_entry->f_attr.args[i] == D_INT) {
-                data_type = "int";
-            }
-            else if (func_entry->f_attr.args[i] == D_FLOAT) {
-                data_type = "float";
+        if(trailer->children[i]->operand_type == D_LIST) {
+            if(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type == D_CLASS) {
+                compatibility_result = check_coerce_required({func_entry->f_attr.args[i], func_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.class_name});
             }
             else {
-                yyerror("Unexpected Error: cannot be coerced");
+                compatibility_result = check_coerce_required({func_entry->f_attr.args[i], func_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, base_data_type_map.find(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type)->second});
             }
+        }
+        else {
+            compatibility_result = check_coerce_required({func_entry->f_attr.args[i], func_entry->f_attr.list_types[i]}, {trailer->children[i]->operand_type, "void"});
+        }
+
+        if(func_entry->f_attr.args[i] == D_BOOL) {
+            data_type = "bool";
+        }
+        else if (func_entry->f_attr.args[i] == D_INT) {
+            data_type = "int";
+        }
+        else if (func_entry->f_attr.args[i] == D_FLOAT) {
+            data_type = "float";
+        } else if (func_entry->f_attr.args[i] == D_STRING) {
+            data_type = "string";
+        } else if (func_entry->f_attr.args[i] == D_LIST) {
+            data_type = "list";
+            data_type += func_entry->f_attr.list_types[i];
+        } else if (func_entry->f_attr.args[i] == D_CLASS) {
+            data_type = "class";
+        } else if (func_entry->f_attr.args[i] == D_VOID) {
+            data_type = "void";
+        }
+        else {
+            yyerror("UnexpectedError: cannot be coerced");
+        }
+
+        f_label += "_" + data_type;
+
+        if (compatibility_result.second == true) { // coercion required
 
             if(trailer->children[i]->_3acode != nullptr) {
                 q = new Quadruple("=", data_type, trailer->children[i]->_3acode->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
                 result = q->result;
+                IR.push_back(q);
             }
             else {
                 q = new Quadruple("=", data_type, trailer->children[i]->name, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
                 result = q->result;
+                IR.push_back(q);
+            }
+        } else {
+            if(trailer->children[i]->_3acode != nullptr) {
+                result = trailer->children[i]->_3acode->result;
+            }
+            else {
+                result = trailer->children[i]->name;
             }
         }
+        q = new Quadruple("", "", "", result, Q_PUSH_PARAM);
+        IR.push_back(q);
     }
-                    else {
-                        if(trailer->children[i]->_3acode != nullptr) {
-                            result = trailer->children[i]->_3acode->result;
-                        }
-                        else {
-                            result = trailer->children[i]->name;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    if (!found) {
-        yyerror("SyntaxError: Function not defined.");
-    }
+
+    return f_label;
 }
 
 void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
-    if(!pending_return) {
-        yylineno = return_stmt->line_no;
-        yyerror("SyntaxError: Multiple return statements inside a single function");
-    }
+    // if(!pending_return) {
+    //     yylineno = return_stmt->line_no;
+    //     yyerror("SyntaxError: Multiple return statements inside a single function");
+    // }
     pending_return = false; // encountered a return statement in a function, so this flag is again marked false
 
     base_data_type return_type_formal = funcdef->children[1]->st_entry->f_attr.return_type; // funcdef->children[1] is the IDENTIFIER node
+    int num_args = funcdef->children[1]->st_entry->f_attr.num_args;
     base_data_type return_type_actual;
     Quadruple* q = nullptr;
     if (return_stmt->children.size() != 1) {
@@ -1180,7 +1299,22 @@ string node::get_lhs_operand() {
             this->children[0]->operand_type = D_BOOL;
             return this->children[0]->_3acode->result;
         case ATOM_EXPR:
-            if(this->children[0]->children[0]->name == "print" || this->children[0]->children[0]->name == "self" || this->children[0]->children[0]->name == "range" || this->children[0]->children[0]->name == "len") {
+            if(this->children[0]->children[0]->name == "print") {
+                yylineno = this->children[0]->children[0]->line_no;
+                yyerror("SyntaxError: print cannot be part of an expression.");
+            }
+            else if(this->children[0]->children[0]->name == "self") {
+                if(this->type != ASSIGN) { // if not the LHS of an assign
+                    q = new Quadruple("", this->children[0]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                    IR.push_back(q);
+                    return q->result;
+                }
+                else { // if the left side of an assign
+                    this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
+                    return this->children[0]->_3acode->result;
+                }
+            }
+            else if (this->children[0]->children[0]->name == "range" || this->children[0]->children[0]->name == "len") {
                 yyerror("not handling this yet");
             }
             entry = SYMBOL_TABLE->get_entry(this->children[0]->children[0]->name);
@@ -1202,7 +1336,7 @@ string node::get_lhs_operand() {
             }
             else if(entry->b_type == D_FUNCTION) {
                 this->children[0]->operand_type = entry->f_attr.return_type;
-                return this->children[0]->name; // FIXME: check this
+                return this->children[0]->_3acode->result; // FIXME: check this
             }
         case KEYWORD:
             if(this->name != "print" || this->name != "self" || this->name != "range" || this->name != "len") {
@@ -1238,7 +1372,14 @@ string node::get_rhs_operand() {
             this->children[1]->operand_type = D_BOOL;
             return this->children[1]->name;
         case ATOM_EXPR:
-            if(this->children[1]->children[0]->name == "print" || this->children[1]->children[0]->name == "self" || this->children[1]->children[0]->name == "range" || this->children[1]->children[0]->name == "len") {
+            if(this->children[1]->children[0]->name == "print") {
+                yylineno = this->children[0]->children[0]->line_no;
+                yyerror("SyntaxError: print cannot be part of an expression.");
+            }
+            else if(this->children[1]->children[0]->name == "self") {
+                return this->children[0]->_3acode->result;
+            }
+            else if(this->children[1]->children[0]->name == "range" || this->children[1]->children[0]->name == "len") {
                 yyerror("not handling this yet");
             }
             entry = SYMBOL_TABLE->get_entry(this->children[1]->children[0]->name);
@@ -1253,7 +1394,7 @@ string node::get_rhs_operand() {
             }
             else if(entry->b_type == D_FUNCTION) {
                 this->children[1]->operand_type = entry->f_attr.return_type;
-                return this->children[1]->name; //FIXME: check this
+                return this->children[1]->_3acode->result; //FIXME: check this
             }
         case UNARY_OP:
             this->children[1]->operand_type = this->children[1]->children[0]->operand_type;
@@ -1269,6 +1410,12 @@ string node::get_rhs_operand() {
         case ASSIGN:
             this->children[1]->operand_type = this->children[1]->children[0]->operand_type;
             return this->children[1]->_3acode->result;
+        case TRAILER:
+            if (this->children[1]->children[0]->_3acode != nullptr) {
+                return this->children[1]->children[0]->_3acode->result;
+            } else {
+                return this->children[1]->children[0]->name;
+            }
     }
     //TODO: clear this up
     return "";
@@ -1535,6 +1682,16 @@ void node::generate_3ac_keywords() {
         this->_3acode = new Quadruple("", "", "", "", Q_BLANK);
         this->_3acode->rename_attribute(LABEL, make_function_label(this->parent));
         IR.push_back(this->_3acode);
+        // to pop the params
+        for (int i = this->parent->children[2]->children.size() - 1; i >= 0 ; i--) {
+            if(this->parent->children[2]->children[i]->name == "self") {
+                q = new Quadruple("", "", "", "self", Q_POP_PARAM);
+            }
+            else {
+                q = new Quadruple("", "", "", this->parent->children[2]->children[i]->children[0]->name, Q_POP_PARAM);
+            }
+            IR.push_back(q);
+        }
     }
     else if ((this->name == "None")) {
         this->operand_type = D_VOID;
@@ -1547,12 +1704,19 @@ void node::generate_3ac() {
     symbol_table_entry* entry;
     Quadruple* q;
     string temp_result;
+    node* tmp;
     map<base_data_type, int>::const_iterator iter;
+    int offset;
     if(this->name == "while") { // need to store this for backpatching
         LABEL_CNT_STACK.push(LABEL_COUNTER);
     }
     if(this->type == FUNCDEF) {
         pending_return = true;
+        SYMBOL_TABLE = SYMBOL_TABLE->get_entry(this->children[1]->name)->child_symbol_table; // the function name is children[1]
+    }
+    if (this->type == CLASSDEF) {
+        pending_init = true;
+        SYMBOL_TABLE = SYMBOL_TABLE->get_entry(this->children[1]->name)->child_symbol_table; // the class name is children[1]
     }
     for(auto child: this->children) {
         if(child != nullptr) {
@@ -1564,11 +1728,11 @@ void node::generate_3ac() {
             child->generate_3ac();
         }
     }
-    // cout << "--------" << endl;
-    // cout << this->name << endl;
-    // for(auto q : IR) {
-    //     cout << q->code << endl;
-    // }
+    cout << "--------" << endl;
+    cout << this->name << endl;
+    for(auto q : IR) {
+        cout << q->code << endl;
+    }
     string op1, op2, result, op;
     switch(this->type) {
         case FILE_INPUT:
@@ -1584,9 +1748,29 @@ void node::generate_3ac() {
         case LIST:
             return;
         case IDENTIFIER:
-            this->operand_type = SYMBOL_TABLE->get_entry(this->name)->b_type;
-            if(this->operand_type == D_FUNCTION) {
-                SYMBOL_TABLE = SYMBOL_TABLE->get_entry(this->name)->child_symbol_table;
+            if(SYMBOL_TABLE->st_type != GLOBAL && SYMBOL_TABLE->parent->st_type == CLASS && this->parent->type != FUNCDEF) {
+                // for class members, we get the type from the entry name `self.IDENTIFIER`
+                this->operand_type = SYMBOL_TABLE->get_entry("self." + this->name)->b_type;
+            }
+            else {
+                this->operand_type = SYMBOL_TABLE->get_entry(this->name)->b_type;
+            }
+            if (this->children.size() > 0) {
+                if(this->children[0]->type == IDENTIFIER) {
+                    entry = SYMBOL_TABLE->get_entry(this->children[0]->name); 
+                    if (!entry || entry->child_symbol_table == nullptr || entry->b_type != D_CLASS) { // entry->child_symbol_table (only for class declarations)
+                        yyerror("TypeError: Undeclared type or erroneous type init.");
+                    }
+                    q = new Quadruple("", to_string(entry->size), "", this->name, Q_ALLOC); // allocating memory for a class object
+                    IR.push_back(q);
+                }
+            }
+            if (this->name == "__init__" && SYMBOL_TABLE->parent->st_type == CLASS) {
+                if(pending_init == false) {
+                    yylineno = this->line_no;
+                    yyerror("SyntaxError: Class has multiple __init__ functions.");
+                }
+                pending_init = false;
             }
             return;
         case STRING_LITERAL:
@@ -1605,14 +1789,27 @@ void node::generate_3ac() {
             if(this->children[0]->name == "print") {
                 op1 = this->get_rhs_operand();
                 this->_3acode = new Quadruple("", op1, "", "", Q_PRINT);
-                // TODO: any type checking here? : yes, cannot print classes
+                // TODO: any type checking here? : yes, cannot print classes, function
                 IR.push_back(this->_3acode);
             }
-            else if(this->children[0]->name == "self" || this->children[0]->name == "range" || this->children[0]->name == "len") {
+            else if(this->children[0]->name == "self") {
+                // find offset for data members. this->children[1] is trailer, its children[1] is the name of the data member
+                entry = SYMBOL_TABLE->parent->get_entry("self." +this->children[1]->children[1]->name);
+                if(!entry) {
+                    cout << "entry not found" << endl;
+                }
+                offset = entry->offset;
+                this->_3acode = new Quadruple("+", "addr(self)", to_string(offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                this->operand_type = entry->b_type;
+                IR.push_back(this->_3acode);
+            } 
+            else if(this->children[0]->name == "range" || this->children[0]->name == "len") {
                 yyerror("Not supporting this yet");
             }
             else if(this->children[0]->type == IDENTIFIER) {
+                // cout << "generate_3ac before seg fault" << endl;
                 entry = SYMBOL_TABLE->get_entry(this->children[0]->name);
+                // cout << "generate_3ac after seg fault" << endl;
                 if(entry->b_type == D_LIST) {
                     op1 = this->get_lhs_operand();
                     op2 = this->get_rhs_operand();
@@ -1651,9 +1848,18 @@ void node::generate_3ac() {
                 else if(entry->b_type == D_FUNCTION) {
                     this->operand_type = entry->f_attr.return_type;
                     string func_label = get_compatible_function_and_push_param(this); // this is also ideally label
-                    q = new Quadruple("", func_label, to_string(this->children[1]->children.size()), "", Q_FUNC_CALL);
-                    cout << "ATOM_EXPR " << q->code << endl;
-                    IR.push_back(q);
+                    this->_3acode = new Quadruple("", func_label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
+                    IR.push_back(this->_3acode);
+                    // for (int i = 0; i < entry->f_attr.num_args; i++) {
+                    //     q = new Quadruple("", "", "", "", Q_POP_PARAM);
+                    //     IR.push_back(q);
+                    // }
+                }
+                else if(entry->b_type == D_CLASS) {
+                    if(entry->child_symbol_table != nullptr) {
+                        // only a class declaration will have a child_symbol_table, objects of that class will not
+                        
+                    }
                 }
             }
             return;
@@ -1703,6 +1909,7 @@ void node::generate_3ac() {
             return;
         case COMPARE:
             // TODO: to support `in`, `is` etc.
+            // TODO: to support string comparison
             op1 = this->get_lhs_operand();
             op2 = this->get_rhs_operand();
             this->operand_type = D_BOOL;
@@ -1732,7 +1939,7 @@ void node::generate_3ac() {
             }
             return;
         case SUITE:
-            if (this->parent->name != "else" && this->parent->type != FUNCDEF) {
+            if (this->parent->name != "else" && this->parent->type != FUNCDEF && this->parent->type != CLASSDEF) {
                 this->_3acode = new Quadruple("goto", "", "", "", Q_JUMP); // result will be renamed later (backpatching 1)
                 IR.push_back(this->_3acode);
             }
@@ -1749,10 +1956,14 @@ void node::generate_3ac() {
             }
             return;
         case RETURN_STMT:
-            check_type_and_gen_3ac_return_stmt(this->parent->parent, this);
+            tmp = this;
+            while(tmp && tmp->type != FUNCDEF)
+                tmp = tmp->parent;
+            check_type_and_gen_3ac_return_stmt(tmp, this);
             return;
         case FUNCDEF:
             if(pending_return) {
+                yylineno = this->line_no;
                 if(this->children[4]->name != "None") {
                     yyerror(("SyntaxError: Function " + this->children[1]->name + " should return a value").c_str());
                 }
@@ -1763,8 +1974,17 @@ void node::generate_3ac() {
                 }
             }
             q = new Quadruple("", "", "", "", Q_BLANK); // inserting a blank statement at the end of each function
+            q->rename_attribute(LABEL, "end_func " + this->children[0]->_3acode->label);
             IR.push_back(q);
             SYMBOL_TABLE = SYMBOL_TABLE->parent;
+            return;
+        case CLASSDEF:
+            if (pending_init) {
+                yylineno = this->line_no;
+                yyerror(("SyntaxError: Class " + this->children[1]->name +  " requires an __init__ function.").c_str());
+            }
+            SYMBOL_TABLE = SYMBOL_TABLE->parent; // need to go back to GLOBAL scope.
+            return;
         default:
             // yyerror("Unexpected error: generate_3ac called on a non-terminal node");
             return;

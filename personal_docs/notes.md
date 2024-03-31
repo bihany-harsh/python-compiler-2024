@@ -40,3 +40,5 @@
 * We want to support DOCSTRINGS!!! (additional feature)
 * We want to support `pass` statement!! (additional feature)
 * Supporting passing of `None` as an argument (additional feature)
+* (ADDONS) Supporting coercion in list declaration/initialization.
+* (ADDONS) Declaration in classes allowed in other functions apart from `__init__`.

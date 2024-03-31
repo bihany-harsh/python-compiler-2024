@@ -92,7 +92,7 @@ int symbol_table::delete_entry(string name) {
 void symbol_table::print_st() {
     for(st_entry* entry: this->entries) {
         if(entry->b_type == D_FUNCTION) {
-            cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", num_args = " << entry->f_attr.num_args << ", return_type = " << entry->f_attr.return_type << ", offset = " << entry->offset << endl;
+            cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", num_args = " << entry->f_attr.num_args << ", return_type = " << entry->f_attr.return_type << ", offset = " << entry->offset << endl;
         }
         else if(entry->b_type == D_LIST) {
             cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", offset = " << entry->offset << ", num_elements = " << entry->l_attr.num_of_elems << ", element_type = " << entry->l_attr.list_elem_type << endl;
@@ -146,7 +146,17 @@ symbol_table_entry::symbol_table_entry(string name, base_data_type b_type, int o
 
 void symbol_table_entry::set_size(int size) {
     //FIXME: might have to be fixed for functions, blocks and classes
-    this->size = size;
+    if (this->b_type == D_CLASS) {
+        size = 0;
+        for (st_entry* entry: this->child_symbol_table->entries) {
+            if (entry->b_type != D_FUNCTION) {
+                size += entry->size;
+            }
+        }
+        this->size = size;
+    } else {
+        this->size = size;
+    }
 }
 
 void symbol_table_entry::set_num_args(int num_args) {
@@ -163,4 +173,21 @@ void symbol_table_entry::set_return_type(base_data_type return_type) {
         exit(1);
     }
     this->f_attr.return_type = return_type;
+}
+
+void symbol_table::sort_class_entries() {
+    if (this->st_type != CLASS) {
+        yyerror("Unexpected Error: Erroneous call to the function sort_class_entries.");
+    }
+    
+    stable_partition(this->entries.begin(), this->entries.end(),
+        [](const st_entry* entry) {
+            return entry->b_type != D_FUNCTION;
+        }
+    );
+    int offset = 0;
+    for (st_entry* entry : this->entries) {
+        entry->offset = offset;
+        offset += entry->size;
+    }
 }

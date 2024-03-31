@@ -38,12 +38,45 @@
 #     c : int = 2
 #   print("xyz")
 
-def f(a: int, b:int) -> int:
-  a = 1 + 2
-  return a * b
-# for a in range(1, 2):
-#   print(a)
-x : int = f(1, 2) + 2
+a: int
+def f(a:int) -> float:
+    print(a)
+    return 87.87
+a = 1 + 2
+a = f(a)
+
+class A():
+    def __init__(self, a: int, b: float):
+        self.a:int = a
+        self.b:float = b
+        self.x:float = 4
+    def temp(self, a: bool) -> int:
+        return 0
+    
+# a:int = 1
+# a: A = A(1, 2.0)
+# b: B = a.temp(True)
+# x: = 1
+
+# def func(a:list[int], c : int) -> int:
+#   # some operations
+#   return 0
+
+# b: list[float] = [1, 2, 3]
+# case1 : int = func(b, 2)
+
+# a:list[int] = [1, 1.5, 5,]
+
+  
+# a:A = A(1, 2.0)
+
+# def fact(a: int) -> int:
+#     if a == 0:
+#         return 1
+#     else:
+#         return a * fact(a - 1)
+  
+# x: int = fact(5)
 
 
 # class B(C,):

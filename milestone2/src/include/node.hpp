@@ -61,7 +61,7 @@ typedef enum {
     // RBRACE,
     // COMMA,
     // COLON,
-    // DOT,
+    DOT,
     // SEMICOLON,
     DELIMITER,
     RARROW,
@@ -202,6 +202,7 @@ const map<node_type, string> type_map = {
     {ASSIGN, "ASSIGN"},
     {AUGASSIGN, "AUGASSIGN"},
     {DELIMITER, "DELIMITER"},
+    {DOT, "DOT"},
     {RARROW, "RARROW"},
 };
 
@@ -297,6 +298,8 @@ base_data_type sem_rval_check(symbol_table* st, node* root);
 void check_declare_before_use(symbol_table* st, node* root);
 
 void return_type_check(node* test);
+
+void set_list_elem_type(symbol_table* st, node* test, st_entry* new_entry);
 
 void add_class_st_entry(node* test, base_data_type b_type);
 

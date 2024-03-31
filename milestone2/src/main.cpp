@@ -69,6 +69,8 @@ int main(int argc, const char** argv) {
     AST_ROOT->generate_3ac();
     // cout << "3AC generated" << endl;
     print_3AC(IR);
+
+
     if(verbose_flag) {
         cout << "Finished parsing!" << endl;
     }

@@ -21,6 +21,9 @@ typedef enum quad_type {
     Q_COND_JUMP,
     Q_RETURN,
     Q_FUNC_CALL,
+    Q_PUSH_PARAM,
+    Q_POP_PARAM,
+    Q_ALLOC,
 
     Q_BLANK,
 } quad_type;
