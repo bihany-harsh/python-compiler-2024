@@ -28,6 +28,12 @@ typedef enum symbol_table_type {
 struct symbol_table;
 struct symbol_table_entry;
 
+// const map<base_data_type, string> type_name = {
+//     {D_BOOL, "bool"},
+//     {D_INT, "int"},
+//     {D_FLOAT, "float"},
+// }
+
 typedef struct list_attributes {
 
     base_data_type list_elem_type;

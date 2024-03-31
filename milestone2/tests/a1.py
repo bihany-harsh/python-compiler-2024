@@ -1,4 +1,5 @@
-def f() -> None:
-  return "abc"
+def f(a, b):
+  return a + b
 
-print(f())
+x = g(1,2) * 2
+print(x)

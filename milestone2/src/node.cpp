@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <stack>
+#include <utility>
 #include "include/node.hpp"
 using namespace std;
 
@@ -736,11 +737,156 @@ string make_function_label(node* funcdef) {
     return label;
 }
 
+pair<bool,bool> check_coerce_required(base_data_type formal, base_data_type actual) {
+    // first bool will denote compatibility and second bool will denote requirement of coercion
+    switch(formal) {
+        case D_BOOL:
+            if (actual == D_BOOL) {
+                return {true, false};
+            }
+            else if (actual == D_INT || actual == D_FLOAT) {
+                return {true, true};
+            }
+            else {
+                return {false, true};
+            }
+        break;
+        case D_INT:
+            if (actual == D_INT) {
+                return {true, false};
+            }
+            else if (actual == D_FLOAT || actual == D_BOOL) {
+                return {true, true};
+            }
+            else {
+                return {false, true};
+            }
+        break;
+        case D_FLOAT:
+            if (actual == D_FLOAT) {
+                return {true, false};
+            }
+            else if (actual == D_INT || actual == D_BOOL) {
+                return {true, true};
+            }
+            else {
+                return {false, true};
+            }
+        break;
+        case D_STRING:
+            if (actual == D_STRING) {
+                return {true, false};
+            }
+            else {
+                return {false, true};
+            }
+        break;
+        case D_LIST:
+            if (actual == D_LIST) {
+                return {true, false};
+            }
+            else {
+                return {false, true};
+            }
+        break;
+        case D_CLASS:
+            if (actual == D_CLASS) {
+                return {true, false};
+            }
+            else {
+                return {false, true};
+            }
+        break;
+        case D_VOID:
+            if (actual == D_VOID) {
+                return {true, false};
+            }
+            else {
+                return {false, true};
+            }
+        break;
+        default:
+            return {false, true};
+        break;
+    }
+}
+
 string get_compatible_function_and_push_param(node* atom_expr) {
+    // TODO: will need to make changes for `self`
     bool found = false;
+    bool incompatible_args = false;
+    node* func_name = atom_expr->children[0];
+    node* trailer = atom_expr->children[1];
+    Quadruple* q;
+    string data_type, result;
+    st_entry* func_entry;
+    pair<bool, bool> compatibility_result;
     for (st_entry* st_entry: SYMBOL_TABLE->entries) {
-        if ((st_entry->b_type == D_FUNCTION) && (st_entry->name == atom_expr->children[0]->name)) {
-            if (st_entry->f_attr.num_args )
+        if ((st_entry->b_type == D_FUNCTION) && (st_entry->name == func_name->name)) {
+            if (st_entry->f_attr.num_args == trailer->children.size()) {
+                for(int i = 0; i < trailer->children.size(); i++) {
+                    compatibility_result = check_coerce_required(st_entry->f_attr.args[i], trailer->children[i]->operand_type);
+                    if(compatibility_result.first == false) {
+                        incompatible_args = true;
+                        break;
+                    }
+                }
+            }
+            else {
+                incompatible_args = true;
+            }
+            if (incompatible_args == false) {
+                if (found) {
+                    yylineno = atom_expr->line_no;
+                    yyerror(("Call of function " + func_name->name + " is ambiguous").c_str());
+                }
+                else {
+                    found = true;
+                    func_entry = st_entry;
+                }
+            }
+        }
+    }
+    if(!found) {
+        yylineno = trailer->line_no;
+        yyerror("TypeError: Could not find a function matching this definition.");
+    }
+    for(int i = 0; i < func_entry->f_attr.num_args; i++) {
+        compatibility_result = check_coerce_required(func_entry->f_attr.args[i], trailer->children[i]->operand_type);
+        if (compatibility_result.second == true) { // coercion required
+            if(func_entry->f_attr.args[i] == D_BOOL) {
+                data_type = "bool";
+            }
+            else if (func_entry->f_attr.args[i] == D_INT) {
+                data_type = "int";
+            }
+            else if (func_entry->f_attr.args[i] == D_FLOAT) {
+                data_type = "float";
+            }
+            else {
+                yyerror("Unexpected Error: cannot be coerced");
+            }
+
+            if(trailer->children[i]->_3acode != nullptr) {
+                q = new Quadruple("=", data_type, trailer->children[i]->_3acode->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                result = q->result;
+            }
+            else {
+                q = new Quadruple("=", data_type, trailer->children[i]->name, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
+                result = q->result;
+            }
+        }
+    }
+                    else {
+                        if(trailer->children[i]->_3acode != nullptr) {
+                            result = trailer->children[i]->_3acode->result;
+                        }
+                        else {
+                            result = trailer->children[i]->name;
+                        }
+                    }
+                }
+            }
         }
     }
     if (!found) {
@@ -1389,6 +1535,9 @@ void node::generate_3ac_keywords() {
         this->_3acode = new Quadruple("", "", "", "", Q_BLANK);
         this->_3acode->rename_attribute(LABEL, make_function_label(this->parent));
         IR.push_back(this->_3acode);
+    }
+    else if ((this->name == "None")) {
+        this->operand_type = D_VOID;
     }
 }
 

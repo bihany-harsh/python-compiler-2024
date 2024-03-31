@@ -39,3 +39,4 @@
 * Ternary operators to be supported (additional feature- write 3AC for this)
 * We want to support DOCSTRINGS!!! (additional feature)
 * We want to support `pass` statement!! (additional feature)
+* Supporting passing of `None` as an argument (additional feature)
