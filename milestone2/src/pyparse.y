@@ -174,11 +174,14 @@ expr_stmt                   :   test annassign {
                                         st_entry* new_entry = new st_entry(terminal->name, b_type, OFFSET, terminal->line_no, SYMBOL_TABLE->scope);
                                         terminal->st = SYMBOL_TABLE;
                                         terminal->st_entry = new_entry;
+
                                         SYMBOL_TABLE->add_entry(new_entry);
                                         OFFSET += new_entry->size;
                                         if(b_type == D_LIST) {
                                             terminal->set_list_attributes($2);
-                                        }
+                                        } else if (b_type == D_CLASS) {
+                                            new_entry->class_name = get_class_name($2->children[1]);
+                                        } 
                                     }
                                     $$->handle_annassign();
                             }
@@ -1201,7 +1204,6 @@ classdef                    :   TOK_CLASS TOK_IDENTIFIER {
                                         yyerror("SyntaxError: class declared inside another block");
                                     }
                                     $2->create_class_st();
-                                    cout << "created class symbol table" << endl;
                                 }
                                 optional_paren_arglist TOK_COLON suite {
                                     //TODO: update size of the CLASS node once calculated

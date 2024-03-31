@@ -42,16 +42,28 @@ a: int
 def f(a:int) -> float:
     print(a)
     return 87.87
-a = 1 + 2
+a = 1 + 2 * 3**4
 a = f(a)
+
+# print(a)
 
 class A():
     def __init__(self, a: int, b: float):
         self.a:int = a
         self.b:float = b
         self.x:float = 4
-    def temp(self, a: bool) -> int:
-        return 0
+    def temp(self, a: int) -> float:
+        x: float = f(4)
+        return x
+    
+a_: A
+b_: A
+lista_: list[A] = [a_, b_]
+
+c : list[int] = [1,2,3]
+b: int = c[1] * 2
+
+# print(a_.temp(4))
     
 # a:int = 1
 # a: A = A(1, 2.0)

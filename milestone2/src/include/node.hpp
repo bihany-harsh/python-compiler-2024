@@ -293,6 +293,8 @@ void comp_op_processing(node* root);
 
 node* sem_lval_check(node* root);
 
+string get_class_name(node* test);
+
 base_data_type sem_rval_check(symbol_table* st, node* root);
 
 void check_declare_before_use(symbol_table* st, node* root);

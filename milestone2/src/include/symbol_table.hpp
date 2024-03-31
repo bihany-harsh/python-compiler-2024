@@ -35,7 +35,7 @@ const map<base_data_type, string> base_data_type_map = {
 };
 
 typedef struct list_attributes {
-
+    int list_elem_size = 0; // stores the size of each element of the list
     base_data_type list_elem_type = D_VOID;
     string class_name = ""; // to be used only when we have a list of classes
     long long num_of_elems = -1; // when not initialized it is -1.

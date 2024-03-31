@@ -410,25 +410,6 @@ base_data_type sem_rval_check(symbol_table* st, node* root) {
             }
             else {
                 return D_LIST;
-                // if(tmp->children[1]->children[1]->type == INT) {
-                //     return D_LIST_INT;
-                // } else if(tmp->children[1]->children[1]->type == FLOAT) {
-                //     return D_LIST_FLOAT;
-                // } else if(tmp->children[1]->children[1]->type == BOOL) {
-                //     return D_LIST_BOOL;
-                // } else if(tmp->children[1]->children[1]->type == STR) {
-                //     return D_LIST_STRING;
-                // } else if(tmp->children[1]->children[1]->type == IDENTIFIER) {
-                //     //TODO: verify if correct (we can have a list of objects of user defined classes)
-                //     st_entry* entry = st->get_entry(tmp->children[1]->children[1]->name);
-                //     if(entry && entry->b_type == D_CLASS) {
-                //         return D_LIST_CLASS;
-                //     } else {
-                //         yyerror("Not a valid rvalue");
-                //     }
-                // } else {
-                //     yyerror("Not a valid rvalue");
-                // }
             }
         }
         tmp = tmp->children[0];
@@ -460,18 +441,24 @@ base_data_type sem_rval_check(symbol_table* st, node* root) {
     return D_VOID; // gcc shutup!
 }
 
+string get_class_name(node* test) {
+    // assuming we directly get the class name
+    node* tmp = test;  
+    while(tmp && (!tmp->is_terminal)) {
+        tmp = tmp->children[0];
+    }
+    return tmp->name;
+}
+
 void set_list_elem_type(symbol_table* st, node* test, st_entry* new_entry) {
     //  root points to the node of ```test``` in the grammar
     node* tmp = test;
     while(tmp && (!tmp->is_terminal)) {
-        cout << "set_lwrvnklw: " << tmp->name << endl; 
         if(tmp->children.size() > 1) {
             if(tmp->type != ATOM_EXPR) {
                 yyerror("Not a valid rvalue");
             }
             else {
-                cout << "set_lwrvnklw (child[1]): " << tmp->children[1]->children[1]->name << endl; // after the L_SQB 
-
                 if (tmp->children[1]->children[1]->name == "int") {
                     new_entry->l_attr.list_elem_type = D_INT;
                 } else if (tmp->children[1]->children[1]->name == "float") {
@@ -528,6 +515,8 @@ void node::set_list_attributes(node* annassign) {
         symbol_table_entry* entry = st->get_entry(tmp->children[1]->children[1]->name);
         if(entry && entry->b_type == D_CLASS) {
             this->st_entry->l_attr.list_elem_type = D_CLASS;
+            this->st_entry->l_attr.list_elem_size = entry->size;
+            this->st_entry->class_name = entry->name;
             this->st_entry->l_attr.class_name = entry->name;
         }
         else {
@@ -539,15 +528,19 @@ void node::set_list_attributes(node* annassign) {
         switch(tmp->children[1]->children[1]->type) {
             case INT:
                 this->st_entry->l_attr.list_elem_type = D_INT;
+                this->st_entry->l_attr.list_elem_size = 4;
             break;
             case FLOAT:
                 this->st_entry->l_attr.list_elem_type = D_FLOAT;
+                this->st_entry->l_attr.list_elem_size = 8;
             break;
             case BOOL:
                 this->st_entry->l_attr.list_elem_type = D_BOOL;
+                this->st_entry->l_attr.list_elem_size = 1;
             break;
             case STRING_LITERAL:
                 this->st_entry->l_attr.list_elem_type = D_STRING;
+                this->st_entry->l_attr.list_elem_size = 8;
             break;
             default:
                 yyerror("TypeError: Not a valid type for a list");
@@ -1147,20 +1140,14 @@ void do_list_assignment(node* assign) {
     // should be called from the node ASSIGN(=)
     string op1, temp_result, temp_value, size;
     st_entry* entry;
-    map<base_data_type, int>::const_iterator iter;
     Quadruple* q;
 
     op1 = assign->get_lhs_operand();
     entry = SYMBOL_TABLE->get_entry(op1);
-    iter = base_data_type_size.find(entry->l_attr.list_elem_type);
-    if (iter == base_data_type_size.end()) {
-        yyerror("UnexpectedError: Invalid list element type");
-    }
-    size = to_string(iter->second);
     for(int i = 0; i < assign->children[1]->children.size(); i++) {
         node* temp = assign->children[1]->children[i];
         //TODO: list of class objs: not checked that the class objs be of the same type
-        q = new Quadruple("*", to_string(i), size, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+        q = new Quadruple("*", to_string(i), to_string(entry->l_attr.list_elem_size), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
         IR.push_back(q);
         q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
         IR.push_back(q);
@@ -1171,7 +1158,7 @@ void do_list_assignment(node* assign) {
         else {
             temp_value = temp->_3acode->result;
         }
-        switch(iter->first) { // the data type of the list elements
+        switch(entry->l_attr.list_elem_type) { // the data type of the list elements
             case D_BOOL:
                 if(temp->operand_type == D_STRING) {
                     yylineno = assign->children[0]->line_no;
@@ -1341,6 +1328,12 @@ string node::get_lhs_operand() {
         case KEYWORD:
             if(this->name != "print" || this->name != "self" || this->name != "range" || this->name != "len") {
                 yyerror("UnexpectedError: pyparse grammar is violated.");
+            }
+        case TRAILER:
+            if (this->children[0]->children[0]->_3acode != nullptr) {
+                return this->children[0]->children[0]->_3acode->result;
+            } else {
+                return this->children[0]->children[0]->name;
             }
             
     }
@@ -1705,7 +1698,6 @@ void node::generate_3ac() {
     Quadruple* q;
     string temp_result;
     node* tmp;
-    map<base_data_type, int>::const_iterator iter;
     int offset;
     if(this->name == "while") { // need to store this for backpatching
         LABEL_CNT_STACK.push(LABEL_COUNTER);
@@ -1728,11 +1720,11 @@ void node::generate_3ac() {
             child->generate_3ac();
         }
     }
-    cout << "--------" << endl;
-    cout << this->name << endl;
-    for(auto q : IR) {
-        cout << q->code << endl;
-    }
+    // cout << "--------" << endl;
+    // cout << this->name << endl;
+    // for(auto q : IR) {
+    //     cout << q->code << endl;
+    // }
     string op1, op2, result, op;
     switch(this->type) {
         case FILE_INPUT:
@@ -1748,16 +1740,22 @@ void node::generate_3ac() {
         case LIST:
             return;
         case IDENTIFIER:
-            if(SYMBOL_TABLE->st_type != GLOBAL && SYMBOL_TABLE->parent->st_type == CLASS && this->parent->type != FUNCDEF) {
-                // for class members, we get the type from the entry name `self.IDENTIFIER`
-                this->operand_type = SYMBOL_TABLE->get_entry("self." + this->name)->b_type;
+            entry = SYMBOL_TABLE->get_entry(this->name);
+            if (!entry) {
+                entry = SYMBOL_TABLE->get_entry("self." + this->name);
             }
-            else {
-                this->operand_type = SYMBOL_TABLE->get_entry(this->name)->b_type;
+            if (!entry) {
+                yylineno = this->line_no;
+                yyerror("UnexpectedError: Identifier entry not found.");
+            }
+            this->operand_type = entry->b_type;
+            if(this->operand_type == D_LIST && this->parent->type == ASSIGN) {
+                q = new Quadruple("", to_string(entry->l_attr.list_elem_size * entry->l_attr.num_of_elems), "", this->name, Q_ALLOC);
+                IR.push_back(q);
             }
             if (this->children.size() > 0) {
                 if(this->children[0]->type == IDENTIFIER) {
-                    entry = SYMBOL_TABLE->get_entry(this->children[0]->name); 
+                    entry = SYMBOL_TABLE->get_entry(this->children[0]->name);
                     if (!entry || entry->child_symbol_table == nullptr || entry->b_type != D_CLASS) { // entry->child_symbol_table (only for class declarations)
                         yyerror("TypeError: Undeclared type or erroneous type init.");
                     }
@@ -1807,39 +1805,33 @@ void node::generate_3ac() {
                 yyerror("Not supporting this yet");
             }
             else if(this->children[0]->type == IDENTIFIER) {
-                // cout << "generate_3ac before seg fault" << endl;
                 entry = SYMBOL_TABLE->get_entry(this->children[0]->name);
-                // cout << "generate_3ac after seg fault" << endl;
                 if(entry->b_type == D_LIST) {
                     op1 = this->get_lhs_operand();
                     op2 = this->get_rhs_operand();
                     entry = SYMBOL_TABLE->get_entry(op1);
-                    if(this->children[1]->type == INT_NUMBER && atoi(op2.c_str()) > entry->l_attr.num_of_elems) {
+                    if(this->children[1]->children[0]->type == INT_NUMBER && atoi(op2.c_str()) > entry->l_attr.num_of_elems) {
                         yyerror("IndexError: list index out of range");
-                    }
-                    iter = base_data_type_size.find(entry->l_attr.list_elem_type);
-                    if (iter == base_data_type_size.end()) {
-                        yyerror("UnexpectedError: Invalid list element type");
                     }
 
                     // manual type checking
                     temp_result = op2;
-                    if(this->children[1]->operand_type == D_BOOL) {
+                    if(this->children[1]->children[0]->operand_type == D_BOOL) {
                         temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++));
-                        if(this->children[1]->_3acode != nullptr) {
+                        if(this->children[1]->children[0]->_3acode != nullptr) {
                             // there is some temporary result stored, that has to be coerced
-                            q = new Quadruple("=", "int", this->children[1]->_3acode->result, temp_result, Q_COERCION);
+                            q = new Quadruple("=", "int", this->children[1]->children[0]->_3acode->result, temp_result, Q_COERCION);
                         } else {
-                            q = new Quadruple("=", "int", this->children[1]->name, temp_result, Q_COERCION);
+                            q = new Quadruple("=", "int", this->children[1]->children[0]->name, temp_result, Q_COERCION);
                         }
-                        this->children[1]->operand_type = D_INT;
+                        this->children[1]->children[0]->operand_type = D_INT;
                         IR.push_back(q);
                     }
-                    else if(this->children[1]->operand_type != D_INT) {
+                    else if(this->children[1]->children[0]->operand_type != D_INT) {
                         yylineno = this->children[0]->line_no;
                         yyerror("IndexError: list index must be an integer");
                     }
-                    q = new Quadruple("*", temp_result, to_string(iter->second), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                    q = new Quadruple("*", temp_result, to_string(entry->l_attr.list_elem_size), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                     IR.push_back(q);
                     q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                     IR.push_back(q);
