@@ -47,18 +47,48 @@
 
 # print(a)
 
-class A():
-    def __init__(self, a: int, b: float):
-        self.a:int = a
-        self.b:float = self.a * b
-        self.x:float = 4
-    def temp(self, a: int) -> float:
-        x: float = a + 1
-        return x
+# class A():
+#     def __init__(self, a: int, b: float):
+#         self.a:int = a
+#         self.b:float = self.a * b
+#         self.x:float = 4
+#     def temp(self, a: int) -> float:
+#         x: float = a + 1
+#         return x
     
-a : A = A(1 * 2, 2.0)
-# b : A
-x: int = a.temp(4)
+# a : A = A(1 * 2, 2.0)
+# # b : A
+# x: int = a.temp(4)
+
+# a: int = 5
+# while(a):
+#     print(5)
+#     a -= 1  
+
+#  TODO: whenever we have i in [3, 4] (or a list): error occurs
+
+# def f(a:int) -> int:
+#   return 67
+
+a: int = 1
+i: int
+# while i < 5:
+#     i += 1
+#     if i == 3:
+#         continue
+#     print(5)
+
+for i in range(3*5, 45):
+  if i == 40:
+    break
+  a += 3
+  print(i)
+  
+i = 5
+while i != 0:
+  i -= 1 
+
+
 # b = A(x, x / 2)
 # a_: A
 # b_: A

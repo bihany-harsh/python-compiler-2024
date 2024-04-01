@@ -618,7 +618,7 @@ void node::exit_from_func() {
         // cout << "obtained the argument entry" << endl;
         this->st_entry->f_attr.args.push_back(arg->b_type);
         if (arg->b_type == D_LIST) {
-            cout << arg->l_attr.list_elem_type << endl;
+            // cout << arg->l_attr.list_elem_type << endl;
             if(arg->l_attr.list_elem_type == D_BOOL) {
                 this->st_entry->f_attr.list_types.push_back("bool");
             } else if(arg->l_attr.list_elem_type == D_INT) {
@@ -697,7 +697,7 @@ void node::handle_inheritance(node* optional_arglist) {
         return;
     }
     check_declare_before_use(SYMBOL_TABLE->parent, optional_arglist);
-    cout << "checking decl before use" << endl;
+    // cout << "checking decl before use" << endl;
     node* tmp = optional_arglist->children[1]->children[0]; // optional_paren_arglist-->argument->test
     tmp->traverse_tree();
     while (tmp && !tmp->is_terminal) {
@@ -1703,7 +1703,7 @@ void node::check_operand_type_compatibility() {
                 break;
                 case D_INT:
                     if(this->children[1]->operand_type == D_BOOL) {
-                        cout << "This is the correct place" << endl;
+                        // cout << "This is the correct place" << endl;
                         temp_result = "t" + to_string(INTERMEDIATE_COUNTER++);
                         if(this->children[1]->_3acode != nullptr) {
                             // there is some temporary result stored, that has to be coerced
@@ -1809,7 +1809,7 @@ void node::check_operand_type_compatibility() {
                     }
                 break;
                 case D_INT:
-                    cout << "this->children[1]->operand_type = " << this->children[1]->operand_type << endl;
+                    // cout << "this->children[1]->operand_type = " << this->children[1]->operand_type << endl;
                     if(this->children[1]->operand_type == D_BOOL || this->children[1]->operand_type == D_FLOAT) {
                         temp_result = "t" + to_string(INTERMEDIATE_COUNTER++);
                         if(this->children[1]->_3acode != nullptr) {
@@ -1879,6 +1879,10 @@ void node::generate_3ac_keywords() {
         }
         LABEL_CNT_STACK.pop();
         return;
+    } else if (this->name == "for") { // backpatching the for block
+        this->children[0]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
+        this->children[1]->_3acode->rename_attribute(RESULT, to_string(LABEL_CNT_STACK.top()));
+        LABEL_CNT_STACK.pop();
     } else if ((this->name == "break") || this->name == "continue") {
         // first need to ensure that this statement occured inside a loop
         node* tmp = find_loop_ancestor(this);
@@ -2032,7 +2036,7 @@ void node::generate_3ac() {
                 // else {
                 //     temp_result = op1;
                 // }
-                this->_3acode = new Quadruple("", temp_result, "", "", Q_PRINT);
+                this->_3acode = new Quadruple("", op1, "", "", Q_PRINT);
                 // TODO: any type checking here? : yes, cannot print classes, function
                 IR.push_back(this->_3acode);
             }
@@ -2047,8 +2051,34 @@ void node::generate_3ac() {
                 this->operand_type = entry->b_type;
                 IR.push_back(this->_3acode);
             } 
-            else if(this->children[0]->name == "range" || this->children[0]->name == "len") {
+            else if(this->children[0]->name == "len") { // this->children[0]->name == "range"
                 yyerror("Not supporting this yet");
+            }
+            else if (this->children[0]->name == "range") {
+                // this is the for loop
+                if (this->parent->type != CONDITION || !this->parent->parent || this->parent->parent->name != "for") {
+                    yylineno = this->line_no;
+                    yyerror("`range` keyword to be used in context of a for loop");
+                }
+                if (this->children[1]->children.size() == 1) {
+                    // the case of range(a)
+                    // initialize the loop-counter with 0
+                    this->_3acode = new Quadruple("=", to_string(0), "", this->parent->children[0]->name, Q_ASSIGN);
+                    IR.push_back(this->_3acode);
+                } else if (this->children[1]->children.size() == 2) {
+                    if (this->children[1]->children[0]->_3acode) {
+                        this->_3acode = new Quadruple("=", this->children[1]->children[0]->_3acode->result, "", this->parent->children[0]->name, Q_ASSIGN);
+                        IR.push_back(this->_3acode);
+                    } else {
+                        this->_3acode = new Quadruple("=", this->children[1]->children[0]->name, "", this->parent->children[0]->name, Q_ASSIGN);
+                        IR.push_back(this->_3acode);
+                    }
+                    // the case of range(a, b)
+                } // TODO: support range(start, stop, step) 
+                else {
+                    yylineno = this->line_no;
+                    yyerror("IncompatiblityError: `range` accepts upto 2 arguments.");
+                }
             }
             else if(this->children[0]->type == IDENTIFIER) {
                 entry = SYMBOL_TABLE->get_entry(this->children[0]->name);
@@ -2181,10 +2211,44 @@ void node::generate_3ac() {
                     this->_3acode = new Quadruple("", this->children[0]->_3acode->result, "", "", Q_COND_JUMP); // backpatching 2B
                 }
                 IR.push_back(this->_3acode);
+            } else if (this->parent->name == "for") {
+                if (this->children[0]->type != IDENTIFIER) {
+                    yyerror("SyntaxError: Expressions cannot be assigned.");
+                }
+                if (this->children[2]->children[0]->type != KEYWORD || this->children[2]->children[0]->name != "range") {
+                    yyerror("IncompatiblityError: `for` loop support of the form `for <var> in range(a, b){range(a)}");
+                }
+
+                if (this->children[2]->children[1]->children.size() == 1) {
+                    if (this->children[2]->children[1]->children[0]->_3acode) {
+                        q = new Quadruple("<", this->children[0]->name, this->children[2]->children[1]->children[0]->_3acode->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                        IR.push_back(q);
+                    } else {
+                        cout << this->children[2]->children[1]->children[0]->name << endl;
+                        q = new Quadruple("<", this->children[0]->name, this->children[2]->children[1]->children[0]->name, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                        IR.push_back(q);
+                    }
+                    LABEL_CNT_STACK.push(atoi((q->label).c_str()));
+                } else {
+                    if (this->children[2]->children[1]->children[1]->_3acode) {
+                        q = new Quadruple("<", this->children[0]->name, this->children[2]->children[1]->children[1]->_3acode->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                        IR.push_back(q);
+                    } else {
+                        q = new Quadruple("<", this->children[0]->name, this->children[2]->children[1]->children[1]->name, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                        IR.push_back(q);
+                    }
+                    LABEL_CNT_STACK.push(atoi((q->label).c_str()));
+                }
+                this->_3acode = new Quadruple("", q->result, "", "", Q_COND_JUMP);
+                IR.push_back(this->_3acode);
             }
             return;
         case SUITE:
             if (this->parent->name != "else" && this->parent->type != FUNCDEF && this->parent->type != CLASSDEF) {
+                if (this->parent->name == "for") {
+                    q = new Quadruple("+", this->parent->children[0]->children[0]->name, to_string(1), this->parent->children[0]->children[0]->name, Q_BINARY);
+                    IR.push_back(q);
+                }
                 this->_3acode = new Quadruple("goto", "", "", "", Q_JUMP); // result will be renamed later (backpatching 1)
                 IR.push_back(this->_3acode);
             }

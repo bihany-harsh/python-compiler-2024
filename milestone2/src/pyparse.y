@@ -1044,8 +1044,9 @@ optional_else_suite         :   TOK_ELSE TOK_COLON {
 for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'"); } expr TOK_IN test TOK_COLON {
                                     // FIXME: changed from exprlist and testlist to expr and test (iterating over single variable only)
                                     $1 = new node(KEYWORD, "for", true, NULL);
-                                    node* temp = new node(TEST, "TEST", false, NULL);
+                                    node* temp = new node(CONDITION, "CONDITION", false, NULL);
                                     $4 = new node(KEYWORD, "in", true, NULL);
+                                    
                                     $1->add_parent_child_relation(temp);
                                     temp->add_parent_child_relation($3);
                                     temp->add_parent_child_relation($4);
