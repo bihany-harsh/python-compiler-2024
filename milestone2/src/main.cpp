@@ -8,7 +8,7 @@
 #include "include/symbol_table.hpp"
 using namespace std;
 
-const string filename = "graph.dot";
+const string dot_filename = "graph.dot";
 ostringstream dot_stream;
 bool verbose_flag = false;
 
@@ -23,6 +23,7 @@ extern stack<symbol_table*> ST_STACK;
 extern st_entry* dummy_entry;
 extern stack<int> OFFSET_STACK;
 extern int OFFSET;
+extern ofstream csvFile;
 
 extern vector<Quadruple*> IR;
 extern stack<int> LABEL_CNT_STACK;
@@ -34,7 +35,7 @@ void setup_dot() {
     // AST_ROOT->add_edges_to_dot(dot_file);
     dot_stream << "}\n";
 
-    ofstream out(filename);
+    ofstream out(dot_filename);
     out << dot_stream.str();
     out.close();
 }
@@ -60,20 +61,17 @@ int main(int argc, const char** argv) {
     LABEL_CNT_STACK.push(0);
 
     SYMBOL_TABLE = new symbol_table(GLOBAL, "GLOBAL", NULL);
+    dummy_entry = new st_entry("__name__", D_STRING, OFFSET, -1, SYMBOL_TABLE->scope);
+    SYMBOL_TABLE->add_entry(dummy_entry);
+    OFFSET += dummy_entry->size;
     if(verbose_flag) {
         cout << "Calling the parser routine..." << endl;
     }
     yyparse();
-    // cout << "Symbol table created" << endl;
-    // SYMBOL_TABLE->print_st();
-    AST_ROOT->generate_3ac();
-    // cout << "3AC generated" << endl;
-    print_3AC(IR);
-
-
     if(verbose_flag) {
         cout << "Finished parsing!" << endl;
     }
+
     if(verbose_flag) {
         cout << "Generating dot file..." << endl;
     }
@@ -81,6 +79,23 @@ int main(int argc, const char** argv) {
     if(verbose_flag) {
         cout << "Dot file generated!\nExiting the program..." << endl;
     }
+    
+    csvFile.open("symbol_table.csv");
+    csvFile << "name,b_type,size,offset,decl_line,scope\n";
+    SYMBOL_TABLE->output_st_to_csv();
+    csvFile.close();
+
+    if(verbose_flag) {
+        cout << "Symbol table created!" << endl;
+    }
+
+    AST_ROOT->generate_3ac();
+    if(verbose_flag) {
+        cout << "3AC generated!" << endl;
+    }
+
+    output_3AC_to_txt("three_address_code.txt");
+
 
     return 0;
 }

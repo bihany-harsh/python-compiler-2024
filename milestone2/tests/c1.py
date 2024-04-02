@@ -45,30 +45,30 @@
 # a = 1 + 2 * 3**4
 # a = f(a)
 
-# print(a)
+# # print(a)
 
-class B:
-    def __init__(self, a: int):
-        self.a:int = a
-        self.b:int = 2.0
-        self.c:bool = True
-    def tempx(self, a: bool) -> int:
-        return 1
-    def tempx(self, a: str) -> None:
-        print(a)
+# class B:
+#     def __init__(self, a: int):
+#         self.a:int = a
+#         self.b:int = 2.0
+#         self.c:bool = True
+#     def tempx(self, a: bool) -> int:
+#         return 1
+#     def tempx(self, a: str) -> None:
+#         print(a)
 
-class A(B):
-    def __init__(self, a: int, b: float):
-        self.a:int = a
-        self.b:float = self.a * b
-        self.x:float = 4
-    def temp(self, a: int) -> float:
-        x: float = a + 1
-        return x
+# class A(B):
+#     def __init__(self, a: int, b: float):
+#         self.a:int = a
+#         self.b:float = self.a * b
+#         self.x:float = 4
+#     def temp(self, a: int) -> float:
+#         x: float = a + 1
+#         return x
     
-a : A = A(1 * 2, 2.0)
-# # b : A
-a.tempx("Abc")
+# a : A = A(1 * 2, 2.0)
+# # # b : A
+# a.tempx("Abc")
 
 # a: int = 5
 # while(a):
@@ -80,8 +80,31 @@ a.tempx("Abc")
 # def f(a:int) -> int:
 #   return 67
 
-b: int = 1
 i: int
+
+def g(a: float) -> float:
+    return a ** 2
+
+class A():
+    def __init__(self, b: int):
+        self.b:int = b
+    def f(self, a:int) -> int:
+        self.x:float = 1.0 
+        for a in range(1, 3 * 11):
+            if a == 3:
+                break
+        while a < 3:
+            if a == 2:
+                continue
+            print(5)
+            a += 1
+            g(a * 5)
+        print(a)
+        return a
+
+if __name__ == "__main__":
+    b: A = A(1 // 4 * 8)
+
 # while i < 5:
 #     i += 1
 #     if i == 3:

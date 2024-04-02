@@ -603,6 +603,12 @@ atom                        :   TOK_LPAR {join_lines_implicitly++; } test TOK_RP
                             }
                             |   TOK_IDENTIFIER {
                                     $$ = new node(IDENTIFIER, yytext, true, NULL);
+                                    if($$->name == "__name__") {
+                                        if(SYMBOL_TABLE->st_type != GLOBAL) {
+                                            yyerror("CompilationError: __name__ must be written globally.");
+                                        }
+                                        SYMBOL_TABLE->get_entry("__name__")->decl_line = yylineno;
+                                    }
                             }
                             |   TOK_LEN {
                                     $$ = new node(KEYWORD, "len", true, NULL);
@@ -730,33 +736,6 @@ argument                    :   test { // removed the optional_comp_for here (FI
                                     $$->add_parent_child_relation($3);
                             }
                             ;
-// subscriptlist               :   subscript many_comma_subscript optional_comma {
-//                                     $$ = new node(SUBSCRIPTLIST, "SUBSCRIPTLIST", false, NULL);
-//                                     $$->add_parent_child_relation($1);
-//                                 //     $$->add_parent_child_relation($2);
-//                                     prune_custom_nodes($$, $2);
-//                                 //     $$->add_parent_child_relation($3);
-//                                     prune_custom_nodes($$, $3);
-//                             }
-//                             ;
-// subscript                   :   test {
-//                                     $$ = $1;
-//                             }
-//                             ;
-// many_comma_subscript        :   many_comma_subscript TOK_COMMA subscript {
-//                                     $$ = new node(MANY_COMMA_SUBSCRIPT, "MANY_COMMA_SUBSCRIPT", false, NULL);
-//                                     $2 = new node(DELIMITER, ",", true, NULL);
-//                                     prune_custom_nodes($$, $1);
-//                                     $$->add_parent_child_relation($2);
-//                                     $$->add_parent_child_relation($3);
-//                             }
-//                             |   {   $$ = NULL;  }
-//                             ;
-// optional_comp_for           :   comp_for {
-//                                     $$ = $1;
-//                             }
-//                             |   {   $$ = NULL;  }
-//                             ;
 comp_for                    :   TOK_FOR expr TOK_IN or_test optional_comp_iter {  // (FIXME: previously: TOK_FOR exprlist TOK_IN or_test optional_comp_iter)
                                     $$ = new node(COMP_FOR, "COMP_FOR", false, NULL);
                                     $1 = new node(KEYWORD, "for", true, NULL);
@@ -768,21 +747,6 @@ comp_for                    :   TOK_FOR expr TOK_IN or_test optional_comp_iter {
                                     prune_custom_nodes($$, $5);
                             }
                             ;
-// exprlist                    :   expr many_comma_expr optional_comma {
-//                                     $$ = new node(EXPRLIST, "EXPRLIST", false, NULL);
-//                                     $$->add_parent_child_relation($1);
-//                                     prune_custom_nodes($$, $2);
-//                                     prune_custom_nodes($$, $3);
-//                             }
-//                             ;
-// many_comma_expr             :   many_comma_expr TOK_COMMA expr {
-//                                     $$ = new node(MANY_COMMA_EXPR, "MANY_COMMA_EXPR", false, NULL);
-//                                     $2 = new node(DELIMITER, ",", true, NULL);
-//                                     prune_custom_nodes($$, $1);
-//                                     $$->add_parent_child_relation($2);
-//                                     $$->add_parent_child_relation($3);
-//                             }
-//                             |   {   $$ = NULL;  }
 optional_comp_iter          :   comp_iter {
                                     $$ = $1;
                             }

@@ -316,9 +316,9 @@ string make_function_label(node* funcdef);
 
 pair<bool,bool> check_coerce_required(base_data_type formal, base_data_type actual);
 
-string call_class_init(node* atom_expr, symbol_table* class_st);
+symbol_table_entry* call_class_init(node* atom_expr, symbol_table* class_st);
 
-string get_compatible_function_and_push_param(node* atom_expr);
+symbol_table_entry* get_compatible_function_and_push_param(node* atom_expr);
 
 void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt);
 #endif

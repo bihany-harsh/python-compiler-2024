@@ -8,7 +8,7 @@ output="graph.pdf"
 verbose="false"
 clean_flag="false"
 
-# TODO: add 2>/dev/null at the end of milestone 2
+# TODO: add 2>/dev/null at the end of milestone 3
 
 show_usage() {
     echo "Usage: ./pyrun.sh [-help]/[-h] [-input <file>]/[-i <file>] [-output <file>]/[-o <file>] [-verbose]/[-v] [-clean]/[-c]"
@@ -63,7 +63,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-make INPUT_FILE="$input" GRAPH_PDF="$output" VERBOSE="$verbose"
+make INPUT_FILE="$input" GRAPH_PDF="$output" VERBOSE="$verbose" 2>/dev/null
 if [ "$verbose" = "true" ]; then
   echo "Finished make!"
 fi

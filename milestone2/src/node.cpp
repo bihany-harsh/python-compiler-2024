@@ -891,7 +891,7 @@ pair<bool,bool> check_coerce_required(pair<base_data_type, string> formal, pair<
     }
 }
 
-string call_class_init(node* atom_expr, symbol_table* class_st) {
+symbol_table_entry* call_class_init(node* atom_expr, symbol_table* class_st) {
     st_entry* init_func;
     node* class_name = atom_expr->children[0];
     node* trailer = atom_expr->children[1];
@@ -994,10 +994,10 @@ string call_class_init(node* atom_expr, symbol_table* class_st) {
     }
     q = new Quadruple("", "", "", atom_expr->parent->children[0]->name, Q_PUSH_PARAM);
     IR.push_back(q);
-    return init_func->label;
+    return init_func;
 }
 
-string call_class_member_method(node* atom_expr, symbol_table* class_st) {
+symbol_table_entry* call_class_member_method(node* atom_expr, symbol_table* class_st) {
     bool found = false;
     bool incompatible_args = false;
     node* func_name = atom_expr->children[1]->children[1];
@@ -1112,10 +1112,10 @@ string call_class_member_method(node* atom_expr, symbol_table* class_st) {
     }
     q = new Quadruple("", "", "", atom_expr->children[0]->name, Q_PUSH_PARAM);
     IR.push_back(q);
-    return func_entry->label;
+    return func_entry;
 }
 
-string get_compatible_function_and_push_param(node* atom_expr) {
+symbol_table_entry* get_compatible_function_and_push_param(node* atom_expr) {
     bool found = false;
     bool incompatible_args = false;
     node* func_name = atom_expr->children[0];
@@ -1232,7 +1232,7 @@ string get_compatible_function_and_push_param(node* atom_expr) {
     }
 
     // return f_label;
-    return func_entry->label;
+    return func_entry;
 }
 
 void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
@@ -1485,9 +1485,9 @@ base_data_type max_operand_type(base_data_type lhs, base_data_type rhs) {
 string node::get_lhs_operand() {
     Quadruple* q;
     symbol_table_entry* entry;
-    if(this->children.size() != 2 && this->type != UNARY_OP) {
+    if(this->children.size() != 2 && this->type != UNARY_OP && this->type != TRAILER) { // range may get called with a single child
         yylineno = this->line_no;
-        yyerror("UnexpectedError: node does not have 2 children");
+        yyerror(("UnexpectedError: node " + this->name + " does not have 2 children").c_str());
     }
     switch(this->children[0]->type) {
         case IDENTIFIER:
@@ -1780,13 +1780,12 @@ void node::check_operand_type_compatibility() {
                         yylineno = this->children[1]->line_no;
                         yyerror("VersionError: String concatenation not supported yet. Please wait for a newer version.");
                     }
-                    else {
+                    else if(this->type != COMPARE) {
                         yylineno = this->children[1]->line_no;
                         yyerror("TypeError: Incompatible operation with string");
                     }
                 break;
                 default:
-                //TODO: Assigning value to an array index?
                     yylineno = this->children[0]->line_no;
                     yyerror("TypeError: Incompatible datatypes");
                 break;
@@ -1876,7 +1875,7 @@ void node::generate_3ac_keywords() {
     if ((this->name == "if") || (this->name == "elif")) { // backpatching for if-elif-else block
         this->children[0]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
         return;
-    } else if ((this->name == "while") || (this->name == "for")) { // backpatching for while block
+    } else if ((this->name == "while") || (this->name == "for")) { // backpatching for while and for loops
         this->children[0]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
         for(node* break_node: this->break_nodes) {
             break_node->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
@@ -1888,10 +1887,6 @@ void node::generate_3ac_keywords() {
         }
         LABEL_CNT_STACK.pop();
         return;
-    } else if (this->name == "for") { // backpatching the for block
-        this->children[0]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
-        this->children[1]->_3acode->rename_attribute(RESULT, to_string(LABEL_CNT_STACK.top()));
-        LABEL_CNT_STACK.pop();
     } else if ((this->name == "break") || this->name == "continue") {
         // first need to ensure that this statement occured inside a loop
         node* tmp = find_loop_ancestor(this);
@@ -1910,9 +1905,8 @@ void node::generate_3ac_keywords() {
     }
     else if ((this->name == "def")) {
         // function label creation
-        this->_3acode = new Quadruple("", "", "", "", Q_BLANK);
-        
-        this->_3acode->rename_attribute(LABEL, this->parent->children[1]->st_entry->label);
+        this->_3acode = new Quadruple("", this->parent->children[1]->st_entry->label, "", "", Q_LABEL);
+        // this->_3acode->rename_attribute(ARG1, this->parent->children[1]->st_entry->label);
         IR.push_back(this->_3acode);
         // to pop the params
         for (int i = 0; i < this->parent->children[2]->children.size() ; i++) {
@@ -2036,15 +2030,6 @@ void node::generate_3ac() {
         case ATOM_EXPR:
             if(this->children[0]->name == "print") {
                 op1 = this->get_rhs_operand();
-                // FIXME: coercion to string for print?
-                // if(this->children[1]->operand_type != D_STRING) {
-                //     q = new Quadruple("=", "string", op1, "t" + to_string(INTERMEDIATE_COUNTER++), Q_COERCION);
-                //     IR.push_back(q);
-                //     temp_result = q->result;
-                // }
-                // else {
-                //     temp_result = op1;
-                // }
                 this->_3acode = new Quadruple("", op1, "", "", Q_PRINT);
                 // TODO: any type checking here? : yes, cannot print classes, function
                 IR.push_back(this->_3acode);
@@ -2075,14 +2060,15 @@ void node::generate_3ac() {
                     this->_3acode = new Quadruple("=", to_string(0), "", this->parent->children[0]->name, Q_ASSIGN);
                     IR.push_back(this->_3acode);
                 } else if (this->children[1]->children.size() == 2) {
-                    if (this->children[1]->children[0]->_3acode) {
-                        this->_3acode = new Quadruple("=", this->children[1]->children[0]->_3acode->result, "", this->parent->children[0]->name, Q_ASSIGN);
-                        IR.push_back(this->_3acode);
-                    } else {
-                        this->_3acode = new Quadruple("=", this->children[1]->children[0]->name, "", this->parent->children[0]->name, Q_ASSIGN);
-                        IR.push_back(this->_3acode);
+                    op1 = this->children[1]->get_lhs_operand();
+                    if(this->children[1]->children[0]->operand_type != D_INT) {
+                        yylineno = this->line_no;
+                        yyerror("TypeError: `range` can only iterate over integers.");
                     }
-                    // the case of range(a, b)
+                    this->_3acode = new Quadruple("=", op1, "", this->parent->children[0]->name, Q_ASSIGN);
+
+                    // this->check_operand_type_compatibility(); //TODO: check that the type is integer
+                    IR.push_back(this->_3acode);
                 } // TODO: support range(start, stop, step) 
                 else {
                     yylineno = this->line_no;
@@ -2096,7 +2082,8 @@ void node::generate_3ac() {
                     op2 = this->get_rhs_operand();
                     entry = SYMBOL_TABLE->get_entry(op1);
                     if(this->children[1]->children[0]->type == INT_NUMBER && atoi(op2.c_str()) > entry->l_attr.num_of_elems) {
-                        yyerror("IndexError: list index out of range");
+                        yylineno = this->line_no;
+                        yyerror(("IndexError: list index out of range for list " + this->children[0]->name).c_str());
                     }
 
                     // manual type checking
@@ -2124,9 +2111,13 @@ void node::generate_3ac() {
                 } 
                 else if(entry->b_type == D_FUNCTION) {
                     this->operand_type = entry->f_attr.return_type;
-                    string func_label = get_compatible_function_and_push_param(this);
-                    this->_3acode = new Quadruple("", func_label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
+                    entry = get_compatible_function_and_push_param(this);
+                    q = new Quadruple("", ("+" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
+                    IR.push_back(q);
+                    this->_3acode = new Quadruple("", entry->label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
                     IR.push_back(this->_3acode);
+                    q = new Quadruple("", ("-" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
+                    IR.push_back(q);
                 }
                 else if(entry->b_type == D_CLASS) {
                     if(entry->child_symbol_table != nullptr) {
@@ -2134,15 +2125,23 @@ void node::generate_3ac() {
                         this->operand_type = D_CLASS;
                         this->class_name = entry->name;
                         // push parameters of the __init__ function and call it
-                        string func_label = call_class_init(this, entry->child_symbol_table);
-                        this->_3acode = new Quadruple("", func_label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
+                        entry = call_class_init(this, entry->child_symbol_table);
+                        q = new Quadruple("", ("+" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
+                        IR.push_back(q);
+                        this->_3acode = new Quadruple("", entry->label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
                         IR.push_back(this->_3acode);
+                        q = new Quadruple("", ("-" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
+                        IR.push_back(q);
                     } else {
                         entry = SYMBOL_TABLE->get_entry(entry->class_name); // getting the entry corresponding to the class name
                         tmp = this->children[1]->children[1]; // this points to the name of the function called from the class obj
-                        string func_label = call_class_member_method(this, entry->child_symbol_table); // this->operand_type is set within this function itself
-                        this->_3acode = new Quadruple("", func_label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
+                        entry = call_class_member_method(this, entry->child_symbol_table); // this->operand_type is set within this function itself
+                        q = new Quadruple("", ("+" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
+                        IR.push_back(q);
+                        this->_3acode = new Quadruple("", entry->label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
                         IR.push_back(this->_3acode);
+                        q = new Quadruple("", ("-" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
+                        IR.push_back(q);
                     }
                 }
             }
@@ -2228,23 +2227,22 @@ void node::generate_3ac() {
                 }
 
                 if (this->children[2]->children[1]->children.size() == 1) {
-                    if (this->children[2]->children[1]->children[0]->_3acode) {
-                        q = new Quadruple("<", this->children[0]->name, this->children[2]->children[1]->children[0]->_3acode->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
-                        IR.push_back(q);
-                    } else {
-                        cout << this->children[2]->children[1]->children[0]->name << endl;
-                        q = new Quadruple("<", this->children[0]->name, this->children[2]->children[1]->children[0]->name, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
-                        IR.push_back(q);
+                    op2 = this->children[2]->children[1]->get_lhs_operand();
+                    if(this->children[2]->children[1]->children[0]->operand_type != D_INT) {
+                        yylineno = this->line_no;
+                        yyerror("TypeError: `range` can only iterate over integers.");
                     }
+                    q = new Quadruple("<", this->children[0]->name, op2, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                    IR.push_back(q);
                     LABEL_CNT_STACK.push(atoi((q->label).c_str()));
                 } else {
-                    if (this->children[2]->children[1]->children[1]->_3acode) {
-                        q = new Quadruple("<", this->children[0]->name, this->children[2]->children[1]->children[1]->_3acode->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
-                        IR.push_back(q);
-                    } else {
-                        q = new Quadruple("<", this->children[0]->name, this->children[2]->children[1]->children[1]->name, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
-                        IR.push_back(q);
+                    op2 = this->children[2]->children[1]->get_rhs_operand();
+                    if(this->children[2]->children[1]->children[1]->operand_type != D_INT) {
+                        yylineno = this->line_no;
+                        yyerror("TypeError: `range` can only iterate over integers.");
                     }
+                    q = new Quadruple("<", this->children[0]->name, op2, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                    IR.push_back(q);
                     LABEL_CNT_STACK.push(atoi((q->label).c_str()));
                 }
                 this->_3acode = new Quadruple("", q->result, "", "", Q_COND_JUMP);
@@ -2290,8 +2288,7 @@ void node::generate_3ac() {
                     IR.push_back(q);
                 }
             }
-            q = new Quadruple("", "", "", "", Q_BLANK); // inserting a blank statement at the end of each function
-            q->rename_attribute(LABEL, "end_func " + this->children[0]->_3acode->label);
+            q = new Quadruple("", "end_func " + this->children[1]->st_entry->label, "", "", Q_LABEL); // inserting a blank statement at the end of each function
             IR.push_back(q);
             SYMBOL_TABLE = SYMBOL_TABLE->parent;
             return;

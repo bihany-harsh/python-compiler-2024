@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <stack>
+#include <fstream>
 #include "include/symbol_table.hpp"
 using namespace std;
 
@@ -19,6 +20,8 @@ stack<int> OFFSET_STACK;
 int OFFSET = 0;
 int block_counter = 0; // keeps a track of how many block scopes have been created (for giving unique names to st_entries of each block)
 int num_args = 0; // for function parameters, is updated in pyparse.y
+
+ofstream csvFile;
 
 symbol_table::symbol_table(symbol_table_type st_type, string st_name, symbol_table* parent) {
     this->st_type = st_type;
@@ -108,6 +111,20 @@ void symbol_table::print_st() {
     }
 }
 
+void symbol_table::output_st_to_csv() {
+    if(!csvFile.is_open()) {
+        cerr << "Failed to open csv file for writing.\n";
+        exit(1);
+    }
+
+    for(st_entry* entry: this->entries) {
+        csvFile << entry->name << "," << entry->b_type << "," << entry->size << "," << entry->offset << "," << entry->decl_line << "," << entry->scope << endl;
+        if(entry->child_symbol_table) {
+            entry->child_symbol_table->output_st_to_csv();
+        }
+    }
+}
+
 st_entry* symbol_table::get_entry(string name) {
     symbol_table* st = this;
     while(st) {
@@ -134,15 +151,6 @@ symbol_table_entry::symbol_table_entry(string name, base_data_type b_type, int o
     this->decl_line = decl_line;
     this->scope = scope;
 }
-
-// symbol_table_entry::~symbol_table_entry() {
-//     symbol_table* descendents = this->child_symbol_table;
-
-//     while(descendents) {
-//         // iterating over all descendent symbol tables
-//         ~descendents;
-//     }
-// }
 
 void symbol_table_entry::set_size(int size) {
     //FIXME: might have to be fixed for functions, blocks and classes

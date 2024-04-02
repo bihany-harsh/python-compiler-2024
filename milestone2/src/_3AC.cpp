@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <stack>
+#include <fstream>
 #include "include/_3AC.hpp"
 using namespace std;
 
@@ -63,6 +64,12 @@ string Quadruple::make_code() {
         case Q_ALLOC:
             code = this->label + ":\t" + this->result + " = alloc " + this->arg1;
             break;
+        case Q_LABEL:
+            code = this->label + ":\t" + this->arg1;
+            break;
+        case Q_SP_UPDATE:
+            code = this->label + ":\tstackpointer " + this->arg1;
+            break;
         case Q_BLANK:
             code = this->label + ":\t";
             break;
@@ -94,5 +101,16 @@ void Quadruple::rename_attribute(POS code, string new_name) {
 void print_3AC(vector<Quadruple*> IR) {
     for(Quadruple* quad: IR) {
         cout << quad->code << endl;
+    }
+}
+
+void output_3AC_to_txt(const string& filename) {
+    ofstream txtFile(filename);
+    if (!txtFile.is_open()) {
+        std::cerr << "Failed to open file for writing.\n";
+        exit(1);
+    }
+    for(Quadruple* q: IR) {
+        txtFile << q->code << endl;
     }
 }

@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <fstream>
 using namespace std;
 
 typedef enum base_data_types {
@@ -121,7 +122,10 @@ typedef struct symbol_table {
     void sort_class_entries();
 
     void set_scope(); // set the scope of the symbol table
+    void output_st_to_csv();
+
 } symbol_table;
+
 
 void copy_func_attr(st_entry* source, st_entry* dest);
 
