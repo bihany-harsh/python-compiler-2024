@@ -688,7 +688,6 @@ void add_class_st_entry(node* test, base_data_type b_type) {
 }
 
 void node::handle_inheritance(node* optional_arglist) {
-    // optional_arglist->traverse_tree();
     if(optional_arglist && optional_arglist->children.size() > 4) {
         yyerror("CompilationError: multiple inheritances not supported.");
     }
@@ -697,16 +696,15 @@ void node::handle_inheritance(node* optional_arglist) {
         return;
     }
     check_declare_before_use(SYMBOL_TABLE->parent, optional_arglist);
-    // cout << "checking decl before use" << endl;
     node* tmp = optional_arglist->children[1]->children[0]; // optional_paren_arglist-->argument->test
-    tmp->traverse_tree();
     while (tmp && !tmp->is_terminal) {
         if (tmp->children.size() > 1) {
             yyerror("SyntaxError: Invalid base class.");
         }
         tmp = tmp->children[0];
     }
-    symbol_table_entry* tmp_entry = SYMBOL_TABLE->parent->get_entry(tmp->name);
+    symbol_table_entry* new_entry;
+    symbol_table_entry* tmp_entry = SYMBOL_TABLE->parent->get_entry(tmp->name); // entry of the class to be inherited
     if (!tmp || tmp->type != IDENTIFIER || tmp_entry->b_type != D_CLASS) {
         yyerror("SyntaxError: Inheritance should be from proper base class.");
     }
@@ -716,11 +714,17 @@ void node::handle_inheritance(node* optional_arglist) {
             // check if the function is already defined in the current class
             symbol_table_entry* present_entry = SYMBOL_TABLE->get_entry(inherit_entry->name);
             if (!present_entry) {
-                SYMBOL_TABLE->add_entry(inherit_entry);
+                new_entry = new symbol_table_entry(inherit_entry->name, inherit_entry->b_type, OFFSET, inherit_entry->decl_line, SYMBOL_TABLE->scope);
+                OFFSET += new_entry->size;
+                copy_func_attr(inherit_entry, new_entry);
+                SYMBOL_TABLE->add_entry(new_entry);
             } else {
                 if (present_entry->b_type == D_FUNCTION) {
                     if (inherit_entry->f_attr.num_args != present_entry->f_attr.num_args) {
-                        SYMBOL_TABLE->add_entry(inherit_entry);
+                        new_entry = new symbol_table_entry(inherit_entry->name, inherit_entry->b_type, OFFSET, inherit_entry->decl_line, SYMBOL_TABLE->scope);
+                        OFFSET += new_entry->size;
+                        copy_func_attr(inherit_entry, new_entry); // 
+                        SYMBOL_TABLE->add_entry(new_entry);
                     } else {
                         bool to_inherit = false;
                         for(int i = 0; i < inherit_entry->f_attr.num_args; i++) {
@@ -733,7 +737,10 @@ void node::handle_inheritance(node* optional_arglist) {
                             }
                         }
                         if (to_inherit) {
-                            SYMBOL_TABLE->add_entry(inherit_entry);
+                            new_entry = new symbol_table_entry(inherit_entry->name, inherit_entry->b_type, OFFSET, inherit_entry->decl_line, SYMBOL_TABLE->scope);
+                            OFFSET += new_entry->size;
+                            copy_func_attr(inherit_entry, new_entry);
+                            SYMBOL_TABLE->add_entry(new_entry);
                         }
                     }
                 }
@@ -742,7 +749,9 @@ void node::handle_inheritance(node* optional_arglist) {
             // TODO: throw an incomapatibilty error whenever a member of a class is a some other class 
         } else {
             if (!SYMBOL_TABLE->get_entry(inherit_entry->name)) {
-                SYMBOL_TABLE->add_entry(inherit_entry);
+                new_entry = new symbol_table_entry(inherit_entry->name, inherit_entry->b_type, OFFSET, inherit_entry->decl_line, SYMBOL_TABLE->scope);
+                OFFSET += new_entry->size;
+                SYMBOL_TABLE->add_entry(new_entry);
             }
             // else ignore, as the member is now overwritten for this class
         }
@@ -787,7 +796,7 @@ string make_function_label(node* funcdef) {
     string label = "";
     node* parameters = funcdef->children[2];
     if (SYMBOL_TABLE->parent->st_type == CLASS) {
-        label = SYMBOL_TABLE->parent->st_name + "_" + funcdef->children[1]->name;; // name of the class
+        label = SYMBOL_TABLE->parent->st_name + "_" + funcdef->children[1]->name;; // name of the class + name of the function
         if(parameters->children[0]->name != "self") {
             yyerror("IncompatibilityError: Class member methods must have a `self` argument.");
         }
@@ -1398,7 +1407,7 @@ void do_list_assignment(node* assign) {
                 }
                 else if(temp->operand_type != D_BOOL) {
                     yylineno = assign->children[0]->line_no;
-                    yyerror("TypeError: 1. Incompatible datatypes");
+                    yyerror("TypeError: Incompatible datatypes");
                 }
             break;
             case D_INT:
@@ -1416,7 +1425,7 @@ void do_list_assignment(node* assign) {
                 }
                 else if(temp->operand_type != D_INT) {
                     yylineno = assign->children[0]->line_no;
-                    yyerror("TypeError: 2. Incompatible datatypes");
+                    yyerror("TypeError: Incompatible datatypes");
                 }
             break;
             case D_FLOAT:
@@ -1433,7 +1442,7 @@ void do_list_assignment(node* assign) {
                 }
                 else if(temp->operand_type != D_FLOAT) {
                     yylineno = assign->children[0]->line_no;
-                    yyerror("TypeError: 3. Incompatible datatypes");
+                    yyerror("TypeError: Incompatible datatypes");
                 }
             break;
             case D_STRING:
@@ -1731,7 +1740,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_INT) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: 4. Incompatible datatypes");
+                        yyerror("TypeError: Incompatible datatypes");
                     }
                 break;
                 case D_FLOAT:
@@ -1763,7 +1772,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_FLOAT) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: 5. Incompatible datatypes");
+                        yyerror("TypeError: Incompatible datatypes");
                     }
                 break;
                 case D_STRING:
@@ -1779,7 +1788,7 @@ void node::check_operand_type_compatibility() {
                 default:
                 //TODO: Assigning value to an array index?
                     yylineno = this->children[0]->line_no;
-                    yyerror("TypeError: 6. Incompatible datatypes");
+                    yyerror("TypeError: Incompatible datatypes");
                 break;
             }
         break;
@@ -1805,7 +1814,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_BOOL) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: 7. Incompatible datatypes");
+                        yyerror("TypeError: Incompatible datatypes");
                     }
                 break;
                 case D_INT:
@@ -1824,7 +1833,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_INT) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: 8. Incompatible datatypes");
+                        yyerror("TypeError: Incompatible datatypes");
                     }
                 break;
                 case D_FLOAT:
@@ -1867,7 +1876,7 @@ void node::generate_3ac_keywords() {
     if ((this->name == "if") || (this->name == "elif")) { // backpatching for if-elif-else block
         this->children[0]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
         return;
-    } else if ((this->name == "while")) { // backpatching for while block
+    } else if ((this->name == "while") || (this->name == "for")) { // backpatching for while block
         this->children[0]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
         for(node* break_node: this->break_nodes) {
             break_node->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
@@ -1902,8 +1911,8 @@ void node::generate_3ac_keywords() {
     else if ((this->name == "def")) {
         // function label creation
         this->_3acode = new Quadruple("", "", "", "", Q_BLANK);
-        SYMBOL_TABLE->get_entry(this->parent->children[1]->name)->label = make_function_label(this->parent);
-        this->_3acode->rename_attribute(LABEL, make_function_label(this->parent));
+        
+        this->_3acode->rename_attribute(LABEL, this->parent->children[1]->st_entry->label);
         IR.push_back(this->_3acode);
         // to pop the params
         for (int i = 0; i < this->parent->children[2]->children.size() ; i++) {
@@ -2132,7 +2141,6 @@ void node::generate_3ac() {
                         entry = SYMBOL_TABLE->get_entry(entry->class_name); // getting the entry corresponding to the class name
                         tmp = this->children[1]->children[1]; // this points to the name of the function called from the class obj
                         string func_label = call_class_member_method(this, entry->child_symbol_table); // this->operand_type is set within this function itself
-                        cout << "atom_expr->operand_type = " << this->operand_type << endl;
                         this->_3acode = new Quadruple("", func_label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
                         IR.push_back(this->_3acode);
                     }

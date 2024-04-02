@@ -92,7 +92,7 @@ int symbol_table::delete_entry(string name) {
 void symbol_table::print_st() {
     for(st_entry* entry: this->entries) {
         if(entry->b_type == D_FUNCTION) {
-            cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", num_args = " << entry->f_attr.num_args << ", return_type = " << entry->f_attr.return_type << ", offset = " << entry->offset << endl;
+            cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", num_args = " << entry->f_attr.num_args << ", return_type = " << entry->f_attr.return_type << ", offset = " << entry->label << endl;
         }
         else if(entry->b_type == D_LIST) {
             cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", offset = " << entry->offset << ", num_elements = " << entry->l_attr.num_of_elems << ", element_type = " << entry->l_attr.list_elem_type << endl;
@@ -190,4 +190,21 @@ void symbol_table::sort_class_entries() {
         entry->offset = offset;
         offset += entry->size;
     }
+    // cout << "printing st -------------" << endl;
+    // for(symbol_table_entry* entry: this->entries) {
+    //     cout << entry->name << " " << entry->label << endl;
+    // }
+}
+
+void copy_func_attr(st_entry* src, st_entry* dest) {
+    dest->label = src->label;
+    dest->size = src->size;
+    dest->f_attr.num_args = src->f_attr.num_args;
+    dest->f_attr.return_type = src->f_attr.return_type;
+    for(int i = 0; i < src->f_attr.num_args; i++) {
+        dest->f_attr.args.push_back(src->f_attr.args[i]);
+        dest->f_attr.list_types.push_back(src->f_attr.list_types[i]);
+    }
+    dest->child_symbol_table = src->child_symbol_table;
+    return;
 }

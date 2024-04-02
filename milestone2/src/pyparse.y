@@ -1102,7 +1102,6 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                 } TOK_COLON suite {
                                     $$ = new node(FUNCDEF, "FUNCDEF", false, NULL);
                                     $8 = new node(DELIMITER, ":", true, NULL);
-                                    $2->exit_from_func(); // sets the argument types of the function and restores scope
 
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
@@ -1110,6 +1109,12 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                     prune_custom_nodes($$, $6);
                                     $$->add_parent_child_relation($8);
                                     $$->add_parent_child_relation($9);
+
+                                    $$->delete_delimiters();
+                                    $$->delete_single_child_nodes();
+                                    string label = make_function_label($$);
+                                    $2->exit_from_func(); // sets the argument types of the function and restores scope
+                                    $2->st_entry->label = label;
                             }
                             ;
 optional_tok_rarrow_test    :   TOK_RARROW test {

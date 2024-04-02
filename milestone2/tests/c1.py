@@ -47,18 +47,28 @@
 
 # print(a)
 
-# class A():
-#     def __init__(self, a: int, b: float):
-#         self.a:int = a
-#         self.b:float = self.a * b
-#         self.x:float = 4
-#     def temp(self, a: int) -> float:
-#         x: float = a + 1
-#         return x
+class B:
+    def __init__(self, a: int):
+        self.a:int = a
+        self.b:int = 2.0
+        self.c:bool = True
+    def tempx(self, a: bool) -> int:
+        return 1
+    def tempx(self, a: str) -> None:
+        print(a)
+
+class A(B):
+    def __init__(self, a: int, b: float):
+        self.a:int = a
+        self.b:float = self.a * b
+        self.x:float = 4
+    def temp(self, a: int) -> float:
+        x: float = a + 1
+        return x
     
-# a : A = A(1 * 2, 2.0)
+a : A = A(1 * 2, 2.0)
 # # b : A
-# x: int = a.temp(4)
+a.tempx("Abc")
 
 # a: int = 5
 # while(a):
@@ -70,7 +80,7 @@
 # def f(a:int) -> int:
 #   return 67
 
-a: int = 1
+b: int = 1
 i: int
 # while i < 5:
 #     i += 1
@@ -78,15 +88,15 @@ i: int
 #         continue
 #     print(5)
 
-for i in range(3*5, 45):
-  if i == 40:
-    break
-  a += 3
-  print(i)
+# for i in range(3*5, 45):
+#   if i == 40:
+#     break
+#   a += 3
+#   print(i)
   
-i = 5
-while i != 0:
-  i -= 1 
+# i = 5
+# while i != 0 or i == 10:
+#   i -= 1 
 
 
 # b = A(x, x / 2)

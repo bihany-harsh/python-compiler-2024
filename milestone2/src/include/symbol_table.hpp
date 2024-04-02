@@ -99,6 +99,7 @@ typedef struct symbol_table_entry {
 
 typedef struct symbol_table {
     string st_name = "";
+    string base_class_name = ""; // will be used only when the st_type is CLASS and this class is derived from some other class
     symbol_table_type st_type;
     vector<st_entry*> entries;
     symbol_table* parent = nullptr;
@@ -121,5 +122,7 @@ typedef struct symbol_table {
 
     void set_scope(); // set the scope of the symbol table
 } symbol_table;
+
+void copy_func_attr(st_entry* source, st_entry* dest);
 
 #endif
