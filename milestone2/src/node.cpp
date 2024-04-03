@@ -1905,7 +1905,7 @@ void node::generate_3ac_keywords() {
     }
     else if ((this->name == "def")) {
         // function label creation
-        this->_3acode = new Quadruple("", this->parent->children[1]->st_entry->label, "", "", Q_LABEL);
+        this->_3acode = new Quadruple("", "begin_func", this->parent->children[1]->st_entry->label, "", Q_FUNC_LABEL);
         // this->_3acode->rename_attribute(ARG1, this->parent->children[1]->st_entry->label);
         IR.push_back(this->_3acode);
         // to pop the params
@@ -2128,7 +2128,7 @@ void node::generate_3ac() {
                         entry = call_class_init(this, entry->child_symbol_table);
                         q = new Quadruple("", ("+" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
                         IR.push_back(q);
-                        this->_3acode = new Quadruple("", entry->label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
+                        this->_3acode = new Quadruple("", entry->label, to_string(this->children[1]->children.size() + 1), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
                         IR.push_back(this->_3acode);
                         q = new Quadruple("", ("-" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
                         IR.push_back(q);
@@ -2138,7 +2138,7 @@ void node::generate_3ac() {
                         entry = call_class_member_method(this, entry->child_symbol_table); // this->operand_type is set within this function itself
                         q = new Quadruple("", ("+" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
                         IR.push_back(q);
-                        this->_3acode = new Quadruple("", entry->label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
+                        this->_3acode = new Quadruple("", entry->label, to_string(this->children[2]->children.size() + 1), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
                         IR.push_back(this->_3acode);
                         q = new Quadruple("", ("-" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
                         IR.push_back(q);
@@ -2288,7 +2288,7 @@ void node::generate_3ac() {
                     IR.push_back(q);
                 }
             }
-            q = new Quadruple("", "end_func " + this->children[1]->st_entry->label, "", "", Q_LABEL); // inserting a blank statement at the end of each function
+            q = new Quadruple("", "end_func", this->children[1]->st_entry->label, "", Q_FUNC_LABEL); // inserting a blank statement at the end of each function
             IR.push_back(q);
             SYMBOL_TABLE = SYMBOL_TABLE->parent;
             return;

@@ -24,7 +24,7 @@ typedef enum quad_type {
     Q_PUSH_PARAM,
     Q_POP_PARAM,
     Q_ALLOC,
-    Q_LABEL,
+    Q_FUNC_LABEL,
     Q_SP_UPDATE,
     Q_BLANK,
 } quad_type;

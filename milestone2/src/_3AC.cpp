@@ -64,8 +64,8 @@ string Quadruple::make_code() {
         case Q_ALLOC:
             code = this->label + ":\t" + this->result + " = alloc " + this->arg1;
             break;
-        case Q_LABEL:
-            code = this->label + ":\t" + this->arg1;
+        case Q_FUNC_LABEL:
+            code = this->label + ":\t" + this->arg1 + " " + this->arg2;
             break;
         case Q_SP_UPDATE:
             code = this->label + ":\tstackpointer " + this->arg1;
