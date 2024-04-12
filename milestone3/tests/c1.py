@@ -1,3 +1,4 @@
-c:int = 5
-b: bool = True
-a: str = "hello"
+def f(a: int, b: int)->int:
+    c: int = a + b
+    return c
+

@@ -1,18 +1,12 @@
 	.text
-	.globl c
-	.data
-	.align 4
-	.type c, @object
-	.size c, 4
-c:
-	.long 5
-	.globl b
-	.type b, @object
-	.size b, 1
-b:
-	.byte 1
-	.globl a
-	.type a, @object
-	.size a, 6
-a:
-	.string "hello"
+	.globl f_int_int
+	.type f_int_int, @function
+f_int_int:
+.LFB0:
+	pushq %rbp
+	movq %rsp, %rbp
+	movq c, %rax
+	popq %rbp
+	ret
+.LFE0:
+	.size f_int_int, .-f_int_int
