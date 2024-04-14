@@ -1,14 +1,14 @@
 class SimpleClass:
-    def __init__(self, value: int) -> None:
-        self.value:int = value
+    def __init__(self, value: float) -> None:
+        self.value:float = value
 
-    def get_value(self) -> int:
+    def get_value(self) -> float:
         return self.value
     
     def print_value(self) -> None:
         print(self.value)
 
-    def square(self) -> int:
+    def square(self) -> float:
         self.value = self.value ** 2
         return 1
 
@@ -16,7 +16,7 @@ def main():
     # Create a SimpleClass object
     obj: SimpleClass = SimpleClass(5)
     # Get the value of the object
-    value: int = obj.get_value()
+    value: float = obj.get_value()
     # Print the value
     print(value)
     # Print the value using the object's method

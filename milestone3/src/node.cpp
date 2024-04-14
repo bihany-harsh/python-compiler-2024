@@ -2167,6 +2167,7 @@ void node::generate_3ac() {
                 op1 = this->get_lhs_operand();
                 op2 = this->get_rhs_operand();
                 this->_3acode = new Quadruple(this->name, op2, "", op1, Q_ASSIGN);
+                // cout << this->_3acode->code << endl;
                 this->check_operand_type_compatibility();
                 IR.push_back(this->_3acode);
             }

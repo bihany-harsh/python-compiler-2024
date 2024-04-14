@@ -54,10 +54,10 @@ typedef struct class_attributes {
 } class_attr;
 
 const map<base_data_type, int> base_data_type_size = {
-    {D_INT, 4},
+    {D_INT, 8},
     {D_FLOAT, 8},
     {D_STRING, 8},
-    {D_BOOL, 1},
+    {D_BOOL, 8},
     //FIXME: verify the assumption that these are all pointers to the actual data structure (runtime support) 
     {D_LIST, 8},
     {D_CLASS, 8},
