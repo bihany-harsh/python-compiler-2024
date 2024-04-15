@@ -234,6 +234,10 @@ void Instruction_Wrapper::gen_x86_jump(Quadruple* quad, symbol_table* scope) {
             if (scope->get_entry(quad->result)) { // say `return x + y` {return t1 (x+y)} (then rax would already have the result)
                 instr = new Instruction("movq", to_string(scope->get_entry(quad->result)->offset) + "(%rbp)", "%rax", "", I_INSTRUCTION);
                 this->text_segment.push_back(instr);
+            } else {
+                // return 0
+                instr = new Instruction("movq", "$" + quad->result, "%rax", "", I_INSTRUCTION);
+                this->text_segment.push_back(instr);
             }
         } else if (return_type == D_BOOL) {
             instr = new Instruction("movb", quad->result, "%al", "", I_INSTRUCTION);
@@ -245,6 +249,11 @@ void Instruction_Wrapper::gen_x86_jump(Quadruple* quad, symbol_table* scope) {
 void Instruction_Wrapper::gen_x86_print(Quadruple* quad, symbol_table* scope) {
     Instruction* instr;
     symbol_table_entry* st_entry;
+
+    // because it is a function call
+    instr = new Instruction("subq", "$16", "%rsp", "", I_INSTRUCTION);
+    this->text_segment.push_back(instr);
+
     if(quad->arg1[0] == '\\') {
         /*
             print \"hello world
@@ -289,17 +298,39 @@ void Instruction_Wrapper::gen_x86_print(Quadruple* quad, symbol_table* scope) {
                     this->text_segment.push_back(instr);
                 }
             } else {
-                yyerror("x86 gen: Should not have had happened");
-            }
-        } else {
-            if (quad->arg1[0] == '0' || quad->arg1[0] == '1') {
-                instr = new Instruction("movq", "$" + quad->arg1, "%rdi", "", I_INSTRUCTION);
+                // somthing like print(f(3, 4)) => print t1
+                instr = new Instruction("movq", "%rax", "%rsi", "", I_INSTRUCTION);
+                this->text_segment.push_back(instr);
+                instr = new Instruction("leaq", ".str0(%rip)", "%rdi", "", I_INSTRUCTION);
                 this->text_segment.push_back(instr);
                 instr = new Instruction("movq", "$0", "%rax", "", I_INSTRUCTION);
                 this->text_segment.push_back(instr);
                 instr = new Instruction("call", "printf@PLT", "", "", I_INSTRUCTION);
                 this->text_segment.push_back(instr);
             }
+        } else {
+            // print 4
+
+            instr = new Instruction("movq", "$" + quad->arg1, "%rsi", "", I_INSTRUCTION);
+            this->text_segment.push_back(instr);
+
+            instr = new Instruction("leaq", ".str0(%rip)", "%rdi", "", I_INSTRUCTION);
+            this->text_segment.push_back(instr);
+
+            instr = new Instruction("movq", "$0", "%rax", "", I_INSTRUCTION);
+            this->text_segment.push_back(instr);
+
+            instr = new Instruction("call", "printf@PLT", "", "", I_INSTRUCTION);
+            this->text_segment.push_back(instr);           
+
+            // if (quad->arg1[0] == '0' || quad->arg1[0] == '1') {
+            //     instr = new Instruction("movq", "$" + quad->arg1, "%rdi", "", I_INSTRUCTION);
+            //     this->text_segment.push_back(instr);
+            //     instr = new Instruction("movq", "$0", "%rax", "", I_INSTRUCTION);
+            //     this->text_segment.push_back(instr);
+            //     instr = new Instruction("call", "printf@PLT", "", "", I_INSTRUCTION);
+            //     this->text_segment.push_back(instr);
+            // }
         }
     }
 }
@@ -344,7 +375,7 @@ void Instruction_Wrapper::gen_x86_func_arg(vector<Quadruple*> pop_IR, symbol_tab
     // this->update_func_offsets(scope);
 
     // now the movq %arg -offset(%rbp)
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; ((i < pop_IR.size()) && (i < 6)); i++) {
         if (i == 0) {
             instr = new Instruction("movq", "%rdi", to_string(scope->get_entry(pop_IR[i]->result)->offset) + "(%rbp)", "", I_INSTRUCTION);
             this->text_segment.push_back(instr);
@@ -455,6 +486,8 @@ void Instruction_Wrapper::gen_x86_binary(Quadruple* quad, symbol_table* scope) {
                             t1 = a + t2
                         */
 
+                        cout << quad->code << endl;
+
                         if (rax_has_temp) {
                             instr = new Instruction("movq", to_string(scope->get_entry(quad->arg1)->offset) + "(%rbp)", "%rcx", "", I_INSTRUCTION);
                             this->text_segment.push_back(instr);
@@ -483,6 +516,7 @@ void Instruction_Wrapper::gen_x86_binary(Quadruple* quad, symbol_table* scope) {
                     /*
                         t1 = a + 4
                     */
+
                     if (rax_has_temp) {
                         instr = new Instruction("movq", to_string(scope->get_entry(quad->arg1)->offset) + "(%rbp)", "%rdx", "", I_INSTRUCTION);
                         this->text_segment.push_back(instr);
@@ -516,6 +550,7 @@ void Instruction_Wrapper::gen_x86_binary(Quadruple* quad, symbol_table* scope) {
                         /*
                             t1 = t2 + a
                         */
+
                         if (rax_has_temp) {
                             instr = new Instruction("movq", to_string(scope->get_entry(quad->arg2)->offset) + "(%rbp)", "%rcx", "", I_INSTRUCTION);
                             this->text_segment.push_back(instr);
@@ -538,6 +573,7 @@ void Instruction_Wrapper::gen_x86_binary(Quadruple* quad, symbol_table* scope) {
                         /*
                             t1 = t2 + t3
                         */
+
                         if (rax_has_temp) {
                             if (quad->op == "+") {
                                 instr = new Instruction("addq", "%rax", "%rdx", "", I_INSTRUCTION);
@@ -555,6 +591,7 @@ void Instruction_Wrapper::gen_x86_binary(Quadruple* quad, symbol_table* scope) {
                     /*
                         t1 = t2 + 4
                     */
+
                     if (rax_has_temp) {
                         if (quad->op == "+") {
                             instr = new Instruction("addq", "$" + quad->arg2, "%rdx", "", I_INSTRUCTION);
@@ -583,6 +620,7 @@ void Instruction_Wrapper::gen_x86_binary(Quadruple* quad, symbol_table* scope) {
                     /*
                         t1 = 4 + a
                     */
+
                     if (rax_has_temp) {
                         instr = new Instruction("movq", to_string(scope->get_entry(quad->arg2)->offset) + "(%rbp)", "%rdx", "", I_INSTRUCTION);
                         this->text_segment.push_back(instr);

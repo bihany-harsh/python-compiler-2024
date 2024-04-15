@@ -11,26 +11,11 @@ f:
 	.cfi_offset 6, -16
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register 6
-	movl	%edi, -20(%rbp)
-	movl	%esi, -24(%rbp)
-	movl	%edx, -28(%rbp)
-	movl	%ecx, -32(%rbp)
-	movl	%r8d, -36(%rbp)
-	movl	%r9d, -40(%rbp)
-	movl	$10, -16(%rbp)
-	movl	-16(%rbp), %eax
-	addl	%eax, %eax
-	movl	%eax, -12(%rbp)
-	movl	-16(%rbp), %edx
-	movl	%edx, %eax
-	addl	%eax, %eax
+	movl	%edi, -4(%rbp)
+	movl	%esi, -8(%rbp)
+	movl	-4(%rbp), %edx
+	movl	-8(%rbp), %eax
 	addl	%edx, %eax
-	movl	%eax, -8(%rbp)
-	movl	-16(%rbp), %eax
-	sall	$2, %eax
-	movl	%eax, -4(%rbp)
-	movl	-20(%rbp), %eax
-	imull	-16(%rbp), %eax
 	popq	%rbp
 	.cfi_def_cfa 7, 8
 	ret
@@ -39,7 +24,7 @@ f:
 	.size	f, .-f
 	.section	.rodata
 .LC0:
-	.string	"abc"
+	.string	"%d\n"
 	.text
 	.globl	main
 	.type	main, @function
@@ -53,32 +38,16 @@ main:
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register 6
 	subq	$16, %rsp
-	movl	$4, -16(%rbp)
-	movl	$5, -12(%rbp)
-	movl	-16(%rbp), %eax
-	leal	8(%rax), %r8d
-	movl	-16(%rbp), %eax
-	leal	7(%rax), %edi
-	movl	-16(%rbp), %eax
-	leal	6(%rax), %r9d
-	movl	-16(%rbp), %eax
-	leal	5(%rax), %r10d
-	movl	-16(%rbp), %eax
-	leal	4(%rax), %ecx
-	movl	-12(%rbp), %eax
-	leal	3(%rax), %edx
-	movl	-16(%rbp), %eax
-	leal	2(%rax), %esi
-	movl	-16(%rbp), %eax
-	addl	$1, %eax
-	pushq	%r8
-	pushq	%rdi
-	movl	%r10d, %r8d
-	movl	%eax, %edi
+	movl	$4, %esi
+	movl	$3, %edi
 	call	f
-	addq	$16, %rsp
+	movl	%eax, -4(%rbp)
+	movl	-4(%rbp), %eax
+	movl	%eax, %esi
 	leaq	.LC0(%rip), %rax
-	movq	%rax, -8(%rbp)
+	movq	%rax, %rdi
+	movl	$0, %eax
+	call	printf@PLT
 	movl	$0, %eax
 	leave
 	.cfi_def_cfa 7, 8
