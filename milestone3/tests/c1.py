@@ -9,7 +9,13 @@ def f(a: int, b: int, c:int, d:int, e: int, f: int, g: int)->int:
     return y + x
 
 def main() -> None:
-    f(3, 4, 5, 6, 7, 8, 9)
+    f(3 + 4 + 5, 4 + 5, 4, 6 + 5, 7, 8, 9)
+    print(1)
+    a : str = "abc"
+    print(a)
+    b : int = 1
+    print(b)
+    print(1)
 
 if __name__ == "__main__":
     main()

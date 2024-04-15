@@ -1,4 +1,8 @@
 	.text
+	.section .rodata
+.str0:
+	.string "%ld\n"
+	.text
 	.globl f_int_int_int_int_int_int_int
 	.type f_int_int_int_int_int_int_int, @function
 f_int_int_int_int_int_int_int:
@@ -23,7 +27,7 @@ f_int_int_int_int_int_int_int:
 	addq $2, %rax
 	movq %rax, -8(%rbp)
 	movq $5, -16(%rbp)
-	movq %rax, -16(%rbp)
+	movq -56(%rbp), -16(%rbp)
 	movq $7, %rax
 	addq $8, %rax
 	movq %rax, -16(%rbp)
@@ -40,10 +44,30 @@ main:
 .LFB1:
 	pushq %rbp
 	movq %rsp, %rbp
+	movq $3, %rax
+	addq $4, %rax
+	addq $5, %rdx
+	leaq (%rdx), %rax
+	movq $4, %rdx
+	addq $5, %rdx
+	movq $6, %rdx
+	addq $5, %rdx
+	movq $1, %rdi
+	movq $0, %rax
+	call printf@PLT
+	movq %rax, -8(%rbp)
+	movq -8(%rbp), %rdi
+	call puts@PLT
+	movq $1, -16(%rbp)
+	movq -16(%rbp), %rsi
+	leaq .str0(%rip), %rdi
+	movq $0, %rax
+	call printf@PLT
+	movq $1, %rdi
+	movq $0, %rax
+	call printf@PLT
 	popq %rbp
 	ret
 .LFE1:
 	.size main, .-main
-	movq 0(%rbp), %rcx
-	leaq (%rax), %rdx
-	leaq (%rdx), %rax
+	movq 0(%rbp), %rdx

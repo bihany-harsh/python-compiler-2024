@@ -8,6 +8,12 @@
 
 using namespace std;
 
+// map<int, string> int_reg_map = {
+//     {0, "%rax"},
+//     {1, "%rdx"},
+//     {2, "%rcx"},
+// };
+
 typedef enum instruction_types {
     I_LABEL,
     I_SEGMENT,
@@ -53,7 +59,8 @@ typedef struct Instruction {
 typedef struct Instruction_Wrapper {
     string filename;
     // map <string, vector<Quadruple*>> func_IR_map;
-    vector<Instruction*> instructions;
+    vector<Instruction*> data_segment;
+    vector<Instruction*> text_segment;
 
     Instruction_Wrapper(string filename);
 
@@ -63,7 +70,9 @@ typedef struct Instruction_Wrapper {
     void update_func_offsets(symbol_table* scope);
     void gen_x86_func_arg(vector<Quadruple*> IR, symbol_table* scope);
     void gen_x86_jump(Quadruple* quad, symbol_table* scope);
+    void gen_x86_print(Quadruple* quad, symbol_table* scope);
     void gen_x86_func_def(Quadruple* quad, Segment_type &prev_seg_type, symbol_table** scope);
+    void gen_x86_func_call(vector<Quadruple*> quad, symbol_table* scope);
     void gen_x86_global_decl(Quadruple* quad, Segment_type &prev_seg_type, symbol_table* scope);
     void gen_x86(vector<Quadruple*> IR, symbol_table* SYMBOL_TABLE);
 } Instruction_Wrapper;
