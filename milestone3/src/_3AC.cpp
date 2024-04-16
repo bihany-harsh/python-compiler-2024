@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <stack>
+#include <set>
 #include <fstream>
 #include "include/_3AC.hpp"
 using namespace std;
@@ -13,6 +14,8 @@ int LABEL_COUNTER = 1; // the counter to generate labels like L1, L2 etc.
 bool pending_return = false; // it is set to true when a function is started and the return statement has not been encountered yet
 // if at the end of a function (not returning void), this is true, then an error to be thrown
 bool pending_init = false;
+
+set<int> targets;
 
 Quadruple::Quadruple(const string& op, const string& arg1, const string& arg2, const string& result, quad_type q_type) {
     this->op = op;
@@ -29,7 +32,7 @@ string Quadruple::make_code() {
     string code = "";
     switch(this->q_type) {
         case Q_UNARY:
-            code = this->label + ":\t\t" + this->result + " = " + this->op + " " + this->arg1;
+            code = this->label + ":\t" + this->result + " = " + this->op + " " + this->arg1;
             break;
         case Q_BINARY:
             code = this->label + ":\t" + this->result + " = " + this->arg1 + " " + this->op + " " + this->arg2;
@@ -42,6 +45,9 @@ string Quadruple::make_code() {
             break;
         case Q_DEREFERENCE:
             code = this->label + ":\t" + this->result + " = *" + this->arg1;
+            break;
+        case Q_STORE:
+            code = this->label + ":\t*" + this->result + " = " + this->arg1;
             break;
         case Q_PRINT:
             code = this->label + ":\tprint " + this->arg1;
@@ -112,5 +118,9 @@ void output_3AC_to_txt(const string& filename) {
     }
     for(Quadruple* q: IR) {
         txtFile << q->code << endl;
+        if (targets.find(atoi(q->label.c_str())) != targets.end()){
+            // cout << q->code << endl;
+            q->is_target = true;
+        }
     }
 }

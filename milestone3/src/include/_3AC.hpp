@@ -16,6 +16,7 @@ typedef enum quad_type {
     Q_COERCION,
     Q_ASSIGN,
     Q_DEREFERENCE,
+    Q_STORE,
     Q_PRINT,
     Q_JUMP,
     Q_COND_JUMP,
@@ -40,6 +41,8 @@ typedef struct Quadruple {
     quad_type q_type;
 
     string code = "";   // Code
+
+    bool is_target = false;
 
     Quadruple(const string& op, const string& arg1, const string& arg2, const string& result, quad_type q_type);
 

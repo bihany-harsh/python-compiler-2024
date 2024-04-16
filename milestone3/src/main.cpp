@@ -100,7 +100,7 @@ int main(int argc, const char** argv) {
     output_3AC_to_txt("three_address_code.txt");
 
     Instruction_Wrapper* x86 = new Instruction_Wrapper(x86_filename);
-    x86->x86_init();
+    x86->gen_x86_init();
     x86->gen_x86(IR, SYMBOL_TABLE);
 
     output_x86(x86_filename, x86);  

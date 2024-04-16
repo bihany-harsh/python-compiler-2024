@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <stack>
+#include <set>
 #include <utility>
 #include "include/node.hpp"
 using namespace std;
@@ -28,6 +29,8 @@ extern long long int INTERMEDIATE_COUNTER;
 extern stack<int> LABEL_CNT_STACK;
 extern int LABEL_COUNTER;
 extern bool pending_return, pending_init;
+
+extern set<int> targets;
 
 node::node(node_type type, string name, bool is_terminal, node* parent) {
     this->type = type;
@@ -528,7 +531,7 @@ void node::set_list_attributes(node* annassign) {
         switch(tmp->children[1]->children[1]->type) {
             case INT:
                 this->st_entry->l_attr.list_elem_type = D_INT;
-                this->st_entry->l_attr.list_elem_size = 4;
+                this->st_entry->l_attr.list_elem_size = 8;
             break;
             case FLOAT:
                 this->st_entry->l_attr.list_elem_type = D_FLOAT;
@@ -536,7 +539,7 @@ void node::set_list_attributes(node* annassign) {
             break;
             case BOOL:
                 this->st_entry->l_attr.list_elem_type = D_BOOL;
-                this->st_entry->l_attr.list_elem_size = 1;
+                this->st_entry->l_attr.list_elem_size = 8;
             break;
             case STRING_LITERAL:
                 this->st_entry->l_attr.list_elem_type = D_STRING;
@@ -806,6 +809,10 @@ string make_function_label(node* funcdef) {
     } else {
         label = funcdef->children[1]->name;
         for(node* tfpdef: parameters->children) {
+            if (tfpdef->children[1]->type == ATOM_EXPR) {
+                label += "_list(" + tfpdef->children[1]->children[1]->children[0]->name + ")";
+                continue;
+            }
             label += "_" + tfpdef->children[1]->name;
         }
     }
@@ -1381,7 +1388,8 @@ void do_list_assignment(node* assign) {
         IR.push_back(q);
         q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
         IR.push_back(q);
-        temp_result = "*" + q->result;
+        // temp_result = "*" + q->result;
+        temp_result = q->result;
         if(temp->_3acode == nullptr) {
             temp_value = temp->name;
         }
@@ -1453,10 +1461,10 @@ void do_list_assignment(node* assign) {
             break;
         }
         if(temp->_3acode == nullptr) {
-            q = new Quadruple("=", temp_value, "", temp_result, Q_ASSIGN);
+            q = new Quadruple("=", temp_value, "", temp_result, Q_STORE);
         }
         else {
-            q = new Quadruple("=", temp_value, "", temp_result, Q_ASSIGN);
+            q = new Quadruple("=", temp_value, "", temp_result, Q_STORE);
         }
         IR.push_back(q);
     }
@@ -1527,7 +1535,8 @@ string node::get_lhs_operand() {
                     return q->result;
                 }
                 else { // if the left side of an assign
-                    this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
+                    // this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
+                    this->children[0]->_3acode->q_type = Q_STORE;
                     return this->children[0]->_3acode->result;
                 }
             }
@@ -1547,7 +1556,8 @@ string node::get_lhs_operand() {
                     return q->result;
                 }
                 else { // if the left side of an assign
-                    this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
+                    // this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
+                    this->children[0]->_3acode->q_type = Q_STORE;
                     return this->children[0]->_3acode->result;
                 }
             }
@@ -1874,16 +1884,33 @@ void node::generate_3ac_keywords() {
     
     if ((this->name == "if") || (this->name == "elif")) { // backpatching for if-elif-else block
         this->children[0]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
+        
+        // making this _3acode as a target
+        targets.insert(LABEL_COUNTER);
         return;
     } else if ((this->name == "while") || (this->name == "for")) { // backpatching for while and for loops
         this->children[0]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
+        
+        // this->children[0]->_3acode->is_target = true;
+        targets.insert(LABEL_COUNTER);
+        
         for(node* break_node: this->break_nodes) {
             break_node->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER));
+            
+            // break_node->_3acode->is_target = true;
+            targets.insert(LABEL_COUNTER);
         }
 
         this->children[1]->_3acode->rename_attribute(RESULT, to_string(LABEL_CNT_STACK.top()));
+
+        // this->children[1]->_3acode->is_target = true;
+        targets.insert(LABEL_CNT_STACK.top());
+
         for(node* continue_node: this->continue_nodes) {
             continue_node->_3acode->rename_attribute(RESULT, to_string(LABEL_CNT_STACK.top()));
+
+            // continue_node->_3acode->is_target = true;
+            targets.insert(LABEL_CNT_STACK.top());
         }
         LABEL_CNT_STACK.pop();
         return;
@@ -1901,6 +1928,9 @@ void node::generate_3ac_keywords() {
             tmp->continue_nodes.push_back(this);
         }
         this->_3acode = new Quadruple("goto", "", "", "", Q_JUMP); // the label will be backpatched when we reach the end of the loop
+        
+        // this->_3acode->is_target = true;
+        
         IR.push_back(this->_3acode);
     }
     else if ((this->name == "def")) {
@@ -2268,6 +2298,9 @@ void node::generate_3ac() {
                         yyerror("UnexpectedError: Expected a suite after if/elif");
                     }
                     child->children[1]->_3acode->rename_attribute(RESULT, to_string(LABEL_COUNTER)); // (backpatching 1)
+
+                    // child->children[1]->_3acode->is_target = true;
+                    targets.insert(LABEL_COUNTER);
                 }
             }
             return;
