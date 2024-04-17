@@ -1,79 +1,94 @@
 def binarySearch(array: list[int], x: int, low: int, high: int) -> int:
+
+  # i: int
+  # for i in range(7):
+  #   z: int = array[i]
+  #   print(z)
+
+  # print(x)
+
   while low <= high:
-    mid: int = low + high // 2
+    mid: int = (low + high) // 2
+    # z: int = array[mid]
+    print(mid)
     if array[mid] == x:
-      return mid
-    elif array[mid] < x:
-      low = mid + 1
+        return mid
+    elif array[mid] > x:
+        low = mid + 1
     else:
-      high = mid - 1
+        high = mid - 1
   return -1
 
+def bubble_sort(arr: list[int]) -> int:
+  # n = len(arr)
+  n: int = 7
+  i: int
+  for i in range(n):
+      # print(i)
+      swapped: int = 0
+      j: int
+      for j in range(0, n - i - 1):
+          # print(j)
+          temp: int
+          if arr[j] > arr[j + 1]:
+              temp = arr[j]
+              arr[j] = arr[j + 1]
+              arr[j + 1] = temp 
+              swapped = 1
+      if swapped == 0:
+          break
+  return 0
+
+def gib_list()->list[int]:
+  x: list[int] = [4, 1, 2, 6, 7, 7, 8]
+  return x
+
 class A():
-  def __init__(self, a : int, b : int):
-    self.a : int = a
-    self.b : int = b
-  def add(self) -> list[int]:
-    a : list[int] = [1,2,3]
-    a[1] += 5
-    self.c : int = self.a + self.b
-    return a
+  def __init__(self, a:int):
+    self.a: int = a
+    self.b:int = a * a
 
-def f() -> int:
-  qw: int = 10
-  return qw
-
-def f(x : int) -> list[int]:
-  if x:
-    a : list[int] = [1,2,3]
-    return a
-  else:
-    b : list[int] = [4,5,6]
-    return b
-
-# class A:
-#   def __init__(self, a: int):
-#     self.a: int = a
-
+    # self.b: str = "abc"
+  def f(self)->int:
+    # self.c:int = 6
+    array: list[int] = gib_list()
+    y:int = bubble_sort(array)
+    result: int = binarySearch(array, 4, 0, 7)
+    # print("Hello")
+    return result
 
 def main():
-  # array: list[int] = [3, 4, 5, 6]
-  a : A = A(1, 2)
-  dsaad : list[int] = f(5)
-  dsaad[1] //= 4
-  # result: int = binarySearch(array, 4, 0, 7) 
-  asdsad: list[int] = a.add()
-  asdsad[1] = a.b * 10
-  # a : int = 10
-  # print(f())
+  # print("abc")
+
+  # array: list[int] = [3, 4, 5, 6, 7, 8, 9]
+  # result: int = binarySearch(array, 5, 0, 7)
+  # print(result)
   
-  # array[1] = True * False
-  # array[1] += 2
+  # x:int = array[5]
+  # print(x)
 
   # if result != -1:
-  #   # print("Element is present at index:")
+  #   print("Element is present at index:")
   #   print(result)
   # else:
-  #   # print("Element is not present")
+  #   print("Element is not present")
   #   print(-1)
+  array: list[int] = gib_list()
 
-  # x: int = array[1] + 2
+  i: int
+  # for i in range(7):
+  #   x: int = array[i]
+  #   print(x)
 
-  # a: A = A(1)
+  y:int = bubble_sort(array)
 
-  # print(a.a)
+  # for i in range(7):
+  #   x: int = array[i]
+  #   print(x)
+  result: int = binarySearch(array, 7, 0, 7)
 
-  # 3 = 4
+  print(result)
 
-  # array[1] += 4
-
-  # print(array[1])
-
-  # x: int = fact(5)
-  # print(x)
-  # print(array[1])
-  # z :int = add(56, 44)
-  # print(add(56, 44) + 2)
 
 # if __name__ == "__main__":
 #   main()

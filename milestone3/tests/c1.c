@@ -8,5 +8,6 @@ int f(int a, int b) {
 int main() {
     int a = f(3, 4);
     printf("%d\n", a);
+    printf("hello");
     return 0;
 }

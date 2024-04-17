@@ -100,6 +100,8 @@ void output_x86(const string& filename, Instruction_Wrapper* x86);
 
 bool is_main_func(string s);
 
+bool is_init_func(string s);
+
 bool is_variable(string name);
 
 #endif

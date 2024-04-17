@@ -25,6 +25,8 @@ f:
 	.section	.rodata
 .LC0:
 	.string	"%d\n"
+.LC1:
+	.string	"hello"
 	.text
 	.globl	main
 	.type	main, @function
@@ -45,6 +47,10 @@ main:
 	movl	-4(%rbp), %eax
 	movl	%eax, %esi
 	leaq	.LC0(%rip), %rax
+	movq	%rax, %rdi
+	movl	$0, %eax
+	call	printf@PLT
+	leaq	.LC1(%rip), %rax
 	movq	%rax, %rdi
 	movl	$0, %eax
 	call	printf@PLT

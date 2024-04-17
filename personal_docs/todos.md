@@ -7,4 +7,7 @@
 * Test multilevel inheritance
 * Return a class obj from a function
 * **Not doing: checking return inside if else - we check that each function have a return (if not returning void) but no error in case control reaches the end of non-void function.**
-*
+* print(a[1]) / return self.b
+* segmentation fault when self not passed as argument in class methods
+* revisit Q_STORE
+* support for len(array)

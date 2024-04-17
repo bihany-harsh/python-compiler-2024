@@ -397,7 +397,7 @@ node* sem_lval_check(node* root, int is_declared) {
             }
             if (tmp->children[0]->type == IDENTIFIER) {
                 if (SYMBOL_TABLE->get_entry(tmp->children[0]->name)->b_type != D_LIST) {
-                    yyerror("Not a valid lvalue.");
+                    yyerror("1. Not a valid lvalue.");
                 } else  {
                     return nullptr;
                 }
@@ -493,14 +493,19 @@ void set_list_elem_type(symbol_table* st, node* test, st_entry* new_entry) {
                 yyerror("Not a valid rvalue");
             }
             else {
+                new_entry->l_attr.num_of_elems = INT8_MAX;
                 if (tmp->children[1]->children[1]->name == "int") {
                     new_entry->l_attr.list_elem_type = D_INT;
+                    new_entry->l_attr.list_elem_size = 8;
                 } else if (tmp->children[1]->children[1]->name == "float") {
                     new_entry->l_attr.list_elem_type = D_FLOAT;
+                    new_entry->l_attr.list_elem_size = 8;
                 } else if (tmp->children[1]->children[1]->name == "bool") {
                     new_entry->l_attr.list_elem_type = D_BOOL;
+                    new_entry->l_attr.list_elem_size = 8;
                 } else if (tmp->children[1]->children[1]->name == "string") {
                     new_entry->l_attr.list_elem_type = D_STRING;
+                    new_entry->l_attr.list_elem_size = 8;
                 } else if (tmp->children[1]->children[1]->type == IDENTIFIER) {
                     // list of clases
                     if ((!SYMBOL_TABLE->get_entry(tmp->children[1]->children[1]->name)) || (SYMBOL_TABLE->get_entry(tmp->children[1]->children[1]->name)->b_type != D_CLASS)) {
@@ -508,6 +513,9 @@ void set_list_elem_type(symbol_table* st, node* test, st_entry* new_entry) {
                     }
                     new_entry->l_attr.list_elem_type = D_CLASS;
                     new_entry->l_attr.class_name = tmp->children[1]->name;
+
+                    // FIXME: check this:
+                    new_entry->l_attr.list_elem_size = 8;
                 } else {
                     yyerror("TypeError: Not a valid list declaration.");
                 }
@@ -542,12 +550,15 @@ void find_return_stmts_and_set_return_list_attr(node* root, st_entry* func_entry
         if(func_entry->f_attr.return_list_attr.num_of_elems == -1) {
             // setting it for the first time
             func_entry->f_attr.return_list_attr.num_of_elems = return_var->l_attr.num_of_elems;
+
+            // cout << "l_attr.list_elem_type " << return_var->l_attr.list_elem_type << endl;
+            // cout << "f_attr.return_list_attr.list_elem_type " << func_entry->f_attr.return_list_attr.list_elem_type << endl;
             if (func_entry->f_attr.return_list_attr.list_elem_type != return_var->l_attr.list_elem_type) {
-                yyerror("Function return type is inconsistent with function prototype.");
+                yyerror("1. Function return type is inconsistent with function prototype.");
             }
             func_entry->f_attr.return_list_attr.list_elem_type = return_var->l_attr.list_elem_type;
             if (func_entry->f_attr.return_list_attr.class_name != return_var->l_attr.class_name) {
-                yyerror("Function return type is inconsistent with function prototype.");
+                yyerror("2. Function return type is inconsistent with function prototype.");
             }
             func_entry->f_attr.return_list_attr.class_name = return_var->l_attr.class_name;
             func_entry->f_attr.return_list_attr.list_elem_size = 8;
@@ -776,7 +787,7 @@ void add_class_st_entry(node* test, base_data_type b_type) {
         yyerror("Unexpected error.");
     }
     if (tmp->type != ATOM_EXPR || tmp->children.size() != 2) {
-        yyerror("Not a valid lvalue.");
+        yyerror("2. Not a valid lvalue.");
     }
     if (tmp->children[0]->name != "self") {
         yyerror((tmp->children[0]->name + " is not a valid lvalue.").c_str());
@@ -904,21 +915,21 @@ string make_function_label(node* funcdef) {
     string label = "";
     node* parameters = funcdef->children[2];
     if (SYMBOL_TABLE->parent->st_type == CLASS) {
-        label = SYMBOL_TABLE->parent->st_name + "_" + funcdef->children[1]->name;; // name of the class + name of the function
+        label = SYMBOL_TABLE->parent->st_name + "$" + funcdef->children[1]->name;; // name of the class + name of the function
         if(parameters->children[0]->name != "self") {
             yyerror("IncompatibilityError: Class member methods must have a `self` argument.");
         }
         for (int i = 1; i < parameters->children.size(); i++) { // from 1 because 0 is self
-            label += "_" + parameters->children[i]->children[1]->name;
+            label += "$" + parameters->children[i]->children[1]->name;
         }
     } else {
         label = funcdef->children[1]->name;
         for(node* tfpdef: parameters->children) {
             if (tfpdef->children[1]->type == ATOM_EXPR) {
-                label += "_list(" + tfpdef->children[1]->children[1]->children[0]->name + ")";
+                label += "$list(" + tfpdef->children[1]->children[1]->children[0]->name + ")";
                 continue;
             }
-            label += "_" + tfpdef->children[1]->name;
+            label += "$" + tfpdef->children[1]->name;
         }
     }
     return label;
@@ -1667,7 +1678,8 @@ string node::get_lhs_operand() {
                 }
                 else { // if the left side of an assign
                     // this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
-                    this->children[0]->_3acode->q_type = Q_STORE;
+                    // cout << this->children[0]->_3acode->code << endl;
+                    // this->children[0]->_3acode->q_type = Q_STORE;
                     return this->children[0]->_3acode->result;
                 }
             }
@@ -1691,7 +1703,8 @@ string node::get_lhs_operand() {
                 }
                 else { // if the left side of an assign
                     // this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
-                    this->children[0]->_3acode->q_type = Q_STORE;
+                    // cout << this->children[0]->_3acode->code << endl;
+                    // this->children[0]->_3acode->q_type = Q_STORE;
                     // cout << this->children[0]->_3acode->code << endl;
                     return this->children[0]->_3acode->result;
                 }
@@ -2246,7 +2259,8 @@ void node::generate_3ac() {
                     yyerror(("Couldn't find entry of the data member self." + this->children[1]->children[1]->name).c_str());
                 }
                 offset = entry->offset;
-                this->_3acode = new Quadruple("+", "addr(self)", to_string(offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                // this->_3acode = new Quadruple("+", "addr(self)", to_string(offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                this->_3acode = new Quadruple("+", "self", to_string(offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                 this->operand_type = entry->b_type;
                 IR.push_back(this->_3acode);
             } 
@@ -2356,7 +2370,8 @@ void node::generate_3ac() {
 
                         this->operand_type = mem_entry->b_type;
                         if (mem_entry->b_type != D_FUNCTION) {
-                            q = new Quadruple("+", "addr(" + this->children[0]->name + ")", to_string(mem_entry->offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                            // q = new Quadruple("+", "addr(" + this->children[0]->name + ")", to_string(mem_entry->offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                            q = new Quadruple("+", this->children[0]->name, to_string(mem_entry->offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                             IR.push_back(q);
                             this->_3acode = new Quadruple("", q->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
                             IR.push_back(this->_3acode);
@@ -2523,8 +2538,9 @@ void node::generate_3ac() {
                 }
                 else {
                     // create a Quadruple to simply return from the function
-                    q = new Quadruple("return", "", "", "", Q_JUMP);
-                    IR.push_back(q);
+                    // dont need a redudant return
+                    // q = new Quadruple("return", "", "", "", Q_JUMP);
+                    // IR.push_back(q);
                 }
             }
             q = new Quadruple("", "end_func", this->children[1]->st_entry->label, "", Q_FUNC_LABEL); // inserting a blank statement at the end of each function

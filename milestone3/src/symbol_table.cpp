@@ -98,7 +98,7 @@ void symbol_table::print_st() {
             cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", num_args = " << entry->f_attr.num_args << ", return_type = " << entry->f_attr.return_type << ", offset = " << entry->label << endl;
         }
         else if(entry->b_type == D_LIST) {
-            cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", offset = " << entry->offset << ", num_elements = " << entry->l_attr.num_of_elems << ", element_type = " << entry->l_attr.list_elem_type << endl;
+            cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", offset = " << entry->offset << ", num_elements = " << entry->l_attr.num_of_elems << ", element_type = " << entry->l_attr.list_elem_type << " , list elem size = " << entry->l_attr.list_elem_size << endl;
         }
         else {
             cout << "Name = " << entry->name << ", b_type = " << entry->b_type << ", size = " << entry->size << ", offset = " << entry->offset << endl;
@@ -224,12 +224,12 @@ void set_return_list_attr(st_entry* entry, string data_type) {
     else if(data_type == "str") {
         entry->f_attr.return_list_attr.list_elem_type = D_STRING;
     }
-    // else if(data_type == "float") {
-    //     entry->f_attr.return_list_attr.list_elem_type = D_FLOAT;
-    // }
-    // else if(data_type == "bool") {
-    //     entry->f_attr.return_list_attr.list_elem_type = D_BOOL;
-    // }
+    else if(data_type == "float") {
+        entry->f_attr.return_list_attr.list_elem_type = D_FLOAT;
+    }
+    else if(data_type == "bool") {
+        entry->f_attr.return_list_attr.list_elem_type = D_BOOL;
+    }
     else {
         entry->f_attr.return_list_attr.list_elem_type = D_CLASS;
         entry->f_attr.return_list_attr.class_name = data_type;

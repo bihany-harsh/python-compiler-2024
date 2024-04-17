@@ -15,7 +15,7 @@ print:
     pushq $0                 # align to 16 bytes
 
     lea  integer_format(%rip), %rdi
-    movq  16(%rbp), %rsi      
+    movq  16(%rbp), %rsi
     xor %rax, %rax          
     call printf
 
