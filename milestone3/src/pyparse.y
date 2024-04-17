@@ -1063,6 +1063,9 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                     }
                                     else {
                                         $2->st_entry->set_return_type(sem_rval_check(SYMBOL_TABLE, $6->children[1]));
+                                        if($2->st_entry->f_attr.return_type == D_LIST) {
+                                            set_return_list_attr($2->st_entry, get_base_type_of_list($6->children[1]));
+                                        }
                                     }
                                 } TOK_COLON suite {
                                     $$ = new node(FUNCDEF, "FUNCDEF", false, NULL);

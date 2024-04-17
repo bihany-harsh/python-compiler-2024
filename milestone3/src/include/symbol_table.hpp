@@ -45,8 +45,9 @@ typedef struct list_attributes {
 typedef struct func_attributes {
     int num_args = 0; // stores the number of arguments
     vector<base_data_type> args = {}; // stores the datatypes of the arguments, in order
-    vector<string> list_types = {}; // stores the datatypes of the list element type, in order 
+    vector<string> list_types = {}; // stores the datatypes of the list element type, in order
     base_data_type return_type = D_VOID; // stores the return type of the function
+    list_attr return_list_attr; // stores the attributes of the list ( only in case the return type is D_LIST )
 } func_attr;
 
 typedef struct class_attributes {
@@ -128,5 +129,7 @@ typedef struct symbol_table {
 
 
 void copy_func_attr(st_entry* source, st_entry* dest);
+
+void set_return_list_attr(st_entry* func_entry, string data_type);
 
 #endif

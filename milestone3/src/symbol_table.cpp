@@ -216,3 +216,22 @@ void copy_func_attr(st_entry* src, st_entry* dest) {
     dest->child_symbol_table = src->child_symbol_table;
     return;
 }
+
+void set_return_list_attr(st_entry* entry, string data_type) {
+    if(data_type == "int") {
+        entry->f_attr.return_list_attr.list_elem_type = D_INT;
+    }
+    else if(data_type == "str") {
+        entry->f_attr.return_list_attr.list_elem_type = D_STRING;
+    }
+    // else if(data_type == "float") {
+    //     entry->f_attr.return_list_attr.list_elem_type = D_FLOAT;
+    // }
+    // else if(data_type == "bool") {
+    //     entry->f_attr.return_list_attr.list_elem_type = D_BOOL;
+    // }
+    else {
+        entry->f_attr.return_list_attr.list_elem_type = D_CLASS;
+        entry->f_attr.return_list_attr.class_name = data_type;
+    }
+}

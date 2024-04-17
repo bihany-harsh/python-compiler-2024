@@ -298,9 +298,11 @@ string get_class_name(node* test);
 
 base_data_type sem_rval_check(symbol_table* st, node* root);
 
+string get_base_type_of_list(node* test);
+
 void check_declare_before_use(symbol_table* st, node* root);
 
-void return_type_check(node* test);
+void find_return_stmts_and_set_return_list_attr(node* suite, st_entry* func_entry);
 
 void set_list_elem_type(symbol_table* st, node* test, st_entry* new_entry);
 

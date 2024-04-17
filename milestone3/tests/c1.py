@@ -9,13 +9,27 @@ def binarySearch(array: list[int], x: int, low: int, high: int) -> int:
       high = mid - 1
   return -1
 
-# def fact(x: int) -> int:
-#     # z: int = x + y
-#     # print(x)
-#     if x == 1:
-#       return 1
-#     else:
-#       return x * fact(x - 1)
+class A():
+  def __init__(self, a : int, b : int):
+    self.a : int = a
+    self.b : int = b
+  def add(self) -> list[int]:
+    a : list[int] = [1,2,3]
+    a[1] += 5
+    self.c : int = self.a + self.b
+    return a
+
+def f() -> int:
+  qw: int = 10
+  return qw
+
+def f(x : int) -> list[int]:
+  if x:
+    a : list[int] = [1,2,3]
+    return a
+  else:
+    b : list[int] = [4,5,6]
+    return b
 
 # class A:
 #   def __init__(self, a: int):
@@ -23,9 +37,19 @@ def binarySearch(array: list[int], x: int, low: int, high: int) -> int:
 
 
 def main():
-  array: list[int] = [3, 4, 5, 6]
-  result: int = binarySearch(array, 4, 0, 7)  
+  # array: list[int] = [3, 4, 5, 6]
+  a : A = A(1, 2)
+  dsaad : list[int] = f(5)
+  dsaad[1] //= 4
+  # result: int = binarySearch(array, 4, 0, 7) 
+  asdsad: list[int] = a.add()
+  asdsad[1] = a.b * 10
+  # a : int = 10
+  # print(f())
   
+  # array[1] = True * False
+  # array[1] += 2
+
   # if result != -1:
   #   # print("Element is present at index:")
   #   print(result)

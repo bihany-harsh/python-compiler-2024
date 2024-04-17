@@ -457,6 +457,24 @@ base_data_type sem_rval_check(symbol_table* st, node* root) {
     return D_VOID; // gcc shutup!
 }
 
+string get_base_type_of_list(node* test) {
+    //  root points to the node of ```test``` in the grammar
+    node* tmp = test;
+    while(tmp && (!tmp->is_terminal)) {
+        if(tmp->children.size() > 1) {
+            if(tmp->type != ATOM_EXPR) {
+                yyerror("Not a valid rvalue");
+            }
+            else {
+                return tmp->children[1]->children[1]->name;
+            }
+        }
+        tmp = tmp->children[0];
+    }
+    yyerror("node.cpp:474:: Shouldn't have reached here.");
+    return "D_VOID"; // gcc shutup!
+}
+
 string get_class_name(node* test) {
     // assuming we directly get the class name
     node* tmp = test;  
@@ -513,7 +531,45 @@ void check_declare_before_use(symbol_table* st, node* root) {
     }
 }
 
+void find_return_stmts_and_set_return_list_attr(node* root, st_entry* func_entry) {
+    if (!root) return;
+
+    if (root->type == RETURN_STMT) {
+        if (root->children.size() == 1) {
+            yyerror("SyntaxError: Function return is inconsistent with function definition.");
+        }
+        st_entry* return_var = SYMBOL_TABLE->get_entry(root->children[1]->name);
+        if(func_entry->f_attr.return_list_attr.num_of_elems == -1) {
+            // setting it for the first time
+            func_entry->f_attr.return_list_attr.num_of_elems = return_var->l_attr.num_of_elems;
+            if (func_entry->f_attr.return_list_attr.list_elem_type != return_var->l_attr.list_elem_type) {
+                yyerror("Function return type is inconsistent with function prototype.");
+            }
+            func_entry->f_attr.return_list_attr.list_elem_type = return_var->l_attr.list_elem_type;
+            if (func_entry->f_attr.return_list_attr.class_name != return_var->l_attr.class_name) {
+                yyerror("Function return type is inconsistent with function prototype.");
+            }
+            func_entry->f_attr.return_list_attr.class_name = return_var->l_attr.class_name;
+            func_entry->f_attr.return_list_attr.list_elem_size = 8;
+        }
+        else if(func_entry->f_attr.return_list_attr.num_of_elems != return_var->l_attr.num_of_elems) {
+            // has been set before and now its different. Not allowed. Error
+            yyerror("SyntaxError: cannot assign lists of different sizes.");
+        }
+        else if(func_entry->f_attr.return_list_attr.list_elem_type != return_var->l_attr.list_elem_type) {
+            yyerror("Function cannot return list of different types.");
+        }
+        else if(func_entry->f_attr.return_list_attr.class_name != return_var->l_attr.class_name) {
+            yyerror("Function cannot return list of different class objects.");
+        }
+    }
+    for(auto child: root->children) {
+        find_return_stmts_and_set_return_list_attr(child, func_entry);
+    }
+}
+
 void node::set_list_attributes(node* annassign) {
+    int found = 0;
     node* tmp = annassign->children[1]; // points to ```test```
     while(tmp && tmp->children.size() != 2) {
         tmp = tmp->children[0];
@@ -522,10 +578,11 @@ void node::set_list_attributes(node* annassign) {
     if(!tmp || tmp->type != ATOM_EXPR) {
         yyerror("Unexpected error when setting list attributes.\nExiting");
     }
-    // this->st_entry->l_attr.list_elem_type = tmp->children[1]->children[1]
     if (tmp->children[1]->children[0]->name != "[") {
         yyerror("SyntaxError: Improper list declaration.");
     }
+
+    // setting the list data type
     if(tmp->children[1]->children[1]->type == IDENTIFIER) {
         // trying to declare a list of classes
         symbol_table_entry* entry = st->get_entry(tmp->children[1]->children[1]->name);
@@ -554,7 +611,7 @@ void node::set_list_attributes(node* annassign) {
                 this->st_entry->l_attr.list_elem_type = D_BOOL;
                 this->st_entry->l_attr.list_elem_size = 8;
             break;
-            case STRING_LITERAL:
+            case STR:
                 this->st_entry->l_attr.list_elem_type = D_STRING;
                 this->st_entry->l_attr.list_elem_size = 8;
             break;
@@ -569,11 +626,46 @@ void node::set_list_attributes(node* annassign) {
         while(tmp && tmp->children.size() == 1) {
             tmp = tmp->children[0];
         }
-        if(!tmp || tmp->type != ATOM || tmp->children[0]->name != "[") {
-            yyerror("TypeError: Not a valid rvalue");
+        if(tmp->type == ATOM_EXPR && SYMBOL_TABLE->get_entry(tmp->children[0]->name)->b_type == D_FUNCTION) {
+            // we are tring to assign the list using the return value of a function
+            // check if the return type of the function is a list
+            symbol_table* st = SYMBOL_TABLE;
+            while(st) {
+                for (symbol_table_entry* func_entry : st->entries) {
+                    if(func_entry->name == tmp->children[0]->name && func_entry->b_type == D_FUNCTION) {
+                        // found a function with the same name
+                        if(func_entry->f_attr.return_type != D_LIST) {
+                            continue;
+                        }
+                        else if (func_entry->f_attr.return_list_attr.list_elem_type != this->st_entry->l_attr.list_elem_type) {
+                            continue;
+                        }
+                        else if (func_entry->f_attr.return_list_attr.list_elem_type == D_CLASS && func_entry->f_attr.return_list_attr.class_name != this->st_entry->l_attr.class_name) {
+                            continue;
+                        }
+                        else {
+                            this->st_entry->l_attr.num_of_elems = func_entry->f_attr.return_list_attr.num_of_elems;
+                            found = 1;
+                            break;
+                        }
+                    }
+                }
+                st = st->parent;
+                if(found) {
+                    break;
+                }
+            }
+            if (!found) {
+                yyerror("TypeError: Function call is not a valid list assignment.");
+            }
         }
-        int children_size = tmp->children[1]->children.size(); 
-        this->st_entry->l_attr.num_of_elems = (children_size + (children_size % 2)) / 2;
+        else {
+            if(!tmp || tmp->type != ATOM || tmp->children[0]->name != "[") {
+                // yyerror("TypeError: Not a valid rvalue");
+            }
+            int children_size = tmp->children[1]->children.size(); 
+            this->st_entry->l_attr.num_of_elems = (children_size + (children_size % 2)) / 2;
+        }
     }
     else {
         this->st_entry->l_attr.num_of_elems = -1; // no initialization
@@ -626,12 +718,8 @@ void node::create_func_st() {
 void node::exit_from_func() {
     // if TFPDEF has a single child, it can only be self and the current environment must be a class environment
     // in all other cases, TFPDEF has > 1 children. The type is specified by the descendent of TFPDEP->children[2] and the name is specified by TFPDEF->children[0]
-    //TODO: handle that non-default arguments appear before default args
-    bool found_default_arg = false; // to check that typed (non-default arguments) are before typed (default) arguments
-    // non-default arguments are arguments that do not have optional_equal_test
     for(int i = 0; i < this->st_entry->f_attr.num_args; i++) {
         symbol_table_entry* arg = SYMBOL_TABLE->entries[i];
-        // cout << "obtained the argument entry" << endl;
         this->st_entry->f_attr.args.push_back(arg->b_type);
         if (arg->b_type == D_LIST) {
             // cout << arg->l_attr.list_elem_type << endl;
@@ -652,6 +740,10 @@ void node::exit_from_func() {
             this->st_entry->f_attr.list_types.push_back("void");
         }
     }
+    if (this->st_entry->f_attr.return_type == D_LIST) {
+        find_return_stmts_and_set_return_list_attr(this->parent->children[this->parent->children.size() - 1], this->st_entry);
+    }
+
     this->st_entry->set_size(OFFSET);
     this->st_entry->child_symbol_table = SYMBOL_TABLE;
 
@@ -1256,12 +1348,9 @@ symbol_table_entry* get_compatible_function_and_push_param(node* atom_expr) {
 }
 
 void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
-    // if(!pending_return) {
-    //     yylineno = return_stmt->line_no;
-    //     yyerror("SyntaxError: Multiple return statements inside a single function");
-    // }
     pending_return = false; // encountered a return statement in a function, so this flag is again marked false
-
+    node* tmp;
+    st_entry* entry;
     base_data_type return_type_formal = funcdef->children[1]->st_entry->f_attr.return_type; // funcdef->children[1] is the IDENTIFIER node
     int num_args = funcdef->children[1]->st_entry->f_attr.num_args;
     base_data_type return_type_actual;
@@ -1277,6 +1366,19 @@ void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
             case IDENTIFIER:
                 return_type_actual = SYMBOL_TABLE->get_entry(return_stmt->children[1]->name)->b_type;
                 break;
+            // case ATOM_EXPR:
+            //     tmp = return_stmt->children[1];
+            //     if (tmp->children[0]->name == "range" || tmp->children[0]->name == "print") {
+            //         yyerror("Not valid arguments for a return statement");
+            //     }
+            //     if (tmp->children[0]->name == "self") {
+            //         entry = SYMBOL_TABLE->get_entry(("self." + tmp->children[1]->children[1]->name).c_str());
+            //         return_type_actual = entry->b_type;
+            //     }
+            //     if (tmp->children[0]->name == "len") {
+            //         yyerror("1358. Not handling this yet.");
+            //     }
+            //     break;
             default:
                 if (return_stmt->children[1]->_3acode != nullptr) {
                     return_type_actual = return_stmt->children[1]->operand_type;
@@ -1372,6 +1474,7 @@ void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
                 yyerror("TypeError: argument does not match return type.");
             }
             funcdef->_3acode = new Quadruple("return", "", "", return_stmt->children[1]->name, Q_JUMP);
+            IR.push_back(funcdef->_3acode);
             break;
         case D_VOID:
             if (return_type_actual != D_VOID) {
@@ -1379,8 +1482,22 @@ void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
                 yyerror("TypeError: argument does not match return type.");
             }
             break;
-        // TODO: check for D_CLASS and D_LIST
+        // TODO: check for D_CLASS
+        case D_LIST:
+            if (return_type_actual != D_LIST) {
+                yylineno = return_stmt->line_no;
+                yyerror("TypeError: argument does not match return type.");
+            }
+            entry = SYMBOL_TABLE->get_entry(return_stmt->children[1]->name);
+            if (funcdef->children[1]->st_entry->f_attr.return_list_attr.list_elem_type != SYMBOL_TABLE->get_entry(return_stmt->children[1]->name)->l_attr.list_elem_type) {
+                yylineno = return_stmt->line_no;
+                yyerror("TypeError: argument does not match return type.");
+            }
+            funcdef->_3acode = new Quadruple("return", "", "", return_stmt->children[1]->name, Q_JUMP);
+            IR.push_back(funcdef->_3acode);
+            break;
         default:
+            yylineno = funcdef->line_no;
             yyerror("UnexpectedError: Invalid return type.");
             break;
     }
@@ -1567,6 +1684,9 @@ string node::get_lhs_operand() {
                 if(this->type != ASSIGN) { // if not the LHS of an assign
                     q = new Quadruple("", this->children[0]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
                     IR.push_back(q);
+                    if(this->type == AUGASSIGN) {
+                        this->children[0]->_3acode->q_type = Q_STORE;
+                    }
                     return q->result;
                 }
                 else { // if the left side of an assign
@@ -1580,16 +1700,19 @@ string node::get_lhs_operand() {
                 this->children[0]->operand_type = entry->f_attr.return_type;
                 return this->children[0]->_3acode->result; // FIXME: check this
             }
+            break;
         case KEYWORD:
             if(this->name != "print" || this->name != "self" || this->name != "range" || this->name != "len") {
                 yyerror("UnexpectedError: pyparse grammar is violated.");
             }
+            break;
         case TRAILER:
             if (this->children[0]->children[0]->_3acode != nullptr) {
                 return this->children[0]->children[0]->_3acode->result;
             } else {
                 return this->children[0]->children[0]->name;
             }
+            break;
             
     }
     //TODO: clear up
@@ -1765,7 +1888,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_INT) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: Incompatible datatypes");
+                        yyerror("1. TypeError: Incompatible datatypes");
                     }
                 break;
                 case D_FLOAT:
@@ -1797,7 +1920,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_FLOAT) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: Incompatible datatypes");
+                        yyerror("2. TypeError: Incompatible datatypes");
                     }
                 break;
                 case D_STRING:
@@ -1812,7 +1935,7 @@ void node::check_operand_type_compatibility() {
                 break;
                 default:
                     yylineno = this->children[0]->line_no;
-                    yyerror("TypeError: Incompatible datatypes");
+                    yyerror("3. TypeError: Incompatible datatypes");
                 break;
             }
         break;
@@ -1838,7 +1961,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_BOOL) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: Incompatible datatypes");
+                        yyerror("4. TypeError: Incompatible datatypes");
                     }
                 break;
                 case D_INT:
@@ -1857,7 +1980,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_INT) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: Incompatible datatypes");
+                        yyerror("5. TypeError: Incompatible datatypes");
                     }
                 break;
                 case D_FLOAT:
@@ -1876,7 +1999,7 @@ void node::check_operand_type_compatibility() {
                     }
                     else if(this->children[1]->operand_type != D_FLOAT) {
                         yylineno = this->children[0]->line_no;
-                        yyerror("TypeError: Incompatible datatypes");
+                        yyerror("6. TypeError: Incompatible datatypes");
                     }
                 break;
                 case D_STRING:
@@ -1970,11 +2093,11 @@ void node::generate_3ac_keywords() {
 }
 
 void node::generate_3ac() {
-    //TODO: pending 3AC generation for functions, classes, for loop, return stmt, ternary operator
+    //TODO: pending 3AC generation for classes, for loop, ternary operator
     //TODO: update SYMBOL_TABLE variable to manage scope (that will be used in typechecking)
     symbol_table_entry* entry, *mem_entry;
     Quadruple* q;
-    string temp_result;
+    string temp_result, label;
     node* tmp;
     int offset;
     if(this->name == "while") { // need to store this for backpatching
@@ -1982,7 +2105,7 @@ void node::generate_3ac() {
     }
     if(this->type == FUNCDEF) {
         pending_return = true;
-        SYMBOL_TABLE = SYMBOL_TABLE->get_entry(this->children[1]->name)->child_symbol_table; // the function name is children[1]
+        SYMBOL_TABLE = this->children[1]->st_entry->child_symbol_table; // the function name is children[1]
     }
     if (this->type == CLASSDEF) {
         pending_init = true;
@@ -1998,11 +2121,11 @@ void node::generate_3ac() {
             child->generate_3ac();
         }
     }
-    cout << "--------" << endl;
-    cout << this->name << endl;
-    for(auto q : IR) {
-        cout << q->code << endl;
-    }
+    // cout << "--------" << endl;
+    // cout << this->name << endl;
+    // for(auto q : IR) {
+    //     cout << q->code << endl;
+    // }
     string op1, op2, result, op;
     switch(this->type) {
         case FILE_INPUT:
@@ -2018,18 +2141,44 @@ void node::generate_3ac() {
         case LIST:
             return;
         case IDENTIFIER:
-            entry = SYMBOL_TABLE->get_entry(this->name);
-            if (!entry) {
-                entry = SYMBOL_TABLE->get_entry("self." + this->name);
-            }
-            if (!entry) {
-                // may be referring to a function/member of a class using an object.
-                if(this->parent->type == TRAILER && this->parent->children[0]->type == DOT) {
+            if(this->parent->type == TRAILER && this->parent->children[0]->type == DOT) {
+                if(this->parent->parent->children[0]->name != "self") {
                     entry = SYMBOL_TABLE->get_entry(this->parent->parent->children[0]->name); // getting the entry corresponding to the object of the class
                     entry = SYMBOL_TABLE->get_entry(entry->class_name); // getting the entry corresponding to the class name
-                    entry = entry->child_symbol_table->get_entry(this->name); // trying to find the data member/member method from that class
                 }
+                else {
+                    entry = SYMBOL_TABLE->get_entry(SYMBOL_TABLE->parent->st_name); // getting the entry corresponding to the class name
+                }
+                mem_entry = entry->child_symbol_table->get_entry(this->name); // trying to find the data member/member method from that class
+                if (!mem_entry) {
+                    mem_entry = entry->child_symbol_table->get_entry("self." + this->name);
+                }
+                // should have found the entry by now
+                entry = mem_entry;
             }
+            else {
+                entry = SYMBOL_TABLE->get_entry(this->name);
+                // if (!entry) {
+                //     entry = SYMBOL_TABLE->get_entry("self." + this->name);
+                // }
+            }
+            // entry = SYMBOL_TABLE->get_entry(this->name);
+            // if (!entry) {
+            //     entry = SYMBOL_TABLE->get_entry("self." + this->name);
+            // }
+            // if (!entry) {
+            //     // may be referring to a function/member of a class using an object.
+            //     if(this->parent->type == TRAILER && this->parent->children[0]->type == DOT) {
+            //         entry = SYMBOL_TABLE->get_entry(this->parent->parent->children[0]->name); // getting the entry corresponding to the object of the class
+            //         entry = SYMBOL_TABLE->get_entry(entry->class_name); // getting the entry corresponding to the class name
+            //         mem_entry = entry->child_symbol_table->get_entry(this->name); // trying to find the data member/member method from that class
+            //         if (!mem_entry) {
+            //             mem_entry = entry->child_symbol_table->get_entry("self." + this->name);
+            //         }
+            //         // should have found the entry by now
+            //         entry = mem_entry;
+            //     }
+            // }
             if(!entry) {
                 yylineno = this->line_no;
                 yyerror("UnexpectedError: Identifier entry not found.");
@@ -2039,8 +2188,10 @@ void node::generate_3ac() {
                 this->class_name = entry->name;
             }
             if(this->operand_type == D_LIST && this->parent->type == ASSIGN) {
-                q = new Quadruple("", to_string(entry->l_attr.list_elem_size * entry->l_attr.num_of_elems), "", this->name, Q_ALLOC);
-                IR.push_back(q);
+                if (this->parent->children[1]->type == TESTLIST_COMP) {
+                    q = new Quadruple("", to_string(entry->l_attr.list_elem_size * entry->l_attr.num_of_elems), "", this->name, Q_ALLOC);
+                    IR.push_back(q);
+                }
             }
             if (this->children.size() > 0) {
                 if(this->children[0]->type == IDENTIFIER) {
@@ -2067,7 +2218,12 @@ void node::generate_3ac() {
             this->operand_type = D_INT;
             return;
         case BOOL_NUMBER:
-            this->operand_type = D_BOOL;
+            this->operand_type = D_INT;
+            if (this->name == "True") {
+                this->name = "1";
+            } else {
+                this->name = "0";
+            }
             return;
         case FLOAT_NUMBER:
             this->operand_type = D_FLOAT;
@@ -2087,7 +2243,7 @@ void node::generate_3ac() {
                 // find offset for data members. this->children[1] is trailer, its children[1] is the name of the data member
                 entry = SYMBOL_TABLE->parent->get_entry("self." +this->children[1]->children[1]->name);
                 if(!entry) {
-                    cout << "entry not found" << endl;
+                    yyerror(("Couldn't find entry of the data member self." + this->children[1]->children[1]->name).c_str());
                 }
                 offset = entry->offset;
                 this->_3acode = new Quadruple("+", "addr(self)", to_string(offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
@@ -2172,7 +2328,6 @@ void node::generate_3ac() {
                     IR.push_back(q);
                 }
                 else if(entry->b_type == D_CLASS) {
-                    // cout << "HERE 1" << endl;
                     if(entry->child_symbol_table != nullptr) {
                         // only a class declaration will have a child_symbol_table, objects of that class will not
                         this->operand_type = D_CLASS;
@@ -2186,15 +2341,21 @@ void node::generate_3ac() {
                         q = new Quadruple("", ("-" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
                         IR.push_back(q);
                     } else {
-                        // cout << "HERE 2" << endl;
                         entry = SYMBOL_TABLE->get_entry(entry->class_name); // getting the entry corresponding to the class name
                         tmp = this->children[1]->children[1]; // this points to the name of the function called from the class obj
 
-                        mem_entry = entry->child_symbol_table->get_entry("self." + this->children[1]->children[1]->name);
+                        mem_entry = entry->child_symbol_table->get_entry(this->children[1]->children[1]->name);
                         if (!mem_entry) {
+                            mem_entry = entry->child_symbol_table->get_entry("self." + this->children[1]->children[1]->name);
+                        }
+                        if (!mem_entry) {
+                            yylineno = this->line_no;
                             // accessing data members
                             yyerror("Such a data member does not exist.");
-                        } else if (mem_entry->b_type != D_FUNCTION) {
+                        }
+
+                        this->operand_type = mem_entry->b_type;
+                        if (mem_entry->b_type != D_FUNCTION) {
                             q = new Quadruple("+", "addr(" + this->children[0]->name + ")", to_string(mem_entry->offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                             IR.push_back(q);
                             this->_3acode = new Quadruple("", q->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
@@ -2279,6 +2440,10 @@ void node::generate_3ac() {
             this->_3acode = new Quadruple(this->name.substr(0, this->name.length() - 1), op1, op2, result, Q_BINARY); // removing "=" from the name
             this->check_operand_type_compatibility();
             IR.push_back(this->_3acode);
+            if (this->children[0]->type == ATOM_EXPR && this->children[0]->_3acode->q_type == Q_STORE) {
+                q = new Quadruple("", this->_3acode->result, "", this->children[0]->_3acode->result, Q_STORE);
+                IR.push_back(q);
+            }
             return;
         case CONDITION:
             if ((this->parent->name == "if") || (this->parent->name == "elif") || (this->parent->name == "while")) {
