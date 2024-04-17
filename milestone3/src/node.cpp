@@ -381,21 +381,34 @@ void node::handle_annassign() {
     to_ast_operator(this, false, match);
 }
 
-node* sem_lval_check(node* root) {
+node* sem_lval_check(node* root, int is_declared) {
     node* tmp = root;  
     while(tmp && (!tmp->is_terminal)) {
         if(tmp->children.size() > 1) {
-            if(SYMBOL_TABLE->st_type == FUNCTION && SYMBOL_TABLE->parent->st_type == CLASS) {
-                return nullptr;
-            } else if (SYMBOL_TABLE->st_type == CLASS) {
-                yyerror("IncompatiblityError: Stray code in class not supported.");
+            if (tmp->children[0]->name == "self") {
+                if(SYMBOL_TABLE->st_type == FUNCTION && SYMBOL_TABLE->parent->st_type == CLASS) {
+                    return nullptr;
+                } else /*(SYMBOL_TABLE->st_type == CLASS)*/ {
+                    yyerror("IncompatiblityError: Stray code in class not supported.");
+                }    
             }
-            yyerror("Not a valid lvalue");
+            if (tmp->children[0]->name == "print") {
+                return nullptr; // TODO: check semantic
+            }
+            if (tmp->children[0]->type == IDENTIFIER) {
+                if (SYMBOL_TABLE->get_entry(tmp->children[0]->name)->b_type != D_LIST) {
+                    yyerror("Not a valid lvalue.");
+                } else  {
+                    return nullptr;
+                }
+            }
+            
+            yyerror("1. Not a valid lvalue");
         }
         tmp = tmp->children[0];
     }
     if(!tmp) {
-        yyerror("Not a valid lvalue");
+        yyerror("2. Not a valid lvalue");
     }
     if(tmp->type != IDENTIFIER && (tmp->name != "range" && tmp->name != "print" && tmp->name != "len")) {
         yyerror((tmp->name + " is not a valid lvalue").c_str());
@@ -1386,7 +1399,8 @@ void do_list_assignment(node* assign) {
         //TODO: list of class objs: not checked that the class objs be of the same type
         q = new Quadruple("*", to_string(i), to_string(entry->l_attr.list_elem_size), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
         IR.push_back(q);
-        q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+        // q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+        q = new Quadruple("+", op1, q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
         IR.push_back(q);
         // temp_result = "*" + q->result;
         temp_result = q->result;
@@ -1558,6 +1572,7 @@ string node::get_lhs_operand() {
                 else { // if the left side of an assign
                     // this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
                     this->children[0]->_3acode->q_type = Q_STORE;
+                    // cout << this->children[0]->_3acode->code << endl;
                     return this->children[0]->_3acode->result;
                 }
             }
@@ -1957,7 +1972,7 @@ void node::generate_3ac_keywords() {
 void node::generate_3ac() {
     //TODO: pending 3AC generation for functions, classes, for loop, return stmt, ternary operator
     //TODO: update SYMBOL_TABLE variable to manage scope (that will be used in typechecking)
-    symbol_table_entry* entry;
+    symbol_table_entry* entry, *mem_entry;
     Quadruple* q;
     string temp_result;
     node* tmp;
@@ -1983,11 +1998,11 @@ void node::generate_3ac() {
             child->generate_3ac();
         }
     }
-    // cout << "--------" << endl;
-    // cout << this->name << endl;
-    // for(auto q : IR) {
-    //     cout << q->code << endl;
-    // }
+    cout << "--------" << endl;
+    cout << this->name << endl;
+    for(auto q : IR) {
+        cout << q->code << endl;
+    }
     string op1, op2, result, op;
     switch(this->type) {
         case FILE_INPUT:
@@ -2060,6 +2075,10 @@ void node::generate_3ac() {
         case ATOM_EXPR:
             if(this->children[0]->name == "print") {
                 op1 = this->get_rhs_operand();
+                // cout << "IN PRINT with " << op1 << endl;
+                if (this->children[1]->type == TRAILER) {
+
+                }
                 this->_3acode = new Quadruple("", op1, "", "", Q_PRINT);
                 // TODO: any type checking here? : yes, cannot print classes, function
                 IR.push_back(this->_3acode);
@@ -2135,9 +2154,12 @@ void node::generate_3ac() {
                     }
                     q = new Quadruple("*", temp_result, to_string(entry->l_attr.list_elem_size), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                     IR.push_back(q);
-                    q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                    // q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                    q = new Quadruple("+", op1, q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                     IR.push_back(q);
                     this->_3acode = q;
+
+                    // cout << this->_3acode->code << endl;
                 } 
                 else if(entry->b_type == D_FUNCTION) {
                     this->operand_type = entry->f_attr.return_type;
@@ -2150,6 +2172,7 @@ void node::generate_3ac() {
                     IR.push_back(q);
                 }
                 else if(entry->b_type == D_CLASS) {
+                    // cout << "HERE 1" << endl;
                     if(entry->child_symbol_table != nullptr) {
                         // only a class declaration will have a child_symbol_table, objects of that class will not
                         this->operand_type = D_CLASS;
@@ -2163,15 +2186,28 @@ void node::generate_3ac() {
                         q = new Quadruple("", ("-" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
                         IR.push_back(q);
                     } else {
+                        // cout << "HERE 2" << endl;
                         entry = SYMBOL_TABLE->get_entry(entry->class_name); // getting the entry corresponding to the class name
                         tmp = this->children[1]->children[1]; // this points to the name of the function called from the class obj
-                        entry = call_class_member_method(this, entry->child_symbol_table); // this->operand_type is set within this function itself
-                        q = new Quadruple("", ("+" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
-                        IR.push_back(q);
-                        this->_3acode = new Quadruple("", entry->label, to_string(this->children[2]->children.size() + 1), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
-                        IR.push_back(this->_3acode);
-                        q = new Quadruple("", ("-" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
-                        IR.push_back(q);
+
+                        mem_entry = entry->child_symbol_table->get_entry("self." + this->children[1]->children[1]->name);
+                        if (!mem_entry) {
+                            // accessing data members
+                            yyerror("Such a data member does not exist.");
+                        } else if (mem_entry->b_type != D_FUNCTION) {
+                            q = new Quadruple("+", "addr(" + this->children[0]->name + ")", to_string(mem_entry->offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                            IR.push_back(q);
+                            this->_3acode = new Quadruple("", q->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                            IR.push_back(this->_3acode);
+                        } else {
+                            entry = call_class_member_method(this, entry->child_symbol_table); // this->operand_type is set within this function itself
+                            q = new Quadruple("", ("+" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
+                            IR.push_back(q);
+                            this->_3acode = new Quadruple("", entry->label, to_string(this->children[2]->children.size() + 1), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
+                            IR.push_back(this->_3acode);
+                            q = new Quadruple("", ("-" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
+                            IR.push_back(q);   
+                        }
                     }
                 }
             }
@@ -2196,7 +2232,11 @@ void node::generate_3ac() {
             else {
                 op1 = this->get_lhs_operand();
                 op2 = this->get_rhs_operand();
-                this->_3acode = new Quadruple(this->name, op2, "", op1, Q_ASSIGN);
+                if (this->children[0]->type == ATOM_EXPR) {
+                    this->_3acode = new Quadruple(this->name, op2, "", op1, Q_STORE);
+                } else {
+                    this->_3acode = new Quadruple(this->name, op2, "", op1, Q_ASSIGN);
+                }
                 // cout << this->_3acode->code << endl;
                 this->check_operand_type_compatibility();
                 IR.push_back(this->_3acode);

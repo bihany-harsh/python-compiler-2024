@@ -96,8 +96,8 @@ file_input                  :   multiple_lines {
                                     if(verbose_flag) {
                                         cout << "AST cleaning done!" << endl;
                                     }
-                                    AST_ROOT->delete_delimiters();   
-                                    AST_ROOT->delete_single_child_nodes();
+                                //     AST_ROOT->delete_delimiters();   
+                                //     AST_ROOT->delete_single_child_nodes();
                             }
                             ;
 multiple_lines              :   multiple_lines single_line {
@@ -159,7 +159,7 @@ expr_stmt                   :   test annassign {
                                     $$ = new node(EXPR_STMT, "EXPR_STMT", false, NULL);
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
-                                    node* terminal = sem_lval_check($1); // returns nullptr if expecting a class variable declaration
+                                    node* terminal = sem_lval_check($1, 0); // returns nullptr if expecting a class variable declaration
                                     // if invalid, calls yyerror and exits. if valid, returns non-nullptr
                                     base_data_type b_type = sem_rval_check(SYMBOL_TABLE, $2->children[1]);
                                     if(terminal == nullptr) {
@@ -188,7 +188,7 @@ expr_stmt                   :   test annassign {
                             |   test augassign test {
                                     $$ = new node(EXPR_STMT, "EXPR_STMT", false, NULL);
                                     
-                                    sem_lval_check($1);
+                                    sem_lval_check($1, 1);
 
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
@@ -203,6 +203,7 @@ expr_stmt                   :   test annassign {
                                     // $$->add_parent_child_relation($2);                              
 
                                     prune_custom_nodes($$, $2);
+                                    sem_lval_check($1, 1);
                                     check_declare_before_use(SYMBOL_TABLE, $1); // to check that the LHS has been declared before use
 
                                     $$->check_multi_assignment();

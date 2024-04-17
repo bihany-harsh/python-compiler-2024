@@ -87,6 +87,7 @@ typedef struct Instruction_Wrapper {
     void gen_x86_function(vector<Quadruple*> func_IR, Function_Wrapper* func_wrapper);
 
     void gen_x86_basic_block(vector<Quadruple*> basic_block, Function_Wrapper* func_wrapper);
+    void gen_x86_end();
 
     vector<Instruction*> generator(Quadruple* quad, int x, int y, int z);
 

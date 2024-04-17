@@ -292,7 +292,7 @@ void to_ast_operator(node* root, bool is_left_associative, set<string> matching_
 void comp_op_processing(node* root);
 
 
-node* sem_lval_check(node* root);
+node* sem_lval_check(node* root, int is_declared);
 
 string get_class_name(node* test);
 

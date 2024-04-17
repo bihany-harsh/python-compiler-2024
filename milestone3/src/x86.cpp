@@ -38,6 +38,19 @@ void output_x86(const string& filename, Instruction_Wrapper* x86) {
     for (Instruction* instr: x86->instructions) {
         txtFile << instr->code << endl;
     }
+
+    ifstream print_func("print.s");
+    string line;
+
+    while(getline(print_func, line)){
+        txtFile << line << '\n';
+    }
+
+
+    ifstream alloc_mem("allocmem.s");
+    while(getline(alloc_mem, line)) {
+        txtFile << line << '\n';
+    }
 }
 
 Instruction::Instruction(string op, string dst, string src1, string src2, instruction_type type) {
@@ -595,6 +608,7 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
 
         // we have ifFalse semantic
         instr = new Instruction("je", "L" + to_string(y), "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
     } else if (quad->q_type == Q_JUMP && quad->op == "goto") {
         instr = new Instruction("jmp", "L" + to_string(x), "", "", I_INSTRUCTION);
         instructions.push_back(instr);
@@ -649,13 +663,15 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
             instructions.push_back(instr);
         }
     } else if (quad->q_type == Q_JUMP && quad->op == "return") {
-        if (quad->arg1 != "") {
-            if (!is_variable(quad->arg1)) {
-                instr = new Instruction("movq", "$" + quad->arg1, "%rax", "", I_INSTRUCTION);
+        if (quad->result != "") {
+            if (!is_variable(quad->result)) {
+                instr = new Instruction("movq", "$" + quad->result, "%rax", "", I_INSTRUCTION);
             } else {
-                instr = new Instruction("movq", to_string(x) + "(%rbp)", "%rax", "", I_INSTRUCTION);
+                instr = new Instruction("movq", to_string(y) + "(%rbp)", "%rax", "", I_INSTRUCTION);
             }
+            instructions.push_back(instr);
         }
+
 
         instr = new Instruction("addq", "$" + to_string(x), "%rsp", "", I_INSTRUCTION);
         instructions.push_back(instr);
@@ -664,6 +680,8 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
         instr = new Instruction("popq", "%r14", "", "", I_INSTRUCTION);
         instructions.push_back(instr);
         instr = new Instruction("popq", "%r13", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%r12", "", "", I_INSTRUCTION);
         instructions.push_back(instr);
         instr = new Instruction("popq", "%rsi", "", "", I_INSTRUCTION);
         instructions.push_back(instr);
@@ -693,6 +711,8 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
             instr = new Instruction("popq", "%r14", "", "", I_INSTRUCTION);
             instructions.push_back(instr);
             instr = new Instruction("popq", "%r13", "", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("popq", "%r12", "", "", I_INSTRUCTION);
             instructions.push_back(instr);
             instr = new Instruction("popq", "%rsi", "", "", I_INSTRUCTION);
             instructions.push_back(instr);
@@ -730,19 +750,109 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
         instructions.push_back(instr);
 
         // TODO: to handle print and alloc
-        if (this->get_func_name(quad->arg1) == "print") {
-            // instr = new Instruction("addq", "$8", "%rsp", "", I_INSTRUCTION);
-            // instructions.push_back(instr);
-        } else if (this->get_func_name(quad->arg1) == "alloc") {
-            // instr = new Instruction("movq", "%rax", to_string(z) + "(%rbp)", "", I_INSTRUCTION);
-            // instructions.push_back(instr);
-        } else if (x > 0) {
+        // handled separately!
+        if (x > 0) {
             instr = new Instruction("addq", "$" + to_string(x*8), "%rsp", "", I_INSTRUCTION);
             instructions.push_back(instr);
         }
 
         if (quad->result != "") {
             instr = new Instruction("movq", "%rax", to_string(y) + "(%rbp)", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+        }
+
+        instr = new Instruction("popq", "%r11", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%r10", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%r9", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%r8", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%rdx", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%rcx", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%rax", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+    } else if (quad->q_type == Q_PRINT) {
+        instr = new Instruction("pushq", "%rax", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%rcx", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%rdx", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r8", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r9", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r10", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r11", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        if (!is_variable(quad->arg1)) {
+            instr = new Instruction("pushq", "$" + quad->arg1, "", "", I_INSTRUCTION);
+        } else {
+            // cout << "PUSH_PARAM " << x << endl; 
+            instr = new Instruction("pushq", to_string(x) + "(%rbp)", "", "", I_INSTRUCTION);
+        }
+
+        instructions.push_back(instr);
+
+        instr = new Instruction("call", "print", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+
+        instr = new Instruction("addq", "$8", "%rsp", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+
+        instr = new Instruction("popq", "%r11", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%r10", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%r9", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%r8", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%rdx", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%rcx", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("popq", "%rax", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+    } else if (quad->q_type == Q_ALLOC) {
+        cout << quad->code << endl;
+        instr = new Instruction("pushq", "%rax", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%rcx", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%rdx", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r8", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r9", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r10", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r11", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+
+        if (!is_variable(quad->arg1)) {
+            instr = new Instruction("pushq", "$" + quad->arg1, "", "", I_INSTRUCTION);
+        } else {
+            // cout << "PUSH_PARAM " << x << endl; 
+            instr = new Instruction("pushq", to_string(x) + "(%rbp)", "", "", I_INSTRUCTION);
+        }
+
+        instructions.push_back(instr);
+
+        instr = new Instruction("call", "allocmem", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+
+        instr = new Instruction("addq", "$8", "%rsp", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+
+        if (quad->result != "") {
+            instr = new Instruction("movq", "%rax", to_string(z) + "(%rbp)", "", I_INSTRUCTION);
             instructions.push_back(instr);
         }
 
@@ -803,7 +913,7 @@ void Instruction_Wrapper::gen_x86_basic_block(vector<Quadruple*> basic_block, Fu
             } else {
                 x = func_wrapper->variable_offset_map[quad->arg1]->offset;
             }
-            y = atoi(quad->label.c_str());
+            y = atoi(quad->result.c_str());
             gen_instruction = this->generator(quad, x, y, -1);
         } else if (quad->q_type == Q_JUMP && quad->op == "goto") {
             gen_instruction = this->generator(quad, atoi(quad->result.c_str()), -1, -1);
@@ -882,6 +992,25 @@ void Instruction_Wrapper::gen_x86_basic_block(vector<Quadruple*> basic_block, Fu
             gen_instruction = this->generator(quad, x, func_wrapper->num_args, -1);
         } else if (quad->q_type == Q_POP_PARAM) {
             gen_instruction = this->generator(quad, -1, -1, -1);
+        } else if (quad->q_type == Q_PRINT) {
+            if (func_wrapper->variable_offset_map.find(quad->arg1) == func_wrapper->variable_offset_map.end()) {
+                x = -1;
+            } else {
+                x = func_wrapper->variable_offset_map[quad->arg1]->offset;
+            }
+            gen_instruction = this->generator(quad, x, -1, -1);
+        } else if (quad->q_type == Q_ALLOC) {
+            if (func_wrapper->variable_offset_map.find(quad->arg1) == func_wrapper->variable_offset_map.end()) {
+                x = -1;
+            } else {
+                x = func_wrapper->variable_offset_map[quad->arg1]->offset;
+            }
+            if (func_wrapper->variable_offset_map.find(quad->result) == func_wrapper->variable_offset_map.end()) {
+                z = -1;
+            } else {
+                z = func_wrapper->variable_offset_map[quad->arg1]->offset;
+            }
+            gen_instruction = this->generator(quad, x, -1, z);
         } else if (quad->q_type == Q_FUNC_CALL) {
             // (q, num_of_args, result)
             gen_instruction = this->generator(quad, func_wrapper->num_args, func_wrapper->variable_offset_map[quad->result]->offset, -1);
@@ -964,7 +1093,7 @@ void Instruction_Wrapper::gen_x86_init() {
     instr = new Instruction(".data", "", "", "", I_SEGMENT);
     this->instructions.push_back(instr);
 
-    instr = new Instruction(".integer_format:", ".asciz", "\"%ld\\n\"", "", I_INSTRUCTION);
+    instr = new Instruction("integer_format:", ".asciz", "\"%ld\\n\"", "", I_INSTRUCTION);
     this->instructions.push_back(instr);
 
     instr = new Instruction(".global", "main", "", "", I_DIRECTIVE);
@@ -987,7 +1116,20 @@ void Instruction_Wrapper::gen_x86(vector<Quadruple*> IR, symbol_table* SYMBOL_TA
         this->function_wrappers.push_back(function_wrapper);
         this->gen_x86_function(function, function_wrapper);
     }
+
+    // this->gen_x86_end();
 }
+
+// void Instruction_Wrapper::gen_x86_end() {
+//     ofstream out("x86_code.s");
+
+//     ifstream print_func("print.s");
+//     string line;
+
+//     while(getline(print_func, line)){
+//         out << line << '\n';
+//     }
+// }
 
 void Instruction_Wrapper::get_functions(vector<Quadruple*> IR) {
     vector<Quadruple*> function;
