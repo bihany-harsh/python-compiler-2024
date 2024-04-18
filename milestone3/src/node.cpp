@@ -1724,7 +1724,7 @@ string node::get_lhs_operand() {
             }
             else if(this->children[0]->children[0]->name == "self") {
                 if (this->children[0]->_3acode == nullptr) {
-                    yyerror("UnexpectedError: there should've been a 3ac here");
+                    yyerror("1. UnexpectedError: there should've been a 3ac here");
                 }
                 return this->children[0]->_3acode->result;
             }
@@ -1732,7 +1732,7 @@ string node::get_lhs_operand() {
                 yyerror("SyntaxError: Incorrect usage of range.");
             } else if (this->children[0]->children[0]->name == "len") {
                 if (!this->children[0]->_3acode) {
-                    yyerror("UnexpectedError: there should've been a 3ac here");
+                    yyerror("2. UnexpectedError: there should've been a 3ac here");
                 }
                 this->children[0]->operand_type = D_INT;
                 return this->children[0]->_3acode->result;
@@ -1744,7 +1744,7 @@ string node::get_lhs_operand() {
             if(entry->b_type == D_LIST) {
                 // operand type, dereferencing is already done. Only in the case of an assignment, we would want to store back the result.
                 if (this->children[0]->_3acode == nullptr) {
-                    yyerror("UnexpectedError: there should've been a 3ac here");
+                    yyerror("3. UnexpectedError: there should've been a 3ac here");
                 }
                 return this->children[0]->_3acode->result;
             }
@@ -1789,15 +1789,15 @@ string node::get_rhs_operand() {
                 yyerror("SyntaxError: print cannot be part of an expression.");
             }
             else if(this->children[1]->children[0]->name == "self") {
-                return this->children[1]->_3acode->result;
+                return this->children[1]->children[0]->_3acode->result;
             }
             else if(this->children[1]->children[0]->name == "range") {
                 yyerror("not handling this yet");
             } else if(this->children[1]->children[0]->name == "len") {
-                if (!this->children[0]->_3acode) {
-                    yyerror("UnexpectedError: there should've been a 3ac here");
+                if (!this->children[1]->children[0]->_3acode) {
+                    yyerror("4. UnexpectedError: there should've been a 3ac here");
                 }
-                return this->children[0]->_3acode->result;
+                return this->children[1]->children[0]->_3acode->result;
             }
             entry = SYMBOL_TABLE->get_entry(this->children[1]->children[0]->name);
             if(entry == nullptr) {
