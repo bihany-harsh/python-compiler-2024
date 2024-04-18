@@ -1774,20 +1774,24 @@ string node::get_lhs_operand() {
                 yyerror("SyntaxError: print cannot be part of an expression.");
             }
             else if(this->children[0]->children[0]->name == "self") {
-                if(this->type != ASSIGN) { // if not the LHS of an assign
-                    // q = new Quadruple("", this->children[0]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
-                    // IR.push_back(q);
-                    if (!this->children[0]->_3acode) {
-                        yyerror("UnexpectedError: there should've been a 3ac here");
-                    }
-                    return this->children[0]->_3acode->result;
+                // if(this->type != ASSIGN) { // if not the LHS of an assign
+                //     // q = new Quadruple("", this->children[0]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                //     // IR.push_back(q);
+                //     if (!this->children[0]->_3acode) {
+                //         yyerror("UnexpectedError: there should've been a 3ac here");
+                //     }
+                //     return this->children[0]->_3acode->result;
+                // }
+                // else { // if the left side of an assign
+                //     // this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
+                //     // cout << this->children[0]->_3acode->code << endl;
+                //     // this->children[0]->_3acode->q_type = Q_STORE;
+                //     return this->children[0]->_3acode->result;
+                // }
+                if (this->children[0]->_3acode == nullptr) {
+                    yyerror("UnexpectedError: there should've been a 3ac here");
                 }
-                else { // if the left side of an assign
-                    // this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
-                    // cout << this->children[0]->_3acode->code << endl;
-                    // this->children[0]->_3acode->q_type = Q_STORE;
-                    return this->children[0]->_3acode->result;
-                }
+                return this->children[0]->_3acode->result;
             }
             else if (this->children[0]->children[0]->name == "range") {
                 yyerror("not handling this yet");
@@ -1803,27 +1807,33 @@ string node::get_lhs_operand() {
                 yyerror("UnexpectedError: Couldn't find entry of the list variable");
             }
             if(entry->b_type == D_LIST) {
-                this->children[0]->operand_type = SYMBOL_TABLE->get_entry(this->children[0]->children[0]->name)->l_attr.list_elem_type;
+                // this->children[0]->operand_type = SYMBOL_TABLE->get_entry(this->children[0]->children[0]->name)->l_attr.list_elem_type;
                 // return this->children[0]->_3acode->result;
-                if(this->type != ASSIGN) { // if not the LHS of an assign
-                    q = new Quadruple("", this->children[0]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
-                    IR.push_back(q);
-                    if(this->type == AUGASSIGN) {
-                        this->children[0]->_3acode->q_type = Q_STORE;
-                    }
-                    return q->result;
+                // if(this->type != ASSIGN) { // if not the LHS of an assign
+                //     q = new Quadruple("", this->children[0]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                //     IR.push_back(q);
+                //     if(this->type == AUGASSIGN) {
+                //         this->children[0]->_3acode->q_type = Q_STORE;
+                //     }
+                //     return q->result;
+                // }
+                // else { // if the left side of an assign
+                //     // this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
+                //     // cout << this->children[0]->_3acode->code << endl;
+                //     // this->children[0]->_3acode->q_type = Q_STORE;
+                //     // cout << this->children[0]->_3acode->code << endl;
+                //     return this->children[0]->_3acode->result;
+                // }
+
+                // operand type, dereferencing is already done. Only in the case of an assignment, we would want to store back the result.
+                if (this->children[0]->_3acode == nullptr) {
+                    yyerror("UnexpectedError: there should've been a 3ac here");
                 }
-                else { // if the left side of an assign
-                    // this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
-                    // cout << this->children[0]->_3acode->code << endl;
-                    // this->children[0]->_3acode->q_type = Q_STORE;
-                    // cout << this->children[0]->_3acode->code << endl;
-                    return this->children[0]->_3acode->result;
-                }
+                return this->children[0]->_3acode->result;
             }
             else if(entry->b_type == D_FUNCTION) {
                 this->children[0]->operand_type = entry->f_attr.return_type;
-                return this->children[0]->_3acode->result; // FIXME: check this
+                return this->children[0]->_3acode->result;
             }
             break;
         case KEYWORD:
@@ -1937,7 +1947,6 @@ string node::get_rhs_operand() {
 
 void node::check_operand_type_compatibility() {
     //TODO: check all the calls of the function rename_attribute() and ensure that correct attribute is renamed
-    //TODO: ensure that all coercion cases are linked with a typecasting case
     string temp_result; // stores the temporary result attr of a Quadruple (for coercion)
     Quadruple* q; // temporary, for adding coercion statements to the Intermediate code
     switch(this->_3acode->q_type) {
@@ -2369,6 +2378,7 @@ void node::generate_3ac() {
             return;
         case ATOM_EXPR:
             if(this->children[0]->name == "print") {
+                this->operand_type = D_VOID;
                 op1 = this->get_rhs_operand();
                 // cout << "IN PRINT with " << op1 << endl;
                 // if (this->children[1]->children[0]->type == ATOM_EXPR) {
@@ -2583,7 +2593,7 @@ void node::generate_3ac() {
                         tmp = this->children[1]->children[1]; // this points to the name of the function called from the class obj
 
                         mem_entry = entry->child_symbol_table->get_entry(this->children[1]->children[1]->name);
-                        if (!mem_entry) {
+                        if(!mem_entry) {
                             mem_entry = entry->child_symbol_table->get_entry("self." + this->children[1]->children[1]->name);
                         }
                         if (!mem_entry) {
@@ -2592,8 +2602,8 @@ void node::generate_3ac() {
                             yyerror("Such a data member does not exist.");
                         }
 
-                        this->operand_type = mem_entry->b_type;
                         if (mem_entry->b_type != D_FUNCTION) {
+                            this->operand_type = mem_entry->b_type;
                             // q = new Quadruple("+", "addr(" + this->children[0]->name + ")", to_string(mem_entry->offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                             q = new Quadruple("+", this->children[0]->name, to_string(mem_entry->offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                             IR.push_back(q);
@@ -2601,12 +2611,13 @@ void node::generate_3ac() {
                             IR.push_back(this->_3acode);
                         } else {
                             entry = call_class_member_method(this, entry->child_symbol_table); // this->operand_type is set within this function itself
+                            this->operand_type = entry->f_attr.return_type;
                             q = new Quadruple("", ("+" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
                             IR.push_back(q);
                             this->_3acode = new Quadruple("", entry->label, to_string(this->children[2]->children.size() + 1), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
                             IR.push_back(this->_3acode);
                             q = new Quadruple("", ("-" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
-                            IR.push_back(q);   
+                            IR.push_back(q);
                         }
                     }
                 }
@@ -2635,10 +2646,6 @@ void node::generate_3ac() {
                 this->_3acode = new Quadruple(this->name, op2, "", op1, Q_ASSIGN);
                 IR.push_back(this->_3acode);
                 if (this->children[0]->type == ATOM_EXPR) {
-                    if (!this->children[0]->_3acode) {
-                        yylineno = this->line_no;
-                        yyerror("UnexpectedError: There should've been a 3ac here.");
-                    }
                     q = new Quadruple("", op1, "", this->children[0]->_3acode->arg1, Q_STORE);
                     IR.push_back(q);
                 }
@@ -2666,12 +2673,16 @@ void node::generate_3ac() {
             return;
         case COMPARE:
             // TODO: to support `in`, `is` etc.
-            // TODO: to support string comparison
             op1 = this->get_lhs_operand();
             op2 = this->get_rhs_operand();
             this->operand_type = D_BOOL;
             result = "t" + to_string(INTERMEDIATE_COUNTER++);
-            this->_3acode = new Quadruple(this->name, op1, op2, result, Q_BINARY);
+            if (this->children[0]->operand_type == D_STRING) {
+                this->_3acode = new Quadruple(this->name, op1, op2, result, Q_BINARY_STR);
+            }
+            else {
+                this->_3acode = new Quadruple(this->name, op1, op2, result, Q_BINARY);
+            }
             this->check_operand_type_compatibility();
             IR.push_back(this->_3acode);
             return;
@@ -2683,7 +2694,7 @@ void node::generate_3ac() {
             this->_3acode = new Quadruple(this->name.substr(0, this->name.length() - 1), op1, op2, result, Q_BINARY); // removing "=" from the name
             this->check_operand_type_compatibility();
             IR.push_back(this->_3acode);
-            if (this->children[0]->type == ATOM_EXPR && this->children[0]->_3acode->q_type == Q_STORE) {
+            if (this->children[0]->type == ATOM_EXPR) {
                 q = new Quadruple("", this->_3acode->result, "", this->children[0]->_3acode->result, Q_STORE);
                 IR.push_back(q);
             }

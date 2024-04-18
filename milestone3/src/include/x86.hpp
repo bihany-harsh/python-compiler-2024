@@ -63,6 +63,7 @@ typedef struct Instruction_Wrapper {
 
     vector<vector<Quadruple*>> functions;
     vector<Instruction*> instructions;
+    vector<Instruction*> data_segment;
     vector<Function_Wrapper*> function_wrappers;
 
     // map <string, vector<Quadruple*>> func_IR_map;

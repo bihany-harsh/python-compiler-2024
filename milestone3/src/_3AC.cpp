@@ -37,6 +37,9 @@ string Quadruple::make_code() {
         case Q_BINARY:
             code = this->label + ":\t" + this->result + " = " + this->arg1 + " " + this->op + " " + this->arg2;
             break;
+        case Q_BINARY_STR:
+            code = this->label + ":\t" + this->result + " = " + this->arg1 + " " + this->op + " " + this->arg2;
+            break;
         case Q_COERCION:
             code = this->label + ":\t" + this->result + " = (" + this->arg1 + ") " + this->arg2;
             break;

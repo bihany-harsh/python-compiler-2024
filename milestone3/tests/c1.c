@@ -1,13 +1,11 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
-int f(int a, int b) {
-    return a + b;
-}
 
 int main() {
-    int a = f(3, 4);
-    printf("%d\n", a);
-    printf("hello");
-    return 0;
+    char a[] = "Hello World, this is Swarnendu and I am conducting Compiler Design Course at IIT Kanpur aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    char b[] = "hello world, this is Debadatta and I am conducting OS    at IIT Kanpur bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+    printf("%d\n", strcmp(b, a));
 }

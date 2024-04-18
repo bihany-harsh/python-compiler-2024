@@ -13,6 +13,7 @@ typedef enum POS {
 typedef enum quad_type {
     Q_UNARY,
     Q_BINARY,
+    Q_BINARY_STR,
     Q_COERCION,
     Q_ASSIGN,
     Q_DEREFERENCE,
