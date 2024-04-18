@@ -247,7 +247,7 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
             } else {
                 instr = new Instruction("imulq", to_string(y) + "(%rbp)", "%rdx", "", I_INSTRUCTION);
             }
-        } else if (quad->op == "//") {
+        } else if (quad->op == "//" || quad->op == "/") {
             if (!is_variable(quad->arg1)) {
                 instr = new Instruction("movq", "$" + quad->arg1, "%rax", "", I_INSTRUCTION);
             } else {
@@ -309,6 +309,31 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
             }
             instructions.push_back(instr);
             instr = new Instruction("salq", "%cl", "%rdx", "", I_INSTRUCTION);
+        } else if (quad->op == "and") {
+            cout << quad->code << endl;
+            if (is_variable(quad->arg1)) {
+                instr = new Instruction("movq", to_string(x) + "(%rbp)", "%rdx", "", I_INSTRUCTION);
+            } else {
+                instr = new Instruction("movq", "$" + quad->arg1, "%rdx", "", I_INSTRUCTION);
+            }
+            instructions.push_back(instr);
+            if (!is_variable(quad->arg2)) {
+                instr = new Instruction("and", "$" + quad->arg2, "%rdx", "", I_INSTRUCTION);
+            } else {
+                instr = new Instruction("and", to_string(y) + "(%rbp)", "%rdx", "", I_INSTRUCTION);
+            }
+        } else if (quad->op == "or") {
+            if (is_variable(quad->arg1)) {
+                instr = new Instruction("movq", to_string(x) + "(%rbp)", "%rdx", "", I_INSTRUCTION);
+            } else {
+                instr = new Instruction("movq", "$" + quad->arg1, "%rdx", "", I_INSTRUCTION);
+            }
+            instructions.push_back(instr);
+            if (!is_variable(quad->arg2)) {
+                instr = new Instruction("or", "$" + quad->arg2, "%rdx", "", I_INSTRUCTION);
+            } else {
+                instr = new Instruction("or", to_string(y) + "(%rbp)", "%rdx", "", I_INSTRUCTION);
+            }
         } else if (quad->op == ">") {
             if (!is_variable(quad->arg1)) {
                 instr = new Instruction("movq", "$" + quad->arg1, "%rdx", "", I_INSTRUCTION);
@@ -579,6 +604,143 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
 
         instr = new Instruction("movq", "%rdx", to_string(z) + "(%rbp)", "", I_INSTRUCTION);
         instructions.push_back(instr);
+    } else if (quad->q_type == Q_BINARY_STR) {
+        instr = new Instruction("pushq", "%rbp", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("movq", "%rsp", "%rbp", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%rbx", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%rdi", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%rsi", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r12", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r13", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r14", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("pushq", "%r15", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+
+        instr = new Instruction("movq", to_string(x) + "(%rbp)", "%rdi", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("movq", to_string(y) + "(%rbp)", "%rsi", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+
+        instr = new Instruction("call", "strcmp@PLT", "", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+
+        // rax has result
+
+        instr = new Instruction("movq", "%rax", "%rdx", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+        instr = new Instruction("movq", "$0", "%rcx", "", I_INSTRUCTION);
+        instructions.push_back(instr);
+
+        if (quad->op == ">") {
+            instr = new Instruction("cmpq", "%rdx", "%rcx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jl", "1f", "", "", I_INSTRUCTION); // TRUE
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$0", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION); // FALSE
+            instructions.push_back(instr);
+            instr = new Instruction("1", "", "", "", I_LABEL);
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$1", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("2", "", "", "", I_LABEL);
+        } else if (quad->op == "<") {
+            instr = new Instruction("cmpq", "%rdx", "%rcx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jg", "1f", "", "", I_INSTRUCTION); // TRUE
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$0", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION); // FALSE
+            instructions.push_back(instr);
+            instr = new Instruction("1", "", "", "", I_LABEL);
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$1", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("2", "", "", "", I_LABEL);
+        } else if (quad->op == ">=") {
+            instr = new Instruction("cmpq", "%rdx", "%rcx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jle", "1f", "", "", I_INSTRUCTION); // TRUE
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$0", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION); // FALSE
+            instructions.push_back(instr);
+            instr = new Instruction("1", "", "", "", I_LABEL);
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$1", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("2", "", "", "", I_LABEL);
+        } else if (quad->op == "<=") {
+            instr = new Instruction("cmpq", "%rdx", "%rcx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jge", "1f", "", "", I_INSTRUCTION); // TRUE
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$0", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION); // FALSE
+            instructions.push_back(instr);
+            instr = new Instruction("1", "", "", "", I_LABEL);
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$1", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("2", "", "", "", I_LABEL);
+        } else if (quad->op == "==") {
+            instr = new Instruction("cmpq", "%rdx", "%rcx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("je", "1f", "", "", I_INSTRUCTION); // TRUE
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$0", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION); // FALSE
+            instructions.push_back(instr);
+            instr = new Instruction("1", "", "", "", I_LABEL);
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$1", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("2", "", "", "", I_LABEL);
+        } else if (quad->op == "!=") {
+            instr = new Instruction("cmpq", "%rdx", "%rcx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jne", "1f", "", "", I_INSTRUCTION); // TRUE
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$0", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION); // FALSE
+            instructions.push_back(instr);
+            instr = new Instruction("1", "", "", "", I_LABEL);
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$1", "%rdx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jmp", "2f", "", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("2", "", "", "", I_LABEL);
+        }
+
+        instructions.push_back(instr);
+
+        instr = new Instruction("movq", "%rdx", to_string(z) + "(%rbp)", "", I_INSTRUCTION);
+        instructions.push_back(instr);
     } else if (quad->q_type == Q_UNARY) {
         if (quad->op == "~") {
             if (!is_variable(quad->arg1)) {
@@ -629,10 +791,10 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
                 this->data_segment.push_back(instr);
 
                 instr = new Instruction("leaq", quad->result + "_str(%rip)", "%rdx", "", I_INSTRUCTION);
-                this->instructions.push_back(instr);
+                instructions.push_back(instr);
 
                 instr = new Instruction("movq", "%rdx", to_string(y) + "(%rbp)", "", I_INSTRUCTION);
-                this->instructions.push_back(instr);
+                instructions.push_back(instr);
             } else  {
                 instr = new Instruction("movq", to_string(x) + "(%rbp)", "%rdx", "", I_INSTRUCTION);
                 instructions.push_back(instr);
@@ -1139,6 +1301,22 @@ void Instruction_Wrapper::gen_x86_basic_block(vector<Quadruple*> basic_block, Fu
             gen_instruction = this->generator(quad, -1, -1, -1);
         } else if (quad->q_type == Q_BINARY_STR) {
             // cout << quad->code << endl;
+            if (func_wrapper->variable_offset_map.find(quad->result) == func_wrapper->variable_offset_map.end()) {
+                z = -1;
+            } else {
+                z = func_wrapper->variable_offset_map[quad->result]->offset;
+            }
+            if (func_wrapper->variable_offset_map.find(quad->arg1) == func_wrapper->variable_offset_map.end()) {
+                x = -1;
+            } else {
+                x = func_wrapper->variable_offset_map[quad->arg1]->offset;
+            }
+            if (func_wrapper->variable_offset_map.find(quad->arg2) == func_wrapper->variable_offset_map.end()) {
+                y = -1;
+            } else {
+                y = func_wrapper->variable_offset_map[quad->arg2]->offset;
+            }
+            gen_instruction = this->generator(quad, x, y, z);
         } else {
             gen_instruction = this->generator(quad, -1, -1, -1);
         }
@@ -1162,7 +1340,7 @@ void Instruction_Wrapper::gen_x86_function(vector<Quadruple*> func_IR, Function_
     for(Quadruple* quad: func_IR) {
         if (quad->q_type == Q_COND_JUMP || (quad->q_type == Q_JUMP && quad->op == "goto")) {
             leaders.insert(atoi(quad->result.c_str()));
-            leaders.insert(atoi(quad->label.c_str()));
+            leaders.insert(atoi(quad->label.c_str()) + 1);
         } else if (quad->q_type == Q_FUNC_CALL) {
             leaders.insert(atoi(quad->label.c_str()));
             leaders.insert(atoi(quad->label.c_str()) + 1);

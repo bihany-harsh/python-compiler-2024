@@ -26,7 +26,7 @@ f:
 .LC0:
 	.string	"%d\n"
 .LC1:
-	.string	"hello"
+	.string	"hello world"
 	.text
 	.globl	main
 	.type	main, @function
@@ -40,21 +40,31 @@ main:
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register 6
 	subq	$16, %rsp
-	movl	$4, %esi
-	movl	$3, %edi
+	movq	%fs:40, %rax
+	movq	%rax, -8(%rbp)
+	xorl	%eax, %eax
+	movl	$2, %esi
+	movl	$1, %edi
 	call	f
-	movl	%eax, -4(%rbp)
-	movl	-4(%rbp), %eax
 	movl	%eax, %esi
 	leaq	.LC0(%rip), %rax
 	movq	%rax, %rdi
 	movl	$0, %eax
 	call	printf@PLT
+	movl	$1819043176, -14(%rbp)
+	movw	$111, -10(%rbp)
 	leaq	.LC1(%rip), %rax
 	movq	%rax, %rdi
+	call	puts@PLT
+	leaq	-14(%rbp), %rax
+	movq	%rax, %rdi
+	call	puts@PLT
 	movl	$0, %eax
-	call	printf@PLT
-	movl	$0, %eax
+	movq	-8(%rbp), %rdx
+	subq	%fs:40, %rdx
+	je	.L5
+	call	__stack_chk_fail@PLT
+.L5:
 	leave
 	.cfi_def_cfa 7, 8
 	ret

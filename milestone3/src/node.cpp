@@ -396,7 +396,7 @@ node* sem_lval_check(node* root, int is_declared) {
                 return nullptr; // TODO: check semantic
             }
             if (tmp->children[0]->type == IDENTIFIER) {
-                if (SYMBOL_TABLE->get_entry(tmp->children[0]->name)->b_type != D_LIST) {
+                if (SYMBOL_TABLE->get_entry(tmp->children[0]->name)->b_type != D_LIST && SYMBOL_TABLE->get_entry(tmp->children[0]->name)->b_type != D_CLASS && SYMBOL_TABLE->get_entry(tmp->children[0]->name)->b_type != D_FUNCTION) {
                     yyerror("1. Not a valid lvalue.");
                 } else  {
                     return nullptr;
@@ -1744,19 +1744,19 @@ string node::get_lhs_operand() {
     }
     switch(this->children[0]->type) {
         case IDENTIFIER:
-            this->children[0]->operand_type = SYMBOL_TABLE->get_entry(this->children[0]->name)->b_type;
+            // this->children[0]->operand_type = SYMBOL_TABLE->get_entry(this->children[0]->name)->b_type;
             return this->children[0]->name;
         case STRING_LITERAL:
-            this->children[0]->operand_type = D_STRING;
+            // this->children[0]->operand_type = D_STRING;
             return this->children[0]->name;
         case BOOL_NUMBER:
-            this->children[0]->operand_type = D_BOOL;
+            // this->children[0]->operand_type = D_BOOL;
             return this->children[0]->name;
         case INT_NUMBER:
-            this->children[0]->operand_type = D_INT;
+            // this->children[0]->operand_type = D_INT;
             return this->children[0]->name;
         case FLOAT_NUMBER:
-            this->children[0]->operand_type = D_FLOAT;
+            // this->children[0]->operand_type = D_FLOAT;
             return this->children[0]->name;
         case UNARY_OP:
             this->children[0]->operand_type = this->children[0]->children[0]->operand_type;
@@ -1863,19 +1863,19 @@ string node::get_rhs_operand() {
     }
     switch(this->children[1]->type) {
         case IDENTIFIER:
-            this->children[1]->operand_type = SYMBOL_TABLE->get_entry(this->children[1]->name)->b_type;
+            // this->children[1]->operand_type = SYMBOL_TABLE->get_entry(this->children[1]->name)->b_type;
             return this->children[1]->name;
         case FLOAT_NUMBER:
-            this->children[1]->operand_type = D_FLOAT;
+            // this->children[1]->operand_type = D_FLOAT;
             return this->children[1]->name;
         case INT_NUMBER:
-            this->children[1]->operand_type = D_INT;
+            // this->children[1]->operand_type = D_INT;
             return this->children[1]->name;
         case STRING_LITERAL:
-            this->children[1]->operand_type = D_STRING;
+            // this->children[1]->operand_type = D_STRING;
             return this->children[1]->name;
         case BOOL_NUMBER:
-            this->children[1]->operand_type = D_BOOL;
+            // this->children[1]->operand_type = D_BOOL;
             return this->children[1]->name;
         case ATOM_EXPR:
             if(this->children[1]->children[0]->name == "print") {
@@ -2262,7 +2262,7 @@ void node::generate_3ac() {
         if(child != nullptr) {
             // cout << "before calling " << child->name << ", IC = " << INTERMEDIATE_COUNTER << endl;
             if(this->type == FILE_INPUT) {
-                INTERMEDIATE_COUNTER = 1; // resetting it for each statement
+                // INTERMEDIATE_COUNTER = 1; // resetting it for each statement
                 // IR.push_back(new Quadruple("", "", "", "", Q_BLANK));
             }
             child->generate_3ac();
@@ -2674,8 +2674,19 @@ void node::generate_3ac() {
         case COMPARE:
             // TODO: to support `in`, `is` etc.
             op1 = this->get_lhs_operand();
+            if(this->children[0]->type == STRING_LITERAL) {
+                q = new Quadruple("", op1, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_ASSIGN);
+                IR.push_back(q);
+                op1 = q->result;
+            }
+
             op2 = this->get_rhs_operand();
-            this->operand_type = D_BOOL;
+            if(this->children[1]->type == STRING_LITERAL) {
+                q = new Quadruple("", op2, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_ASSIGN);
+                IR.push_back(q);
+                op2 = q->result;
+            }
+            this->operand_type = D_INT;
             result = "t" + to_string(INTERMEDIATE_COUNTER++);
             if (this->children[0]->operand_type == D_STRING) {
                 this->_3acode = new Quadruple(this->name, op1, op2, result, Q_BINARY_STR);

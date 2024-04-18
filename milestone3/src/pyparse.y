@@ -96,8 +96,8 @@ file_input                  :   multiple_lines {
                                     if(verbose_flag) {
                                         cout << "AST cleaning done!" << endl;
                                     }
-                                //     AST_ROOT->delete_delimiters();   
-                                //     AST_ROOT->delete_single_child_nodes();
+                                    AST_ROOT->delete_delimiters();   
+                                    AST_ROOT->delete_single_child_nodes();
                             }
                             ;
 multiple_lines              :   multiple_lines single_line {
