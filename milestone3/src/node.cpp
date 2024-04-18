@@ -1789,15 +1789,15 @@ string node::get_rhs_operand() {
                 yyerror("SyntaxError: print cannot be part of an expression.");
             }
             else if(this->children[1]->children[0]->name == "self") {
-                return this->children[1]->children[0]->_3acode->result;
+                return this->children[1]->_3acode->result;
             }
             else if(this->children[1]->children[0]->name == "range") {
                 yyerror("not handling this yet");
             } else if(this->children[1]->children[0]->name == "len") {
-                if (!this->children[1]->children[0]->_3acode) {
+                if (!this->children[1]->_3acode) {
                     yyerror("4. UnexpectedError: there should've been a 3ac here");
                 }
-                return this->children[1]->children[0]->_3acode->result;
+                return this->children[1]->_3acode->result;
             }
             entry = SYMBOL_TABLE->get_entry(this->children[1]->children[0]->name);
             if(entry == nullptr) {
