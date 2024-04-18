@@ -97,9 +97,9 @@ int main(int argc, const char** argv) {
         cout << "3AC generated!" << endl;
     }
 
-    // SYMBOL_TABLE->print_st();
-
     output_3AC_to_txt("three_address_code.txt");
+
+    // SYMBOL_TABLE->print_st();
 
     Instruction_Wrapper* x86 = new Instruction_Wrapper(x86_filename);
     x86->gen_x86_init();

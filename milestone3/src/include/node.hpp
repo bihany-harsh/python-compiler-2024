@@ -318,6 +318,8 @@ string make_function_label(node* funcdef);
 
 pair<bool,bool> check_coerce_required(base_data_type formal, base_data_type actual);
 
+st_entry* find_class_function_entry(string class_name, node* atom_expr);
+
 symbol_table_entry* call_class_init(node* atom_expr, symbol_table* class_st);
 
 symbol_table_entry* get_compatible_function_and_push_param(node* atom_expr);

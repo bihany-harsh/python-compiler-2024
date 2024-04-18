@@ -915,9 +915,9 @@ string make_function_label(node* funcdef) {
     string label = "";
     node* parameters = funcdef->children[2];
     if (SYMBOL_TABLE->parent->st_type == CLASS) {
-        label = SYMBOL_TABLE->parent->st_name + "$" + funcdef->children[1]->name;; // name of the class + name of the function
-        if(parameters->children[0]->name != "self") {
-            yyerror("IncompatibilityError: Class member methods must have a `self` argument.");
+        label = SYMBOL_TABLE->parent->st_name + "$" + funcdef->children[1]->name; // name of the class + name of the function
+        if (parameters->children.size() == 0 || parameters->children[0]->name != "self") {
+            yyerror("IncompatibilityError: Class member methods must have a `self` argument/`self` as its first argument");
         }
         for (int i = 1; i < parameters->children.size(); i++) { // from 1 because 0 is self
             label += "$" + parameters->children[i]->children[1]->name;
@@ -1012,6 +1012,99 @@ pair<bool,bool> check_coerce_required(pair<base_data_type, string> formal, pair<
             return {false, true};
         break;
     }
+}
+
+st_entry* find_class_function_entry(string class_name, node* atom_expr) {
+    st_entry* class_entry = SYMBOL_TABLE->get_entry(class_name);
+    st_entry* arg_entry, *func_entry;
+    string func_name = atom_expr->children[2]->children[1]->name;
+    string result;
+    node* trailer = atom_expr->children[3];
+    Quadruple* q;
+    bool found = false;
+    bool incompatible_args = false;
+    if (!class_entry) {
+        yyerror("SyntaxError: Class not defined.");
+    }
+    for (st_entry* entry: class_entry->child_symbol_table->entries) {
+        incompatible_args = false;
+        if (entry->name == func_name) {
+            if (entry->b_type == D_FUNCTION) {
+                if (entry->f_attr.num_args != trailer->children.size()) {
+                    continue;
+                }
+                for (int i = 0; i < entry->f_attr.num_args; i++) {
+                    base_data_type arg_btype = entry->f_attr.args[i];
+                    if (trailer->children[i]->operand_type == D_LIST) {
+                        if (SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type == D_CLASS) {
+                            arg_entry = SYMBOL_TABLE->get_entry(trailer->children[i]->name);
+                            if (arg_entry->l_attr.class_name != entry->f_attr.list_types[i]) {
+                                incompatible_args = true;
+                                break;
+                            }
+                        }
+                        else {
+                            if (base_data_type_map.find(SYMBOL_TABLE->get_entry(trailer->children[i]->name)->l_attr.list_elem_type)->second != entry->f_attr.list_types[i]) {
+                                incompatible_args = true;
+                                break;
+                            }
+                        }
+                    }
+                    else {
+                        if (arg_btype != trailer->children[i]->operand_type) {
+                            // FIXME: ignoring float and bool, checking only for equality
+                            incompatible_args = true;
+                            break;
+                        }
+                    }
+                }
+                if (incompatible_args == false) {
+                    if (found) {
+                        yylineno = atom_expr->line_no;
+                        yyerror(("Call of function " + func_name + " is ambiguous.").c_str());
+                    }
+                    else {
+                        found = true;
+                        func_entry = entry;
+                    }
+                }
+            }
+            else {
+                yyerror("SyntaxError: Data member is not callable");
+            }
+        }
+    }
+    if (!found) {
+        yylineno = atom_expr->line_no;
+        yyerror(("SyntaxError: Function " + func_name + " not found in class " + class_name).c_str());
+    }
+
+    // FIXME: no coercion being considered because floats are to be ignored
+    for(int i = func_entry->f_attr.num_args - 1; i >= 0; i--) {
+        if (trailer->children[i]->_3acode != nullptr) {
+            result = trailer->children[i]->_3acode->result;
+        }
+        else {
+            result = trailer->children[i]->name;
+        }
+        q = new Quadruple("", "", "", result, Q_PUSH_PARAM);
+        IR.push_back(q);
+    }
+    if (atom_expr->children[1]->children[0]->_3acode == nullptr) {
+        q = new Quadruple("*", atom_expr->children[1]->children[0]->name, "8", "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+    }
+    else {
+        q = new Quadruple("*", atom_expr->children[1]->children[0]->_3acode->result, "8", "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+    }
+    IR.push_back(q);
+    q = new Quadruple("+", atom_expr->children[0]->name, q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+    IR.push_back(q);
+    q = new Quadruple("", q->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+    IR.push_back(q);
+    q = new Quadruple("", "", "", q->result, Q_PUSH_PARAM);
+    IR.push_back(q);
+    // cout << "func_label = " << func_entry->label << endl;
+    return func_entry;
 }
 
 symbol_table_entry* call_class_init(node* atom_expr, symbol_table* class_st) {
@@ -1395,7 +1488,7 @@ void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
                     return_type_actual = return_stmt->children[1]->operand_type;
                 } else {
                     yylineno = return_stmt->line_no;
-                    yyerror("UnexpectedError: Invalid return type.");
+                    yyerror("1. UnexpectedError: Invalid return type.");
                 }
         }
     } else {
@@ -1493,7 +1586,6 @@ void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
                 yyerror("TypeError: argument does not match return type.");
             }
             break;
-        // TODO: check for D_CLASS
         case D_LIST:
             if (return_type_actual != D_LIST) {
                 yylineno = return_stmt->line_no;
@@ -1507,9 +1599,20 @@ void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
             funcdef->_3acode = new Quadruple("return", "", "", return_stmt->children[1]->name, Q_JUMP);
             IR.push_back(funcdef->_3acode);
             break;
+        case D_CLASS:
+            if (return_type_actual == D_CLASS) {
+                if (funcdef->children[4]->name != SYMBOL_TABLE->get_entry(return_stmt->children[1]->name)->class_name) {
+                    yyerror("SyntaxError: Function returning object of another class.");
+                }
+            } else {
+                yyerror("SyntaxError: Function is supposed to return a class object.");
+            }
+            funcdef->_3acode = new Quadruple("return", "", "", return_stmt->children[1]->name, Q_JUMP);
+            IR.push_back(funcdef->_3acode);
+            break;
         default:
             yylineno = funcdef->line_no;
-            yyerror("UnexpectedError: Invalid return type.");
+            yyerror("2. UnexpectedError: Invalid return type.");
             break;
     }
 }
@@ -1672,9 +1775,12 @@ string node::get_lhs_operand() {
             }
             else if(this->children[0]->children[0]->name == "self") {
                 if(this->type != ASSIGN) { // if not the LHS of an assign
-                    q = new Quadruple("", this->children[0]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
-                    IR.push_back(q);
-                    return q->result;
+                    // q = new Quadruple("", this->children[0]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                    // IR.push_back(q);
+                    if (!this->children[0]->_3acode) {
+                        yyerror("UnexpectedError: there should've been a 3ac here");
+                    }
+                    return this->children[0]->_3acode->result;
                 }
                 else { // if the left side of an assign
                     // this->children[0]->_3acode->result = "*" + this->children[0]->_3acode->result;
@@ -1683,8 +1789,14 @@ string node::get_lhs_operand() {
                     return this->children[0]->_3acode->result;
                 }
             }
-            else if (this->children[0]->children[0]->name == "range" || this->children[0]->children[0]->name == "len") {
+            else if (this->children[0]->children[0]->name == "range") {
                 yyerror("not handling this yet");
+            } else if (this->children[0]->children[0]->name == "len") {
+                if (!this->children[0]->_3acode) {
+                    yyerror("UnexpectedError: there should've been a 3ac here");
+                }
+                this->children[0]->operand_type = D_INT;
+                return this->children[0]->_3acode->result;
             }
             entry = SYMBOL_TABLE->get_entry(this->children[0]->children[0]->name);
             if(entry == nullptr) {
@@ -1763,18 +1875,32 @@ string node::get_rhs_operand() {
             else if(this->children[1]->children[0]->name == "self") {
                 return this->children[1]->_3acode->result;
             }
-            else if(this->children[1]->children[0]->name == "range" || this->children[1]->children[0]->name == "len") {
+            else if(this->children[1]->children[0]->name == "range") {
                 yyerror("not handling this yet");
+            } else if(this->children[1]->children[0]->name == "len") {
+                if (!this->children[0]->_3acode) {
+                    yyerror("UnexpectedError: there should've been a 3ac here");
+                }
+                return this->children[0]->_3acode->result;
             }
             entry = SYMBOL_TABLE->get_entry(this->children[1]->children[0]->name);
             if(entry == nullptr) {
                 yyerror("UnexpectedError: Couldn't find entry of the list variable");
             }
-            if(entry->b_type == D_LIST) {
-                this->children[1]->operand_type = entry->l_attr.list_elem_type;
-                q = new Quadruple("", this->children[1]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
-                IR.push_back(q);
-                return q->result;
+            if (entry->b_type == D_LIST) {
+                if (entry->l_attr.list_elem_type != D_CLASS) {
+                    this->children[1]->operand_type = entry->l_attr.list_elem_type;
+                    q = new Quadruple("", this->children[1]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                    IR.push_back(q);
+                    return q->result;
+                } else {
+                    // cout << "we are here for atom_expr of class obj func call " << this->children[1]->children[0]->name << endl; 
+                    if(!this->children[1]->_3acode) {
+                        yyerror("Should've had a 3ac here.");
+                    }
+                    return this->children[1]->_3acode->result;
+                }
+                // this->children[1]->operand_type = entry->l_attr.list_elem_type;
             }
             else if(entry->b_type == D_FUNCTION) {
                 this->children[1]->operand_type = entry->f_attr.return_type;
@@ -1978,7 +2104,6 @@ void node::check_operand_type_compatibility() {
                     }
                 break;
                 case D_INT:
-                    // cout << "this->children[1]->operand_type = " << this->children[1]->operand_type << endl;
                     if(this->children[1]->operand_type == D_BOOL || this->children[1]->operand_type == D_FLOAT) {
                         temp_result = "t" + to_string(INTERMEDIATE_COUNTER++);
                         if(this->children[1]->_3acode != nullptr) {
@@ -2245,11 +2370,30 @@ void node::generate_3ac() {
             if(this->children[0]->name == "print") {
                 op1 = this->get_rhs_operand();
                 // cout << "IN PRINT with " << op1 << endl;
-                if (this->children[1]->type == TRAILER) {
-
+                // if (this->children[1]->children[0]->type == ATOM_EXPR) {
+                //     if(this->children[1]->children[0]->name == "self") {
+                //         q = new Quadruple("", this->children[1]->children[0]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                //         IR.push_back(q);
+                //         this->_3acode = new Quadruple("", q->result, "", "", Q_PRINT);
+                //         IR.push_back(this->_3acode);
+                //     }
+                //     else if (this->children[1]->children[0]->type == IDENTIFIER) {
+                //         // if ()
+                //     }
+                // }
+                if (this->children[1]->children[0]->type == IDENTIFIER) {
+                    entry = SYMBOL_TABLE->get_entry(this->children[1]->children[0]->name);
+                    if (entry->b_type == D_CLASS) {
+                        yyerror("TypeError: Cannot print a class object.");
+                    }
+                    if (entry->b_type == D_FUNCTION) {
+                        yyerror("TypeError: Cannot print a function object.");
+                    }
+                    if (entry->b_type == D_LIST) {
+                        yyerror("TypeError: Cannot print a list object.");
+                    }
                 }
                 this->_3acode = new Quadruple("", op1, "", "", Q_PRINT);
-                // TODO: any type checking here? : yes, cannot print classes, function
                 IR.push_back(this->_3acode);
             }
             else if(this->children[0]->name == "self") {
@@ -2260,12 +2404,20 @@ void node::generate_3ac() {
                 }
                 offset = entry->offset;
                 // this->_3acode = new Quadruple("+", "addr(self)", to_string(offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
-                this->_3acode = new Quadruple("+", "self", to_string(offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                 this->operand_type = entry->b_type;
+                q = new Quadruple("+", "self", to_string(offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                IR.push_back(q);
+                this->_3acode = new Quadruple("", q->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
                 IR.push_back(this->_3acode);
             } 
-            else if(this->children[0]->name == "len") { // this->children[0]->name == "range"
-                yyerror("Not supporting this yet");
+            else if(this->children[0]->name == "len") {
+                entry = SYMBOL_TABLE->get_entry(this->children[1]->children[0]->name);
+                if (!entry || entry->b_type != D_LIST) {
+                    yylineno = this->line_no;
+                    yyerror("SyntaxError: Not a valid argument passed with list");
+                }
+                this->_3acode = new Quadruple("", to_string(entry->l_attr.num_of_elems), "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_ASSIGN);
+                IR.push_back(this->_3acode);
             }
             else if (this->children[0]->name == "range") {
                 // this is the for loop
@@ -2282,7 +2434,7 @@ void node::generate_3ac() {
                     op1 = this->children[1]->get_lhs_operand();
                     if(this->children[1]->children[0]->operand_type != D_INT) {
                         yylineno = this->line_no;
-                        yyerror("TypeError: `range` can only iterate over integers.");
+                        yyerror("1. TypeError: `range` can only iterate over integers.");
                     }
                     this->_3acode = new Quadruple("=", op1, "", this->parent->children[0]->name, Q_ASSIGN);
 
@@ -2297,38 +2449,96 @@ void node::generate_3ac() {
             else if(this->children[0]->type == IDENTIFIER) {
                 entry = SYMBOL_TABLE->get_entry(this->children[0]->name);
                 if(entry->b_type == D_LIST) {
-                    op1 = this->get_lhs_operand();
-                    op2 = this->get_rhs_operand();
-                    entry = SYMBOL_TABLE->get_entry(op1);
-                    if(this->children[1]->children[0]->type == INT_NUMBER && atoi(op2.c_str()) > entry->l_attr.num_of_elems) {
-                        yylineno = this->line_no;
-                        yyerror(("IndexError: list index out of range for list " + this->children[0]->name).c_str());
-                    }
-
-                    // manual type checking
-                    temp_result = op2;
-                    if(this->children[1]->children[0]->operand_type == D_BOOL) {
-                        temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++));
-                        if(this->children[1]->children[0]->_3acode != nullptr) {
-                            // there is some temporary result stored, that has to be coerced
-                            q = new Quadruple("=", "int", this->children[1]->children[0]->_3acode->result, temp_result, Q_COERCION);
-                        } else {
-                            q = new Quadruple("=", "int", this->children[1]->children[0]->name, temp_result, Q_COERCION);
+                    if (entry->l_attr.list_elem_type != D_CLASS) {
+                        // this is a normal list of base data types
+                        op1 = this->get_lhs_operand();
+                        op2 = this->get_rhs_operand();
+                        entry = SYMBOL_TABLE->get_entry(op1);
+                        if(this->children[1]->children[0]->type == INT_NUMBER && atoi(op2.c_str()) > entry->l_attr.num_of_elems) {
+                            yylineno = this->line_no;
+                            yyerror(("IndexError: list index out of range for list " + this->children[0]->name).c_str());
                         }
-                        this->children[1]->children[0]->operand_type = D_INT;
-                        IR.push_back(q);
-                    }
-                    else if(this->children[1]->children[0]->operand_type != D_INT) {
-                        yylineno = this->children[0]->line_no;
-                        yyerror("IndexError: list index must be an integer");
-                    }
-                    q = new Quadruple("*", temp_result, to_string(entry->l_attr.list_elem_size), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
-                    IR.push_back(q);
-                    // q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
-                    q = new Quadruple("+", op1, q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
-                    IR.push_back(q);
-                    this->_3acode = q;
 
+                        // manual type checking
+                        temp_result = op2;
+                        if(this->children[1]->children[0]->operand_type == D_BOOL) {
+                            temp_result = ("t" + to_string(INTERMEDIATE_COUNTER++));
+                            if(this->children[1]->children[0]->_3acode != nullptr) {
+                                // there is some temporary result stored, that has to be coerced
+                                q = new Quadruple("=", "int", this->children[1]->children[0]->_3acode->result, temp_result, Q_COERCION);
+                            } else {
+                                q = new Quadruple("=", "int", this->children[1]->children[0]->name, temp_result, Q_COERCION);
+                            }
+                            this->children[1]->children[0]->operand_type = D_INT;
+                            IR.push_back(q);
+                        }
+                        else if(this->children[1]->children[0]->operand_type != D_INT) {
+                            yylineno = this->children[0]->line_no;
+                            yyerror("IndexError: list index must be an integer");
+                        }
+                        q = new Quadruple("*", temp_result, to_string(entry->l_attr.list_elem_size), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                        IR.push_back(q);
+                        // q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                        q = new Quadruple("+", op1, q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                        IR.push_back(q);
+                        q = new Quadruple("", q->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                        IR.push_back(q);
+                        this->_3acode = q;
+                    } else {
+                        // list of class objects
+                        yylineno = this->line_no;
+                        if (this->children.size() == 4) {
+                            if(this->children[1]->children.size() != 1 || this->children[1]->children[0]->operand_type != D_INT) {
+                                yyerror("SyntaxError: Incorrect indexing of a list of class objects");
+                            }
+                            if(this->children[2]->children.size() != 2 || this->children[2]->children[0]->name != ".") {
+                                yyerror("SyntaxError: Incorrect usage of a list of class objects.");
+                            }
+                            mem_entry = find_class_function_entry(entry->l_attr.class_name, this);
+                            this->operand_type = mem_entry->f_attr.return_type;
+                            q = new Quadruple("", ("+" + to_string(mem_entry->size)).c_str(), "", "", Q_SP_UPDATE);
+                            IR.push_back(q);
+                            this->_3acode = new Quadruple("", mem_entry->label, to_string(this->children[3]->children.size() + 1), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
+                            IR.push_back(this->_3acode);
+                            q = new Quadruple("", ("-" + to_string(mem_entry->size)).c_str(), "", "", Q_SP_UPDATE);
+                            IR.push_back(q);
+                        } else if (this->children.size() == 3) {
+                            if(this->children[1]->children.size() != 1 || this->children[1]->children[0]->operand_type != D_INT) {
+                                yyerror("SyntaxError: Incorrect indexing of a list of class objects");
+                            }
+                            if(this->children[2]->children.size() != 2 || this->children[2]->children[0]->name != ".") {
+                                yyerror("SyntaxError: Incorrect usage of a list of class objects.");
+                            }
+                            // accessing the data member and storing it in a temporary
+                            if (this->children[1]->children[0]->_3acode == nullptr) {
+                                q = new Quadruple("*", this->children[1]->children[0]->name, "8", "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                            } else {
+                                q = new Quadruple("*", this->children[1]->children[0]->_3acode->result, "8", "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                            }
+                            IR.push_back(q);
+                            q = new Quadruple("+", this->children[0]->name, q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                            IR.push_back(q);
+                            q = new Quadruple("", q->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                            IR.push_back(q);
+                            entry = SYMBOL_TABLE->get_entry(entry->l_attr.class_name);
+                            if (!entry) {
+                                yyerror("UnexpectedError: Class not declared.");
+                            }
+                            mem_entry = entry->child_symbol_table->get_entry("self." + this->children[2]->children[1]->name);
+                            this->operand_type = mem_entry->b_type;
+                            if(!mem_entry) {
+                                yyerror("SyntaxError: Could not find the required data entry.");
+                            }
+                            q = new Quadruple("+", q->result, to_string(mem_entry->offset), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+                            IR.push_back(q);
+                            this->_3acode = new Quadruple("", q->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
+                            IR.push_back(this->_3acode);
+                        } else {
+                            yyerror("SyntaxError: Incorrect usage of a list of class objects.");
+                        }
+
+                    }
+                    
                     // cout << this->_3acode->code << endl;
                 } 
                 else if(entry->b_type == D_FUNCTION) {
@@ -2408,14 +2618,18 @@ void node::generate_3ac() {
             else {
                 op1 = this->get_lhs_operand();
                 op2 = this->get_rhs_operand();
+                this->_3acode = new Quadruple(this->name, op2, "", op1, Q_ASSIGN);
+                IR.push_back(this->_3acode);
                 if (this->children[0]->type == ATOM_EXPR) {
-                    this->_3acode = new Quadruple(this->name, op2, "", op1, Q_STORE);
-                } else {
-                    this->_3acode = new Quadruple(this->name, op2, "", op1, Q_ASSIGN);
+                    if (!this->children[0]->_3acode) {
+                        yylineno = this->line_no;
+                        yyerror("UnexpectedError: There should've been a 3ac here.");
+                    }
+                    q = new Quadruple("", op1, "", this->children[0]->_3acode->arg1, Q_STORE);
+                    IR.push_back(q);
                 }
                 // cout << this->_3acode->code << endl;
                 this->check_operand_type_compatibility();
-                IR.push_back(this->_3acode);
             }
             return;
         case BIN_OP:
@@ -2473,7 +2687,7 @@ void node::generate_3ac() {
                 if (this->children[0]->type != IDENTIFIER) {
                     yyerror("SyntaxError: Expressions cannot be assigned.");
                 }
-                if (this->children[2]->children[0]->type != KEYWORD || this->children[2]->children[0]->name != "range") {
+                if (this->children[2]->children[0]->name != "range") {
                     yyerror("IncompatiblityError: `for` loop support of the form `for <var> in range(a, b){range(a)}");
                 }
 
@@ -2481,7 +2695,7 @@ void node::generate_3ac() {
                     op2 = this->children[2]->children[1]->get_lhs_operand();
                     if(this->children[2]->children[1]->children[0]->operand_type != D_INT) {
                         yylineno = this->line_no;
-                        yyerror("TypeError: `range` can only iterate over integers.");
+                        yyerror("2. TypeError: `range` can only iterate over integers.");
                     }
                     q = new Quadruple("<", this->children[0]->name, op2, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                     IR.push_back(q);
@@ -2490,7 +2704,7 @@ void node::generate_3ac() {
                     op2 = this->children[2]->children[1]->get_rhs_operand();
                     if(this->children[2]->children[1]->children[1]->operand_type != D_INT) {
                         yylineno = this->line_no;
-                        yyerror("TypeError: `range` can only iterate over integers.");
+                        yyerror("3. TypeError: `range` can only iterate over integers.");
                     }
                     q = new Quadruple("<", this->children[0]->name, op2, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
                     IR.push_back(q);

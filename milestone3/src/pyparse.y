@@ -1131,7 +1131,6 @@ many_comma_tfpdef_optional_equal_test   :   many_comma_tfpdef_optional_equal_tes
                                         ;
 tfpdef                      :   TOK_IDENTIFIER { $1 = new node(IDENTIFIER, yytext, true, NULL); } optional_tok_colon_test {
                                     // for now, we can keep it as optional_tok_colon_test since ```self``` will not have a type specification
-                                    // TODO: handle all args in num_args.
                                     if($3 != NULL) {
                                         num_args++;
                                         base_data_type b_type = sem_rval_check(SYMBOL_TABLE, $3->children[1]); // passing the node of ```test``` to rval_check
