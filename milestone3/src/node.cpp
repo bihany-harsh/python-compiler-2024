@@ -1345,6 +1345,7 @@ symbol_table_entry* get_compatible_function_and_push_param(node* atom_expr) {
         for (st_entry* st_entry: st->entries) {
             incompatible_args = false;
             if ((st_entry->b_type == D_FUNCTION) && (st_entry->name == func_name->name)) {
+                // cout << "found entry name: " << st_entry->name << endl;
                 if (st_entry->f_attr.num_args == trailer->children.size()) {
                     for(int i = 0; i < trailer->children.size(); i++) {
                         if(trailer->children[i]->operand_type == D_LIST) {
@@ -1380,6 +1381,7 @@ symbol_table_entry* get_compatible_function_and_push_param(node* atom_expr) {
             }
         }
         st = st->parent;
+        // cout << st->st_name << endl;
         if (found) 
             break;
     }
@@ -1627,8 +1629,7 @@ void do_list_assignment(node* assign) {
     entry = SYMBOL_TABLE->get_entry(op1);
     for(int i = 0; i < assign->children[1]->children.size(); i++) {
         node* temp = assign->children[1]->children[i];
-        //TODO: list of class objs: not checked that the class objs be of the same type
-        q = new Quadruple("*", to_string(i), to_string(entry->l_attr.list_elem_size), "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
+        q = new Quadruple("*", to_string(i), "8", "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
         IR.push_back(q);
         // q = new Quadruple("+", "addr(" + op1 + ")", q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
         q = new Quadruple("+", op1, q->result, "t" + to_string(INTERMEDIATE_COUNTER++), Q_BINARY);
@@ -1704,6 +1705,9 @@ void do_list_assignment(node* assign) {
                     yyerror("TypeError: Cannot assign string to a non-string.");
                 }
             break;
+            case D_CLASS:
+                //TODO: type checking: class name must be the same
+            break;
         }
         if(temp->_3acode == nullptr) {
             q = new Quadruple("=", temp_value, "", temp_result, Q_STORE);
@@ -1744,19 +1748,14 @@ string node::get_lhs_operand() {
     }
     switch(this->children[0]->type) {
         case IDENTIFIER:
-            // this->children[0]->operand_type = SYMBOL_TABLE->get_entry(this->children[0]->name)->b_type;
             return this->children[0]->name;
         case STRING_LITERAL:
-            // this->children[0]->operand_type = D_STRING;
             return this->children[0]->name;
         case BOOL_NUMBER:
-            // this->children[0]->operand_type = D_BOOL;
             return this->children[0]->name;
         case INT_NUMBER:
-            // this->children[0]->operand_type = D_INT;
             return this->children[0]->name;
         case FLOAT_NUMBER:
-            // this->children[0]->operand_type = D_FLOAT;
             return this->children[0]->name;
         case UNARY_OP:
             this->children[0]->operand_type = this->children[0]->children[0]->operand_type;
@@ -1794,7 +1793,7 @@ string node::get_lhs_operand() {
                 return this->children[0]->_3acode->result;
             }
             else if (this->children[0]->children[0]->name == "range") {
-                yyerror("not handling this yet");
+                yyerror("SyntaxError: Incorrect usage of range.");
             } else if (this->children[0]->children[0]->name == "len") {
                 if (!this->children[0]->_3acode) {
                     yyerror("UnexpectedError: there should've been a 3ac here");
@@ -1832,7 +1831,7 @@ string node::get_lhs_operand() {
                 return this->children[0]->_3acode->result;
             }
             else if(entry->b_type == D_FUNCTION) {
-                this->children[0]->operand_type = entry->f_attr.return_type;
+                // this->children[0]->operand_type = entry->f_attr.return_type;
                 return this->children[0]->_3acode->result;
             }
             break;
@@ -1913,8 +1912,8 @@ string node::get_rhs_operand() {
                 // this->children[1]->operand_type = entry->l_attr.list_elem_type;
             }
             else if(entry->b_type == D_FUNCTION) {
-                this->children[1]->operand_type = entry->f_attr.return_type;
-                return this->children[1]->_3acode->result; //FIXME: check this
+                // this->children[1]->operand_type = entry->f_attr.return_type;
+                return this->children[1]->_3acode->result;
             }
             else if(entry->b_type == D_CLASS) {
                 // have called a member method of a class. operand_type is already set. simply return the result
@@ -2339,7 +2338,7 @@ void node::generate_3ac() {
             }
             if(this->operand_type == D_LIST && this->parent->type == ASSIGN) {
                 if (this->parent->children[1]->type == TESTLIST_COMP) {
-                    q = new Quadruple("", to_string(entry->l_attr.list_elem_size * entry->l_attr.num_of_elems), "", this->name, Q_ALLOC);
+                    q = new Quadruple("", to_string(8 * entry->l_attr.num_of_elems), "", this->name, Q_ALLOC);
                     IR.push_back(q);
                 }
             }
@@ -2569,8 +2568,8 @@ void node::generate_3ac() {
                     // cout << this->_3acode->code << endl;
                 } 
                 else if(entry->b_type == D_FUNCTION) {
-                    this->operand_type = entry->f_attr.return_type;
                     entry = get_compatible_function_and_push_param(this);
+                    this->operand_type = entry->f_attr.return_type;
                     q = new Quadruple("", ("+" + to_string(entry->size)).c_str(), "", "", Q_SP_UPDATE);
                     IR.push_back(q);
                     this->_3acode = new Quadruple("", entry->label, to_string(this->children[1]->children.size()), "t" + to_string(INTERMEDIATE_COUNTER++), Q_FUNC_CALL);
