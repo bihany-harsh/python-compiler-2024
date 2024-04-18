@@ -6,19 +6,8 @@
 	t16_str: .asciz, "done"
 	t27_str: .asciz, "hello"
 	t43_str: .asciz, "Before starting the function"
-	t46_str: .asciz, "Element is present at index:"
-	t48_str: .asciz, "this is another string"
-	t51_str: .asciz, "After the function call"
-	t52_str: .asciz, "hello hehre"
-	t56_str: .asciz, "Sum is correct"
-	t57_str: .asciz, "Sum is incorrect"
-	t58_str: .asciz, "After the check"
-	t60_str: .asciz, "inside loop"
-	t61_str: .asciz, "here now"
-	c_str: .asciz, "harsh"
-	b_str: .asciz, "bihany"
-	t63_str: .asciz, "wowo"
-	t64_str: .asciz, "no"
+	t45_str: .asciz, "not v"
+	t48_str: .asciz, "Element is present at index:"
 	.globl main
 	.text
 func1:
@@ -223,6 +212,44 @@ func2:
 	pushq %r13
 	pushq %r14
 	pushq %r15
+	subq $16, %rsp
+	pushq %rax
+	pushq %rcx
+	pushq %rdx
+	pushq %r8
+	pushq %r9
+	pushq %r10
+	pushq %r11
+	pushq $12390
+	call print
+	addq $8, %rsp
+	popq %r11
+	popq %r10
+	popq %r9
+	popq %r8
+	popq %rdx
+	popq %rcx
+	popq %rax
+	addq $16, %rsp
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rsi
+	popq %rdi
+	popq %rbx
+	popq %rbp
+	ret
+func3:
+	pushq %rbp
+	movq %rsp, %rbp
+	pushq %rbx
+	pushq %rdi
+	pushq %rsi
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
 	subq $72, %rsp
 	movq 16(%rbp), %rdx
 	addq $0, %rdx
@@ -271,7 +298,7 @@ func2:
 	popq %rbx
 	popq %rbp
 	ret
-func3:
+func4:
 	pushq %rbp
 	movq %rsp, %rbp
 	pushq %rbx
@@ -334,8 +361,7 @@ func3:
 	popq %rbx
 	popq %rbp
 	ret
-main:
-func4:
+func5:
 	pushq %rbp
 	movq %rsp, %rbp
 	pushq %rbx
@@ -345,7 +371,7 @@ func4:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-	subq $496, %rsp
+	subq $320, %rsp
 	pushq %rax
 	pushq %rcx
 	pushq %rdx
@@ -486,24 +512,14 @@ func4:
 	popq %rdx
 	popq %rcx
 	popq %rax
-	xor %rdx, %rdx
-	subq $1, %rdx
-	movq %rdx, -224(%rbp)
-	movq -200(%rbp), %rdx
-	movq -224(%rbp), %rcx
-	cmpq %rdx, %rcx
-	jne 1f
-	movq $0, %rdx
-	jmp 2f
-1:
-	movq $1, %rdx
-	jmp 2f
-2:
+	movq $0, -224(%rbp)
+	movq -224(%rbp), %rdx
+	not %rdx
 	movq %rdx, -232(%rbp)
 	movq -232(%rbp), %rdx
 	cmpq $0, %rdx
-	je L105
-	leaq t46_str(%rip), %rdx
+	je L107
+	leaq t45_str(%rip), %rdx
 	movq %rdx, -248(%rbp)
 	pushq %rax
 	pushq %rcx
@@ -513,6 +529,44 @@ func4:
 	pushq %r10
 	pushq %r11
 	pushq -248(%rbp)
+	call printstr
+	addq $8, %rsp
+	popq %r11
+	popq %r10
+	popq %r9
+	popq %r8
+	popq %rdx
+	popq %rcx
+	popq %rax
+	jmp L107
+L107:
+	xor %rdx, %rdx
+	subq $1, %rdx
+	movq %rdx, -256(%rbp)
+	movq -200(%rbp), %rdx
+	movq -256(%rbp), %rcx
+	cmpq %rdx, %rcx
+	jne 1f
+	movq $0, %rdx
+	jmp 2f
+1:
+	movq $1, %rdx
+	jmp 2f
+2:
+	movq %rdx, -264(%rbp)
+	movq -264(%rbp), %rdx
+	cmpq $0, %rdx
+	je L114
+	leaq t48_str(%rip), %rdx
+	movq %rdx, -280(%rbp)
+	pushq %rax
+	pushq %rcx
+	pushq %rdx
+	pushq %r8
+	pushq %r9
+	pushq %r10
+	pushq %r11
+	pushq -280(%rbp)
 	call printstr
 	addq $8, %rsp
 	popq %r11
@@ -539,11 +593,11 @@ func4:
 	popq %rdx
 	popq %rcx
 	popq %rax
-	jmp L107
-L105:
+	jmp L116
+L114:
 	xor %rdx, %rdx
 	subq $1, %rdx
-	movq %rdx, -256(%rbp)
+	movq %rdx, -288(%rbp)
 	pushq %rax
 	pushq %rcx
 	pushq %rdx
@@ -551,7 +605,7 @@ L105:
 	pushq %r9
 	pushq %r10
 	pushq %r11
-	pushq -256(%rbp)
+	pushq -288(%rbp)
 	call print
 	addq $8, %rsp
 	popq %r11
@@ -561,43 +615,7 @@ L105:
 	popq %rdx
 	popq %rcx
 	popq %rax
-L107:
-	pushq %rax
-	pushq %rcx
-	pushq %rdx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
-	pushq $19999
-	call print
-	addq $8, %rsp
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rdx
-	popq %rcx
-	popq %rax
-	leaq t48_str(%rip), %rdx
-	movq %rdx, -272(%rbp)
-	pushq %rax
-	pushq %rcx
-	pushq %rdx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
-	pushq -272(%rbp)
-	call printstr
-	addq $8, %rsp
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rdx
-	popq %rcx
-	popq %rax
+L116:
 	pushq %rax
 	pushq %rcx
 	pushq %rdx
@@ -608,7 +626,7 @@ L107:
 	pushq $24
 	call allocmem
 	addq $8, %rsp
-	movq %rax, -280(%rbp)
+	movq %rax, -296(%rbp)
 	popq %r11
 	popq %r10
 	popq %r9
@@ -625,29 +643,9 @@ L107:
 	pushq %r11
 	pushq $6
 	pushq $5
-	pushq -280(%rbp)
-	call func2
-	addq $24, %rsp
-	movq %rax, -288(%rbp)
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rdx
-	popq %rcx
-	popq %rax
-	movq -288(%rbp), %rdx
-	movq %rdx, -280(%rbp)
-	pushq %rax
-	pushq %rcx
-	pushq %rdx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
-	pushq -280(%rbp)
+	pushq -296(%rbp)
 	call func3
-	addq $8, %rsp
+	addq $24, %rsp
 	movq %rax, -304(%rbp)
 	popq %r11
 	popq %r10
@@ -656,8 +654,8 @@ L107:
 	popq %rdx
 	popq %rcx
 	popq %rax
-	leaq t51_str(%rip), %rdx
-	movq %rdx, -328(%rbp)
+	movq -304(%rbp), %rdx
+	movq %rdx, -296(%rbp)
 	pushq %rax
 	pushq %rcx
 	pushq %rdx
@@ -665,9 +663,10 @@ L107:
 	pushq %r9
 	pushq %r10
 	pushq %r11
-	pushq -328(%rbp)
-	call printstr
+	pushq -296(%rbp)
+	call func4
 	addq $8, %rsp
+	movq %rax, -320(%rbp)
 	popq %r11
 	popq %r10
 	popq %r9
@@ -675,47 +674,22 @@ L107:
 	popq %rdx
 	popq %rcx
 	popq %rax
-	leaq t52_str(%rip), %rdx
-	movq %rdx, -344(%rbp)
-	pushq %rax
-	pushq %rcx
-	pushq %rdx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
-	pushq -344(%rbp)
-	call printstr
-	addq $8, %rsp
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rdx
-	popq %rcx
-	popq %rax
-	movq -280(%rbp), %rdx
-	addq $16, %rdx
+	movq $2, -336(%rbp)
+	movq $8, -344(%rbp)
+	movq -336(%rbp), %rdx
+	movq -344(%rbp), %rcx
+	movq $1, %rax
+	testq %rcx, %rcx
+	jz 2f
+1:
+	imulq %rdx, %rax
+	decq %rcx
+	jnz 1b
+2:
+	movq %rax, %rdx
 	movq %rdx, -352(%rbp)
 	movq -352(%rbp), %rdx
-	movq (%rdx), %rdx
 	movq %rdx, -360(%rbp)
-	movq -360(%rbp), %rdx
-	movq $11, %rcx
-	cmpq %rdx, %rcx
-	je 1f
-	movq $0, %rdx
-	jmp 2f
-1:
-	movq $1, %rdx
-	jmp 2f
-2:
-	movq %rdx, -368(%rbp)
-	movq -368(%rbp), %rdx
-	cmpq $0, %rdx
-	je L133
-	leaq t56_str(%rip), %rdx
-	movq %rdx, -384(%rbp)
 	pushq %rax
 	pushq %rcx
 	pushq %rdx
@@ -723,8 +697,8 @@ L107:
 	pushq %r9
 	pushq %r10
 	pushq %r11
-	pushq -384(%rbp)
-	call printstr
+	pushq -360(%rbp)
+	call print
 	addq $8, %rsp
 	popq %r11
 	popq %r10
@@ -733,127 +707,18 @@ L107:
 	popq %rdx
 	popq %rcx
 	popq %rax
-	jmp L135
-L133:
-	leaq t57_str(%rip), %rdx
-	movq %rdx, -400(%rbp)
-	pushq %rax
-	pushq %rcx
-	pushq %rdx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
-	pushq -400(%rbp)
-	call printstr
-	addq $8, %rsp
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rdx
-	popq %rcx
-	popq %rax
-L135:
-	leaq t58_str(%rip), %rdx
-	movq %rdx, -416(%rbp)
-	pushq %rax
-	pushq %rcx
-	pushq %rdx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
-	pushq -416(%rbp)
-	call printstr
-	addq $8, %rsp
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rdx
-	popq %rcx
-	popq %rax
-L137:
-	movq -200(%rbp), %rdx
-	movq $0, %rcx
-	cmpq %rdx, %rcx
-	jl 1f
-	movq $0, %rdx
-	jmp 2f
-1:
-	movq $1, %rdx
-	jmp 2f
-2:
-	movq %rdx, -424(%rbp)
-	movq -424(%rbp), %rdx
-	cmpq $0, %rdx
-	je L143
-	leaq t60_str(%rip), %rdx
-	movq %rdx, -440(%rbp)
-	pushq %rax
-	pushq %rcx
-	pushq %rdx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
-	pushq -440(%rbp)
-	call printstr
-	addq $8, %rsp
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rdx
-	popq %rcx
-	popq %rax
-	movq -200(%rbp), %rdx
-	subq $1, %rdx
-	movq %rdx, -200(%rbp)
-	jmp L137
-L143:
-	leaq t61_str(%rip), %rdx
-	movq %rdx, -456(%rbp)
-	pushq %rax
-	pushq %rcx
-	pushq %rdx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
-	pushq -456(%rbp)
-	call printstr
-	addq $8, %rsp
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rdx
-	popq %rcx
-	popq %rax
-	movq $10, -464(%rbp)
-	leaq c_str(%rip), %rdx
-	movq %rdx, -480(%rbp)
-	leaq b_str(%rip), %rdx
-	movq %rdx, -496(%rbp)
-	pushq %rax
-	pushq %rcx
-	pushq %rdx
-	pushq %r8
-	pushq %r9
-	pushq %r10
-	pushq %r11
-	pushq -496(%rbp)
-	call printstr
-	addq $8, %rsp
-	popq %r11
-	popq %r10
-	popq %r9
-	popq %r8
-	popq %rdx
-	popq %rcx
-	popq %rax
+	addq $320, %rsp
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %rsi
+	popq %rdi
+	popq %rbx
+	popq %rbp
+	ret
+main:
+func6:
 	pushq %rbp
 	movq %rsp, %rbp
 	pushq %rbx
@@ -863,25 +728,7 @@ L143:
 	pushq %r13
 	pushq %r14
 	pushq %r15
-	movq -480(%rbp), %rdi
-	movq -496(%rbp), %rsi
-	call strcmp@PLT
-	movq %rax, %rdx
-	movq $0, %rcx
-	cmpq %rdx, %rcx
-	jge 1f
-	movq $0, %rdx
-	jmp 2f
-1:
-	movq $1, %rdx
-	jmp 2f
-2:
-	movq %rdx, -504(%rbp)
-	movq -504(%rbp), %rdx
-	cmpq $0, %rdx
-	je L154
-	leaq t63_str(%rip), %rdx
-	movq %rdx, -520(%rbp)
+	subq $48, %rsp
 	pushq %rax
 	pushq %rcx
 	pushq %rdx
@@ -889,9 +736,8 @@ L143:
 	pushq %r9
 	pushq %r10
 	pushq %r11
-	pushq -520(%rbp)
-	call printstr
-	addq $8, %rsp
+	call func5
+	movq %rax, -64(%rbp)
 	popq %r11
 	popq %r10
 	popq %r9
@@ -899,10 +745,6 @@ L143:
 	popq %rdx
 	popq %rcx
 	popq %rax
-	jmp L156
-L154:
-	leaq t64_str(%rip), %rdx
-	movq %rdx, -536(%rbp)
 	pushq %rax
 	pushq %rcx
 	pushq %rdx
@@ -910,9 +752,8 @@ L154:
 	pushq %r9
 	pushq %r10
 	pushq %r11
-	pushq -536(%rbp)
-	call printstr
-	addq $8, %rsp
+	call func2
+	movq %rax, -80(%rbp)
 	popq %r11
 	popq %r10
 	popq %r9
@@ -920,7 +761,7 @@ L154:
 	popq %rdx
 	popq %rcx
 	popq %rax
-L156:
+L145:
 	movq $60, %rax
 	xor %rdi, %rdi
 	syscall

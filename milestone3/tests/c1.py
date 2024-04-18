@@ -15,6 +15,9 @@ def binarySearch(array: list[int], x: int, low: int, high: int) -> int:
 # def f(a : int, b: int) -> int:
 #   return a + b
 
+def f()->None:
+  print(12390)
+
 class A():
   def __init__(self, a: int, b: int):
     self.a: int = a
@@ -31,6 +34,10 @@ def main():
   print("Before starting the function")
   print(result) 
 
+  v: int = 0
+  if not v:
+    print("not v")
+
   if result != -1:
     print("Element is present at index:")
     print(result)
@@ -39,35 +46,16 @@ def main():
     # print("After the function call")
     print(-1)
 
-  print(19999)
-  print("this is another string")
-
   a:A = A(5, 6)
   a.f()
 
-  print("After the function call")
-  print("hello hehre")
+  x: int = 2
+  y: int = 8
+  z: int = x ** y
 
-  if (a.sum == 11):
-    print("Sum is correct")
-  else:
-    print("Sum is incorrect")
+  print(z)
+
+if __name__ == "__main__":
+  main()
+  f()
   
-  print("After the check")
-
-  while result > 0:
-    print("inside loop")
-    result -= 1
-  
-  print("here now")
-  x: int = 10
-
-  c: str = "harsh"
-  b: str = "bihany"
-  # print(f(1,2))
-  print(b)
-
-  if c <= b:
-    print("wowo")
-  else:
-    print("no")

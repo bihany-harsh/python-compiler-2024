@@ -281,6 +281,37 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
             }
             instructions.push_back(instr);
             instr = new Instruction("idivq", "%rbx", "", "", I_INSTRUCTION);
+        } else if (quad->op == "**") {
+            // power function
+            if (!is_variable(quad->arg1)) {
+                instr = new Instruction("movq", "$" + quad->arg1, "%rdx", "", I_INSTRUCTION);
+            } else {
+                instr = new Instruction("movq", to_string(x) + "(%rbp)", "%rdx", "", I_INSTRUCTION);
+            }
+            instructions.push_back(instr);
+            if(!is_variable(quad->arg2)) {
+                instr = new Instruction("movq", "$" + quad->arg2, "%rcx", "", I_INSTRUCTION);
+            } else {
+                instr = new Instruction("movq", to_string(y) + "(%rbp)", "%rcx", "", I_INSTRUCTION);
+            }
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "$1", "%rax", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("testq", "%rcx", "%rcx", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jz", "2f", "", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("1", "", "", "", I_LABEL);
+            instructions.push_back(instr);
+            instr = new Instruction("imulq", "%rdx", "%rax", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("decq", "%rcx", "", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("jnz", "1b", "", "", I_INSTRUCTION);
+            instructions.push_back(instr);
+            instr = new Instruction("2", "", "", "", I_LABEL);
+            instructions.push_back(instr);
+            instr = new Instruction("movq", "%rax", "%rdx", "", I_INSTRUCTION);
         } else if (quad->op == ">>") {
             if (is_variable(quad->arg1)) {
                 instr = new Instruction("movq", to_string(x) + "(%rbp)", "%rdx", "", I_INSTRUCTION);
@@ -310,7 +341,7 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
             instructions.push_back(instr);
             instr = new Instruction("salq", "%cl", "%rdx", "", I_INSTRUCTION);
         } else if (quad->op == "and") {
-            cout << quad->code << endl;
+            // cout << quad->code << endl;
             if (is_variable(quad->arg1)) {
                 instr = new Instruction("movq", to_string(x) + "(%rbp)", "%rdx", "", I_INSTRUCTION);
             } else {
@@ -750,7 +781,7 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
             }
             instructions.push_back(instr);
             instr = new Instruction("neq", "%rdx", "", "", I_INSTRUCTION);
-        } else if (quad->op == "!") {
+        } else if (quad->op == "not") {
             if (!is_variable(quad->arg1)) {
                 instr = new Instruction("movq", "$" + quad->arg1, "%rdx", "", I_INSTRUCTION); 
             } else {

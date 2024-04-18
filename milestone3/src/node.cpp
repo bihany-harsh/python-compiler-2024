@@ -932,7 +932,7 @@ string make_function_label(node* funcdef) {
             label += "$" + tfpdef->children[1]->name;
         }
     }
-    return label;
+    return label + "$";
 }
 
 pair<bool,bool> check_coerce_required(pair<base_data_type, string> formal, pair<base_data_type, string> actual) {
@@ -2276,6 +2276,9 @@ void node::generate_3ac() {
     string op1, op2, result, op;
     switch(this->type) {
         case FILE_INPUT:
+            IR.pop_back();
+            q = new Quadruple("", "end_func", "main", "", Q_FUNC_LABEL);
+            IR.push_back(q);
             q = new Quadruple("", "", "", "", Q_BLANK);
             IR.push_back(q);
             return;
@@ -2628,6 +2631,7 @@ void node::generate_3ac() {
             this->operand_type = this->children[0]->operand_type;
             result = "t" + to_string(INTERMEDIATE_COUNTER++);
             this->_3acode = new Quadruple(this->name, op1, "", result, Q_UNARY);
+            // cout << this->_3acode->code << endl;
             this->check_operand_type_compatibility();
             IR.push_back(this->_3acode);
             return;
@@ -2719,6 +2723,15 @@ void node::generate_3ac() {
                     this->_3acode = new Quadruple("", this->children[0]->_3acode->result, "", "", Q_COND_JUMP); // backpatching 2B
                 }
                 IR.push_back(this->_3acode);
+                if(IR[IR.size() - 2]->arg1 == "__name__") {
+                    // remove the last 3 entries from IR
+                    IR.pop_back();
+                    IR.pop_back();
+                    IR.pop_back();
+                    q = new Quadruple("", "begin_func", "main", "", Q_FUNC_LABEL);
+                    IR.push_back(q);
+                }
+                // if(IR[IR.size() ])
             } else if (this->parent->name == "for") {
                 if (this->children[0]->type != IDENTIFIER) {
                     yyerror("SyntaxError: Expressions cannot be assigned.");

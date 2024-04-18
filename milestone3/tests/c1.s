@@ -1,8 +1,12 @@
 	.file	"c1.c"
 	.text
-	.globl	f
-	.type	f, @function
-f:
+	.section	.rodata
+.LC0:
+	.string	"%d\n"
+	.text
+	.globl	main
+	.type	main, @function
+main:
 .LFB0:
 	.cfi_startproc
 	endbr64
@@ -11,65 +15,31 @@ f:
 	.cfi_offset 6, -16
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register 6
-	movl	%edi, -4(%rbp)
-	movl	%esi, -8(%rbp)
-	movl	-4(%rbp), %edx
-	movl	-8(%rbp), %eax
-	addl	%edx, %eax
-	popq	%rbp
-	.cfi_def_cfa 7, 8
-	ret
-	.cfi_endproc
-.LFE0:
-	.size	f, .-f
-	.section	.rodata
-.LC0:
-	.string	"%d\n"
-.LC1:
-	.string	"hello world"
-	.text
-	.globl	main
-	.type	main, @function
-main:
-.LFB1:
-	.cfi_startproc
-	endbr64
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset 6, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register 6
 	subq	$16, %rsp
-	movq	%fs:40, %rax
-	movq	%rax, -8(%rbp)
-	xorl	%eax, %eax
-	movl	$2, %esi
-	movl	$1, %edi
-	call	f
+	movl	$4, -12(%rbp)
+	movl	$5, -8(%rbp)
+	pxor	%xmm0, %xmm0
+	cvtsi2sdl	-8(%rbp), %xmm0
+	pxor	%xmm2, %xmm2
+	cvtsi2sdl	-12(%rbp), %xmm2
+	movq	%xmm2, %rax
+	movapd	%xmm0, %xmm1
+	movq	%rax, %xmm0
+	call	pow@PLT
+	cvttsd2sil	%xmm0, %eax
+	movl	%eax, -4(%rbp)
+	movl	-4(%rbp), %eax
 	movl	%eax, %esi
 	leaq	.LC0(%rip), %rax
 	movq	%rax, %rdi
 	movl	$0, %eax
 	call	printf@PLT
-	movl	$1819043176, -14(%rbp)
-	movw	$111, -10(%rbp)
-	leaq	.LC1(%rip), %rax
-	movq	%rax, %rdi
-	call	puts@PLT
-	leaq	-14(%rbp), %rax
-	movq	%rax, %rdi
-	call	puts@PLT
 	movl	$0, %eax
-	movq	-8(%rbp), %rdx
-	subq	%fs:40, %rdx
-	je	.L5
-	call	__stack_chk_fail@PLT
-.L5:
 	leave
 	.cfi_def_cfa 7, 8
 	ret
 	.cfi_endproc
-.LFE1:
+.LFE0:
 	.size	main, .-main
 	.ident	"GCC: (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0"
 	.section	.note.GNU-stack,"",@progbits
