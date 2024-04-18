@@ -117,16 +117,27 @@ void print_3AC(vector<Quadruple*> IR) {
 }
 
 void output_3AC_to_txt(const string& filename) {
-    ofstream txtFile(filename);
-    if (!txtFile.is_open()) {
-        std::cerr << "Failed to open file for writing.\n";
-        exit(1);
-    }
-    for(Quadruple* q: IR) {
-        txtFile << q->code << endl;
-        if (targets.find(atoi(q->label.c_str())) != targets.end()){
-            // cout << q->code << endl;
-            q->is_target = true;
+    if (filename != "") {
+        ofstream txtFile(filename);
+        if (!txtFile.is_open()) {
+            std::cerr << "Failed to open file for writing.\n";
+            exit(1);
+        }
+        for(Quadruple* q: IR) {
+            txtFile << q->code << endl;
+            if (targets.find(atoi(q->label.c_str())) != targets.end()){
+                // cout << q->code << endl;
+                q->is_target = true;
+            }
+        }
+    } else {
+        for(Quadruple* q: IR) {
+            if (targets.find(atoi(q->label.c_str())) != targets.end()){
+                // cout << q->code << endl;
+                q->is_target = true;
+            }
         }
     }
+    
+    
 }

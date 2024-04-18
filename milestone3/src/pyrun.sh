@@ -1,76 +1,43 @@
 #!/bin/bash
 
-# This script automates the running of the makefile
-# It supports the command line arguments -help, -h, -input, -i, -output, -o, -verbose, -v, -clean, -c
-
-input="../tests/test1.py"
-output="graph.pdf"
-verbose="false"
-clean_flag="false"
-
-# TODO: add 2>/dev/null at the end of milestone 3
-
-show_usage() {
-    echo "Usage: ./pyrun.sh [-help]/[-h] [-input <file>]/[-i <file>] [-output <file>]/[-o <file>] [-verbose]/[-v] [-clean]/[-c]"
-    echo "-input [-i] <file>, -output [-o] <file> specifies the input and output files respectively. Ensure that you provide the relative path."
-    echo "-verbose [-v] prints additional checkpoints to show the progress during execution."
-    echo "-clean [-c] runs the script with the provided options (if any) and then performs make clean"
-    echo "These options can be used in any order."
-}
-
-# Parse the command line arguments
-while [ $# -gt 0 ]; do
-  case "$1" in
-    -help|-h)
-      show_usage
-      exit 0
-      ;;
-    -input|-i)
-      if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
-        input="$2"
-        shift
-      else
-        echo "Error: $1 requires a file argument."
-        echo ""
-        show_usage
-        exit 1
-      fi
-      ;;
-    -output|-o)
-      if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
-        output="$2"
-        shift
-      else
-        echo "Error: $1 requires a file argument."
-        echo ""
-        show_usage
-        exit 1
-      fi
-      ;;
-    -verbose|-v)
-      verbose="true"
-      ;;
-    -clean|-c)
-      clean_flag="true"
-      ;;
-    *)
-      echo "Error: Unsupported option $1."
-      echo ""
-      show_usage
-      exit 1
-      ;;
-  esac
-  shift
-done
-
-make INPUT_FILE="$input" GRAPH_PDF="$output" VERBOSE="$verbose"
-if [ "$verbose" = "true" ]; then
-  echo "Finished make!"
+# Check if at least one argument is provided
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <x86_code.s> [graph.dot]"
+    exit 1
 fi
 
-if [ "$clean_flag" = "true" ]; then
-  make clean
-  if [ "$verbose" = "true" ]; then
-    echo "Finished make clean!"
-  fi
+# Extract the assembly file name without extension
+base_name="${1%.*}"
+
+# Compile the assembly code to an object file
+gcc -c "$1" -o "${base_name}.o"
+if [ $? -ne 0 ]; then
+    exit 2
 fi
+
+# Link the object file to create an executable
+gcc "${base_name}.o" -o "${base_name}.out"
+if [ $? -ne 0 ]; then
+    exit 3
+fi
+
+# Run the executable
+"./${base_name}.out"
+if [ $? -ne 0 ]; then
+    exit 4
+fi
+
+# Check if the second argument (dot file) is provided
+if [ $# -gt 1 ]; then
+    # Assume the second argument is the Graphviz dot file
+    dot_file="$2"
+    pdf_output="${dot_file%.*}.pdf"
+
+    # Generate PDF from dot file
+    dot -Tpdf "$dot_file" -o "$pdf_output"
+    if [ $? -ne 0 ]; then
+        exit 5
+    fi
+fi
+
+exit 0
