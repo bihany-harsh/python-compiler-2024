@@ -59,7 +59,6 @@ const map<base_data_type, int> base_data_type_size = {
     {D_FLOAT, 8},
     {D_STRING, 8},
     {D_BOOL, 8},
-    //FIXME: verify the assumption that these are all pointers to the actual data structure (runtime support) 
     {D_LIST, 8},
     {D_CLASS, 8},
     {D_FUNCTION, 8},
@@ -76,11 +75,6 @@ typedef struct symbol_table_entry {
     int offset = 0;
     int decl_line = 0;
     int scope = 0;
-    // NOTE: the following fields to be set explicitly by the parser.
-    // These are not needed since LIST, FUNCTION, CLASS have been added to types of symbol_table_entries
-    // bool is_list = false;
-    // bool is_function = false;
-    // bool is_class = false;
 
     list_attr l_attr;
     func_attr f_attr;
@@ -90,7 +84,6 @@ typedef struct symbol_table_entry {
 
     // basic routines of a symbol table entry
     symbol_table_entry(string name, base_data_type b_type, int offset, int decl_line, int scope);
-    // ~symbol_table_entry();
     void set_size(int size);
 
 
@@ -107,9 +100,6 @@ typedef struct symbol_table {
     symbol_table* parent = nullptr;
     int scope = 0;
     int offset = 0; // NOTE: probably not required here
-
-    // additional attributes that might be required
-    // extended_attr* xattr = nullptr;
 
     // basic routines for a symbol table
     symbol_table(symbol_table_type st_type, string st_name, symbol_table* parent);

@@ -35,20 +35,9 @@ symbol_table::symbol_table(symbol_table_type st_type, string st_name, symbol_tab
     }
 }
 
-// symbol_table::~symbol_table() {
-//     for(st_entry* entry: this->entries) {
-//         if(entry->child_symbol_table) {
-//             delete entry->child_symbol_table;
-//         }
-//         delete entry;
-//     }
-// }
-
 void symbol_table::add_entry(st_entry* entry) {
     // to add a new entry in the given symbol table
     // ERROR CASE: entry already present
-
-    // TODO: proper error messages
 
     for(st_entry* present_entry: this->entries) {
         if (present_entry->name == entry->name) {
@@ -153,7 +142,6 @@ symbol_table_entry::symbol_table_entry(string name, base_data_type b_type, int o
 }
 
 void symbol_table_entry::set_size(int size) {
-    //FIXME: might have to be fixed for functions, blocks and classes
     if (this->b_type == D_CLASS) {
         size = 0;
         for (st_entry* entry: this->child_symbol_table->entries) {
@@ -198,10 +186,6 @@ void symbol_table::sort_class_entries() {
         entry->offset = offset;
         offset += entry->size;
     }
-    // cout << "printing st -------------" << endl;
-    // for(symbol_table_entry* entry: this->entries) {
-    //     cout << entry->name << " " << entry->label << endl;
-    // }
 }
 
 void copy_func_attr(st_entry* src, st_entry* dest) {
