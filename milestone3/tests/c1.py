@@ -17,8 +17,23 @@ def main():
 
   list__ : list[int] = [1, 2, list_obj[1].b]
 
-  print(list_obj[1].b)
-  print(list__[2])
+  x : int
+  a : int
+  x = a = 1 << 2 ** 2
+  c : str
+  d : str
+  c = d = "abc"
+
+  i : int
+  for i in range(10):
+    print(i)
+    if i > 5:
+      break
+  while i > 0 and i % 2 == 0:
+    print(i)
+    i -= 1
+  print(c)
+  print(a)
 
 
 if __name__ == "__main__":

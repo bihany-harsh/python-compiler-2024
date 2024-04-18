@@ -13,3 +13,5 @@
 * ~~segmentation fault when self not passed as argument in class methods~~
 * ~~revisit Q_STORE~~
 * ~~support for len(array)~~
+* test a list of class objs type checking: all objs belong to same class
+* test for loop, boolean operators

@@ -185,13 +185,6 @@ typedef struct node {
     string name = ""; // stores the lexeme in case of terminal, empty o.w.
     bool is_terminal = false;
 
-    // the value of the node (assuming the primitive types are string, int, double, bool)
-    string str_val = "";
-    long long int int_val = 0;
-    double double_val = 0.0;
-    bool bool_val = false;
-    string val_repr = ""; // the string representation of the value
-
     // line no
     int line_no = 0; // stores the line no. on which the node ends (significant only for multiline statements eg. funcdef or multiline strings)
 
@@ -213,11 +206,6 @@ typedef struct node {
     // METHODS
     // constructor
     node(node_type type, string name, bool is_terminal, node* parent);
-    // functional overloading to assign value to the node
-    void assign_value(string value);
-    void assign_value(long long int value);
-    void assign_value(double value);
-    void assign_value(bool value);
     // add a child
     void add_parent_child_relation(node* child);
     void handle_annassign();  
@@ -289,7 +277,7 @@ node* find_loop_ancestor(node* root); // root would be a node pointing to "break
 
 string make_function_label(node* funcdef);
 
-pair<bool,bool> check_coerce_required(base_data_type formal, base_data_type actual);
+pair<bool,bool> check_coerce_required(pair<base_data_type, string> formal, pair<base_data_type, string> actual);
 
 st_entry* find_class_function_entry(string class_name, node* atom_expr);
 
