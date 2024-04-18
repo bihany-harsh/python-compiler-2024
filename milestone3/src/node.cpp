@@ -2350,6 +2350,7 @@ void node::generate_3ac() {
             }
             return;
         case STRING_LITERAL:
+            this->name = "\"" + this->name.substr(2, this->name.size() - 4) + "\""; // removing the quotes
             this->operand_type = D_STRING;
             return;
         case INT_NUMBER:
@@ -2393,7 +2394,19 @@ void node::generate_3ac() {
                         yyerror("TypeError: Cannot print a list object.");
                     }
                 }
-                this->_3acode = new Quadruple("", op1, "", "", Q_PRINT);
+                if (this->children[1]->children[0]->operand_type == D_STRING) {
+                    if (this->children[1]->children[0]->type == STRING_LITERAL) {
+                        q = new Quadruple("", this->children[1]->children[0]->name, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_ASSIGN);
+                        IR.push_back(q);
+                        this->_3acode = new Quadruple("", q->result, "", "", Q_PRINT_STR);
+                    }
+                    else {
+                        this->_3acode = new Quadruple("", op1, "", "", Q_PRINT_STR);
+                    }
+                }
+                else {
+                    this->_3acode = new Quadruple("", op1, "", "", Q_PRINT);
+                }
                 IR.push_back(this->_3acode);
             }
             else if(this->children[0]->name == "self") {
@@ -2416,6 +2429,7 @@ void node::generate_3ac() {
                     yylineno = this->line_no;
                     yyerror("SyntaxError: Not a valid argument passed with list");
                 }
+                this->operand_type = D_INT;
                 this->_3acode = new Quadruple("", to_string(entry->l_attr.num_of_elems), "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_ASSIGN);
                 IR.push_back(this->_3acode);
             }
@@ -2451,6 +2465,7 @@ void node::generate_3ac() {
                 if(entry->b_type == D_LIST) {
                     if (entry->l_attr.list_elem_type != D_CLASS) {
                         // this is a normal list of base data types
+                        this->operand_type = entry->l_attr.list_elem_type;
                         op1 = this->get_lhs_operand();
                         op2 = this->get_rhs_operand();
                         entry = SYMBOL_TABLE->get_entry(op1);
@@ -2536,7 +2551,6 @@ void node::generate_3ac() {
                         } else {
                             yyerror("SyntaxError: Incorrect usage of a list of class objects.");
                         }
-
                     }
                     
                     // cout << this->_3acode->code << endl;

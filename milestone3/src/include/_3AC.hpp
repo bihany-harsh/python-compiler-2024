@@ -18,6 +18,7 @@ typedef enum quad_type {
     Q_DEREFERENCE,
     Q_STORE,
     Q_PRINT,
+    Q_PRINT_STR,
     Q_JUMP,
     Q_COND_JUMP,
     Q_RETURN,

@@ -1,34 +1,39 @@
-class A():
-  def __init__(self) -> None:
-    self.a : int= 3
+# class A():
+#   def __init__(self) -> None:
+#     self.a : int= 3
 
-  def ret_a(self, b : int) -> int:
-    x: int = self.a + b
-    return x
-  def set_a(self) -> int:
-    self.a = 61
-    return self.a
+#   def ret_a(self, b : int) -> str:
+#     x: int = self.a + b
+#     c : str = "Done"
+#     return c
+#   def set_a(self) -> int:
+#     self.a = 61
+#     return self.a
   
-class B():
-  def __init__(self) -> None:
-    self.a : int= 3
+# class B():
+#   def __init__(self) -> None:
+#     self.a : int= 3
   
-def f()->A:
-  a : B = B()
-  return a
+# def f()->A:
+#   a : A = A()
+#   return a
 
 def main():
   # a : list[int] = [1,2,3,4,5]
-  b1 : A = A()
+  # b1 : A = A()
   # b3 : A = A()
-  b2 : A = f()
-
-  c: list[A] = [b1, b2]
-  # c : int = b.ret_a
-  x: int = c[0].ret_a(1)
+  # b2 : A = f()
+  print("Abc")
+  x: str = "Hello"
   print(x)
-  c[1].set_a()
-  print(c[1].a)
+  print(1)
+
+  # c: list[A] = [b1, b2]
+  # c : int = b.ret_a
+  # x: int = c[0].ret_a(1)
+  # print(c[0].ret_a(1))
+  # c[1].set_a()
+  # print(c[1].a)
   
   # print(x)
   # print(b.a)

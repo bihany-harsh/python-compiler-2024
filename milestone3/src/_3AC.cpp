@@ -52,6 +52,9 @@ string Quadruple::make_code() {
         case Q_PRINT:
             code = this->label + ":\tprint " + this->arg1;
             break;
+        case Q_PRINT_STR:
+            code = this->label + ":\tprint " + this->arg1;
+            break;
         case Q_JUMP:
             code = this->label + ":\t" + this->op + " " + this->result; // handles both goto and return (unconditional jumps)
             break;
