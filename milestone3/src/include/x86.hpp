@@ -8,12 +8,6 @@
 
 using namespace std;
 
-// map<int, string> int_reg_map = {
-//     {0, "%rax"},
-//     {1, "%rdx"},
-//     {2, "%rcx"},
-// };
-
 typedef enum instruction_types {
     I_LABEL,
     I_SEGMENT,
@@ -42,7 +36,6 @@ typedef struct Instruction {
 typedef struct Function_Entry {
     string name = "";
     int offset = 0;
-    // base_data_type b_type;
 
     Function_Entry(string name, int offset /*, base_data_type entry_type*/);
 } Function_Entry;
@@ -66,22 +59,9 @@ typedef struct Instruction_Wrapper {
     vector<Instruction*> data_segment;
     vector<Function_Wrapper*> function_wrappers;
 
-    // map <string, vector<Quadruple*>> func_IR_map;
-    // vector<Instruction*> data_segment;
-    // vector<Instruction*> text_segment;
-
     Instruction_Wrapper(string filename);
 
     void gen_x86_init();
-    // void gen_x86_binary(Quadruple* quad, symbol_table* scope);
-    // void gen_x86_assign(Quadruple* quad, symbol_table* scope);
-    // void update_func_offsets(symbol_table* scope);
-    // void gen_x86_func_arg(vector<Quadruple*> IR, symbol_table* scope);
-    // void gen_x86_jump(Quadruple* quad, symbol_table* scope);
-    // void gen_x86_print(Quadruple* quad, symbol_table* scope);
-    // void gen_x86_func_def(Quadruple* quad, Segment_type &prev_seg_type, symbol_table** scope);
-    // void gen_x86_func_call(vector<Quadruple*> quad, symbol_table* scope);
-    // void gen_x86_global_decl(Quadruple* quad, Segment_type &prev_seg_type, symbol_table* scope);
     void gen_x86(vector<Quadruple*> IR, symbol_table* SYMBOL_TABLE);
 
     void get_functions(vector<Quadruple*> IR);

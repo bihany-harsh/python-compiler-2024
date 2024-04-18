@@ -116,7 +116,6 @@ string Instruction::make_code() {
 }
 
 bool is_main_func(string s) {
-    // TODO: to make more flexible
     return s == "main";
 }
 
@@ -133,7 +132,6 @@ bool is_init_func(string str) {
 Function_Entry::Function_Entry(string name, int offset /*, base_data_type b_type*/) {
     this->name = name;
     this->offset = offset;
-    // this->b_type = b_type;
 }
 
 Function_Wrapper::Function_Wrapper(string func_name) {
@@ -143,8 +141,6 @@ Function_Wrapper::Function_Wrapper(string func_name) {
 void Function_Wrapper::make_function_wrapper(vector<Quadruple*> func_IR) {
     int pop_cnt = 2; // `pushq rbp` and `return address` 
     int local_offset = 8;   // 8 callee saved registers
-
-    // cout << "Making function wrapper: " << func_IR[0]->arg2 << endl;
 
     for (Quadruple* quad: func_IR) {
         if ((quad->q_type == Q_FUNC_LABEL && quad->arg1 == "begin_func") || quad->q_type == Q_SP_UPDATE) {
@@ -159,32 +155,26 @@ void Function_Wrapper::make_function_wrapper(vector<Quadruple*> func_IR) {
         if (quad->q_type == Q_POP_PARAM) {
             this->variable_offset_map[quad->result] = new Function_Entry(quad->result, 8*pop_cnt);
             pop_cnt++;
-            // cout << this->variable_offset_map[quad->result]->name << " " << this->variable_offset_map[quad->result]->offset << endl; 
         } else {
             if (quad->q_type == Q_COND_JUMP) {
                 if (this->variable_offset_map.find(quad->arg1) == this->variable_offset_map.end()) {
                     this->variable_offset_map[quad->arg1] = new Function_Entry(quad->arg1, -8*local_offset);
                     local_offset++;
                 } 
-                // cout << this->variable_offset_map[quad->arg1]->name << " " << this->variable_offset_map[quad->arg1]->offset << endl; 
             } else if (quad->q_type == Q_JUMP && quad->op == "goto") {
                 continue;
             } else {
-                // cout << "quad->code HERE: " << quad->code << endl;
                 if (quad->arg1 != "" && (this->variable_offset_map.find(quad->arg1) == this->variable_offset_map.end()) && is_variable(quad->arg1)) {
                     this->variable_offset_map[quad->arg1] = new Function_Entry(quad->arg1, -8*local_offset);
                     local_offset++;
-                    // cout << this->variable_offset_map[quad->arg1]->name << " " << this->variable_offset_map[quad->arg1]->offset << endl; 
                 } 
                 if (quad->arg2 != "" && (this->variable_offset_map.find(quad->arg2) == this->variable_offset_map.end()) && is_variable(quad->arg2)) {
                     this->variable_offset_map[quad->arg2] = new Function_Entry(quad->arg2, -8*local_offset);
                     local_offset++;
-                    // cout << this->variable_offset_map[quad->arg2]->name << " " << this->variable_offset_map[quad->arg2]->offset << endl; 
                 }
                 if (quad->result != "" && (this->variable_offset_map.find(quad->result) == this->variable_offset_map.end()) && is_variable(quad->result)) {
                     this->variable_offset_map[quad->result] = new Function_Entry(quad->result, -8*local_offset);
                     local_offset++;
-                    // cout << this->variable_offset_map[quad->result]->name << " " << this->variable_offset_map[quad->result]->offset << endl; 
                 }
             }
         }
@@ -205,7 +195,6 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
         return instructions;
     }
     if (quad->is_target) {
-        // cout << quad->code << endl;
         instr = new Instruction("L" + quad->label, "", "", "", I_LABEL);
         instructions.push_back(instr);
     }
@@ -816,8 +805,6 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
             instructions.push_back(instr); 
         } else {
             if (is_string_literal(quad->arg1)) {
-                // cout << quad->code << endl;
-
                 instr = new Instruction(quad->result + "_str:", ".asciz", quad->arg1, "", I_INSTRUCTION);
                 this->data_segment.push_back(instr);
 
@@ -850,7 +837,6 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
         instr = new Instruction("jmp", "L" + to_string(x), "", "", I_INSTRUCTION);
         instructions.push_back(instr);
     } else if (quad->q_type == Q_STORE) {
-        // cout << quad->code << endl;
         if (!is_variable(quad->arg1)) {
             instr = new Instruction("movq", "$" + quad->arg1, "%rax", "", I_INSTRUCTION);
         } else {
@@ -944,7 +930,6 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
         } else {
             // if *$__init__$
             if (is_init_func(quad->arg2)) {
-                // cout << "init function found" << endl;
                 instr = new Instruction("movq", "16(%rbp)", "%rax", "", I_INSTRUCTION);
                 instructions.push_back(instr);
             }
@@ -1039,7 +1024,6 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
         if (!is_variable(quad->arg1)) {
             instr = new Instruction("pushq", "$" + quad->arg1, "", "", I_INSTRUCTION);
         } else {
-            // cout << "PUSH_PARAM " << x << endl; 
             instr = new Instruction("pushq", to_string(x) + "(%rbp)", "", "", I_INSTRUCTION);
         }
 
@@ -1124,7 +1108,6 @@ vector<Instruction*> Instruction_Wrapper::generator(Quadruple* quad, int x, int 
         if (!is_variable(quad->arg1)) {
             instr = new Instruction("pushq", "$" + quad->arg1, "", "", I_INSTRUCTION);
         } else {
-            // cout << "PUSH_PARAM " << x << endl; 
             instr = new Instruction("pushq", to_string(x) + "(%rbp)", "", "", I_INSTRUCTION);
         }
 
@@ -1191,8 +1174,6 @@ void Instruction_Wrapper::gen_x86_basic_block(vector<Quadruple*> basic_block, Fu
     for(Quadruple* quad: basic_block) {
         vector<Instruction*> gen_instruction;
         int x, y, z;
-        
-        // cout << "Generation for: " << quad->code << endl;
 
         if (quad->q_type == Q_COND_JUMP) {
             if (func_wrapper->variable_offset_map.find(quad->arg1) == func_wrapper->variable_offset_map.end()) {
@@ -1235,18 +1216,15 @@ void Instruction_Wrapper::gen_x86_basic_block(vector<Quadruple*> basic_block, Fu
             gen_instruction = this->generator(quad, x, y, -1);
         } else if (quad->q_type == Q_ASSIGN) {
             if (func_wrapper->variable_offset_map.find(quad->result) == func_wrapper->variable_offset_map.end()) {
-                // cout << "not found result: " << quad->result << endl;
                 y = -1;
             } else {
                 y = func_wrapper->variable_offset_map[quad->result]->offset;
-                // cout << "found result: " << quad->result << " with offset " << func_wrapper->variable_offset_map[quad->result]->offset << endl;
             }
             if (func_wrapper->variable_offset_map.find(quad->arg1) == func_wrapper->variable_offset_map.end()) {
                 x = -1;
             } else {
                 x = func_wrapper->variable_offset_map[quad->arg1]->offset;
             }
-            // cout << quad->code << "\t" << x << " " << y << endl;
             gen_instruction = this->generator(quad, x, y, -1);
         } else if (quad->q_type == Q_STORE) {
             if (func_wrapper->variable_offset_map.find(quad->result) == func_wrapper->variable_offset_map.end()) {
@@ -1297,8 +1275,6 @@ void Instruction_Wrapper::gen_x86_basic_block(vector<Quadruple*> basic_block, Fu
             }
             gen_instruction = this->generator(quad, x, -1, -1);
         } else if (quad->q_type == Q_ALLOC) {
-            // cout << "inside q_alloc" << endl;
-            // cout << quad->code << endl;
             if (func_wrapper->variable_offset_map.find(quad->arg1) == func_wrapper->variable_offset_map.end()) {
                 x = -1;
             } else {
@@ -1311,7 +1287,6 @@ void Instruction_Wrapper::gen_x86_basic_block(vector<Quadruple*> basic_block, Fu
             }
             gen_instruction = this->generator(quad, x, -1, z);
         } else if (quad->q_type == Q_FUNC_CALL) {
-            // (q, num_of_args, result)
             gen_instruction = this->generator(quad, func_wrapper->num_args, func_wrapper->variable_offset_map[quad->result]->offset, -1);
             func_wrapper->num_args = 0;
         } else if (quad->q_type == Q_FUNC_LABEL && quad->arg1 == "begin_func") {
@@ -1331,7 +1306,6 @@ void Instruction_Wrapper::gen_x86_basic_block(vector<Quadruple*> basic_block, Fu
         } else if (quad->q_type == Q_SP_UPDATE) {
             gen_instruction = this->generator(quad, -1, -1, -1);
         } else if (quad->q_type == Q_BINARY_STR) {
-            // cout << quad->code << endl;
             if (func_wrapper->variable_offset_map.find(quad->result) == func_wrapper->variable_offset_map.end()) {
                 z = -1;
             } else {
@@ -1437,19 +1411,7 @@ void Instruction_Wrapper::gen_x86(vector<Quadruple*> IR, symbol_table* SYMBOL_TA
         this->gen_x86_function(function, function_wrapper);
     }
 
-    // this->gen_x86_end();
 }
-
-// void Instruction_Wrapper::gen_x86_end() {
-//     ofstream out("x86_code.s");
-
-//     ifstream print_func("print.s");
-//     string line;
-
-//     while(getline(print_func, line)){
-//         out << line << '\n';
-//     }
-// }
 
 void Instruction_Wrapper::get_functions(vector<Quadruple*> IR) {
     vector<Quadruple*> function;
