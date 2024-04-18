@@ -12,18 +12,19 @@ def binarySearch(array: list[int], x: int, low: int, high: int) -> int:
 def BubbleSort(array: list[int], n: int) -> list[int]:
   i : int
   j : int
+  temp : int
   for i in range(n):
     for j in range(n - i - 1):
       if array[j] > array[j + 1]:
         # Swap array j and j + 1
-        temp : int = array[j]
+        temp = array[j]
         array[j] = array[j + 1]
         array[j + 1] = temp
   return array
 
 def main():
   array: list[int] = [3, 6, 1, 4, 9]
-  n: int = len(array)
+  n: int = 5
   array = BubbleSort(array, n)
   result: int = binarySearch(array, 4, 0, n - 1)
   

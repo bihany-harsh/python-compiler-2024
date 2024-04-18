@@ -1789,6 +1789,9 @@ string node::get_rhs_operand() {
                 yyerror("SyntaxError: print cannot be part of an expression.");
             }
             else if(this->children[1]->children[0]->name == "self") {
+                if(!this->children[1]->_3acode) {
+                    yyerror("UnexpectedError: there should've been a 3ac here");
+                }
                 return this->children[1]->_3acode->result;
             }
             else if(this->children[1]->children[0]->name == "range") {
@@ -1804,17 +1807,10 @@ string node::get_rhs_operand() {
                 yyerror("UnexpectedError: Couldn't find entry of the list variable");
             }
             if (entry->b_type == D_LIST) {
-                if (entry->l_attr.list_elem_type != D_CLASS) {
-                    this->children[1]->operand_type = entry->l_attr.list_elem_type;
-                    q = new Quadruple("", this->children[1]->_3acode->result, "", "t" + to_string(INTERMEDIATE_COUNTER++), Q_DEREFERENCE);
-                    IR.push_back(q);
-                    return q->result;
-                } else {
-                    if(!this->children[1]->_3acode) {
-                        yyerror("Should've had a 3ac here.");
-                    }
-                    return this->children[1]->_3acode->result;
+                if (this->children[1]->_3acode == nullptr) {
+                    yyerror("4. UnexpectedError: there should've been a 3ac here");
                 }
+                return this->children[1]->_3acode->result;
             }
             else if(entry->b_type == D_FUNCTION) {
                 return this->children[1]->_3acode->result;
@@ -2055,6 +2051,7 @@ void node::check_operand_type_compatibility() {
                     }
                 break;
             }
+        break;
     }
     return;
 }
@@ -2145,11 +2142,11 @@ void node::generate_3ac() {
             child->generate_3ac();
         }
     }
-    // cout << "--------" << endl;
-    // cout << this->name << endl;
-    // for(auto q : IR) {
-    //     cout << q->code << endl;
-    // }
+    cout << "--------" << endl;
+    cout << this->name << endl;
+    for(auto q : IR) {
+        cout << q->code << endl;
+    }
     string op1, op2, result, op;
     switch(this->type) {
         case FILE_INPUT:
@@ -2484,6 +2481,7 @@ void node::generate_3ac() {
             }
             else {
                 op1 = this->get_lhs_operand();
+                cout << "here before seg fault" << endl;
                 op2 = this->get_rhs_operand();
                 this->_3acode = new Quadruple(this->name, op2, "", op1, Q_ASSIGN);
                 IR.push_back(this->_3acode);
