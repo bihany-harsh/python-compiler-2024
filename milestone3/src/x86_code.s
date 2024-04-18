@@ -242,7 +242,7 @@ func3:
 	popq %rdx
 	popq %rcx
 	popq %rax
-	movq $0, %rdx
+	movq $1, %rdx
 	imulq $8, %rdx
 	movq %rdx, -96(%rbp)
 	movq -80(%rbp), %rdx

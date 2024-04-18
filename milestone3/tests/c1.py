@@ -15,7 +15,7 @@ def main():
 
   list_obj : list[A] = listA()
 
-  list__ : list[int] = [1, 2, list_obj[0].b]
+  list__ : list[int] = [1, 2, list_obj[1].b]
 
   print(list_obj[1].b)
   print(list__[2])

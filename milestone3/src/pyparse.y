@@ -36,7 +36,6 @@
 
     int join_lines_implicitly = 0;
 
-    // TODO: funcdef ")" error check
 %}
 
 %union{
@@ -367,7 +366,7 @@ comparison                  :   expr many_comparison_expr {
                                     $$ = new node(COMPARISON, "COMPARISON", false, NULL);
                                     $$->add_parent_child_relation($1);
                                     prune_custom_nodes($$, $2);
-                                    $$->delete_single_child_nodes(); //TODO: clean this up
+                                    $$->delete_single_child_nodes();
                                     comp_op_processing($$);
                             }
                             ;
@@ -584,7 +583,7 @@ atom_expr                   :   atom many_trailers {
                                     prune_custom_nodes($$, $2);
                                 }
                             ;
-atom                        :   TOK_LPAR {join_lines_implicitly++; } test TOK_RPAR { // FIXME: updated test from testlist_comp 
+atom                        :   TOK_LPAR {join_lines_implicitly++; } test TOK_RPAR {
                                     join_lines_implicitly--;
                                     $$ = new node(ATOM, "ATOM", false, NULL);
                                     $1 = new node(DELIMITER, "(", true, NULL);
@@ -627,11 +626,9 @@ atom                        :   TOK_LPAR {join_lines_implicitly++; } test TOK_RP
                                     $$ = $1;
                             }
                             |   numeric_strings {
-                                    //  $$ = new node(NUMBER, yytext, true, NULL);
                                     $$ = $1;
                             }
                             |   TOK_STRING_LITERAL {
-                                    // FIXME: originally was at_least_one_string (refer milestone1), now been removed
                                     string str_literal = "\\\"" + string(yytext).substr(1, strlen(yytext) - 2) + "\\\"";
                                     $$ = new node(STRING_LITERAL, str_literal.c_str(), true, NULL);
                             }
@@ -685,7 +682,7 @@ trailer                     :   TOK_LPAR { join_lines_implicitly++; } optional_a
                                     prune_custom_nodes($$, $3); 
                                     $$->add_parent_child_relation($4);
                             }
-                            |   TOK_LSQB { join_lines_implicitly++; } test TOK_RSQB { // FIXME: TOK_LSQB subscriptlist TOK_RSQB
+                            |   TOK_LSQB { join_lines_implicitly++; } test TOK_RSQB {
                                     join_lines_implicitly--;
                                     $$ = new node(TRAILER, "TRAILER", false, NULL);
                                     $1 = new node(DELIMITER, "[", true, NULL);
@@ -723,10 +720,7 @@ many_comma_argument         :   many_comma_argument TOK_COMMA argument {
                             }
                             |   {   $$ = NULL;  }
                             ;
-argument                    :   test { // removed the optional_comp_for here (FIXME: previously: test optional_comp_for)
-                                //     $$ = new node(ARGUMENT, "ARGUMENT", false, NULL);
-                                //     $$->add_parent_child_relation($1);
-                                //     prune_custom_nodes($$, $2);
+argument                    :   test {
                                 $$ = $1;
                             }
                             |   test TOK_EQUAL test {
@@ -737,7 +731,7 @@ argument                    :   test { // removed the optional_comp_for here (FI
                                     $$->add_parent_child_relation($3);
                             }
                             ;
-comp_for                    :   TOK_FOR expr TOK_IN or_test optional_comp_iter {  // (FIXME: previously: TOK_FOR exprlist TOK_IN or_test optional_comp_iter)
+comp_for                    :   TOK_FOR expr TOK_IN or_test optional_comp_iter {
                                     $$ = new node(COMP_FOR, "COMP_FOR", false, NULL);
                                     $1 = new node(KEYWORD, "for", true, NULL);
                                     $3 = new node(KEYWORD, "in", true, NULL);
@@ -817,10 +811,6 @@ return_stmt                 :   TOK_RETURN optional_test {
                                     if(SYMBOL_TABLE->st_type != FUNCTION) {
                                         yyerror("SyntaxError: 'return' outside function");
                                     }
-                                    else {
-                                        // TODO: check that return type matches the function return type (can do in type checking also)
-                                        // HOPEFULLY will be done while type-checking
-                                    }
                             }
                             |   TOK_RETURN test TOK_COMMA testlist {
                                     yyerror("SyntaxError: Attempting to return multiple values from a function");
@@ -839,8 +829,7 @@ global_stmt                 :   TOK_GLOBAL TOK_IDENTIFIER {
                                     $$->add_parent_child_relation($1);
                                     $$->add_parent_child_relation($2);
                                     $$->add_parent_child_relation($4);
-
-                                //     handle_global_stmt($$); TODO: kar lena isse!
+                                    yyerror("VersionError: Glboal statements not supported.");
                             }
                             ;
 many_comma_tok_identifier   :   many_comma_tok_identifier TOK_COMMA TOK_IDENTIFIER {
@@ -1007,7 +996,6 @@ optional_else_suite         :   TOK_ELSE TOK_COLON {
                             |   {   $$ = NULL;  }
                             ;
 for_stmt                    :   TOK_FOR { strcpy(compound_stmt_type, "\'for\'"); } expr TOK_IN test TOK_COLON {
-                                    // FIXME: changed from exprlist and testlist to expr and test (iterating over single variable only)
                                     $1 = new node(KEYWORD, "for", true, NULL);
                                     node* temp = new node(CONDITION, "CONDITION", false, NULL);
                                     $4 = new node(KEYWORD, "in", true, NULL);
@@ -1179,8 +1167,6 @@ classdef                    :   TOK_CLASS TOK_IDENTIFIER {
                                     $2->create_class_st();
                                 }
                                 optional_paren_arglist TOK_COLON suite {
-                                    //TODO: update size of the CLASS node once calculated
-                                    //TODO: add offset according to what is calculated within this class
                                     $$ = new node(CLASSDEF, "CLASSDEF", false, NULL);
                                     $1 = new node(KEYWORD, "class", true, NULL);
                                     $5 = new node(DELIMITER, ":", true, NULL);
@@ -1191,7 +1177,6 @@ classdef                    :   TOK_CLASS TOK_IDENTIFIER {
                                     $$->add_parent_child_relation($5);
                                     $$->add_parent_child_relation($6);
 
-                                    //TODO: if inheritance, add base class st_entries to derived
                                     $2->handle_inheritance($4);
                                     $2->exit_from_class();
                             }

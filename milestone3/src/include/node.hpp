@@ -14,10 +14,7 @@ typedef enum {
     // keywords
     KEYWORD,
     BOOL_OP,
-    // OR,
-    // AND,
     UNARY_OP,
-    // NOT,
 
     // datatypes
     INT,
@@ -34,35 +31,13 @@ typedef enum {
     FLOAT_NUMBER,
 
     // operators
-    // PLUS,
-    // MINUS,
-    // STAR,
-    // SLASH,
-    // PERCENT,
-    // DOUBLE_SLASH,
-    // DOUBLE_STAR,
-    // AMPER,
-    // VBAR,
-    // CIRCUMFLEX,
-    // TILDE,
-    // LEFT_SHIFT,
-    // RIGHT_SHIFT,
     BIN_OP,
     COMPARE,
     ASSIGN,
     AUGASSIGN,
 
     // delimiters
-    // LPAR,
-    // RPAR,
-    // LSQB,
-    // RSQB,
-    // LBRACE,
-    // RBRACE,
-    // COMMA,
-    // COLON,
     DOT,
-    // SEMICOLON,
     DELIMITER,
     RARROW,
 
@@ -170,7 +145,6 @@ const set<int> unary_ops = { // it is declared so that these nodes are retained 
     ANNASSIGN,
     OPTIONAL_PAREN_ARGLIST,
     SUITE,
-    // TEST,
     CONDITION, // we need it for 3AC generation so shouldn't be deleted
     IF_STMT,
     WHILE_STMT,
@@ -190,7 +164,6 @@ const map<node_type, string> type_map = {
     {LIST, "LIST"},
 
     // misc
-    // {CONDITION, "CONDITION"},
     {IDENTIFIER, "IDENTIFIER"},
     {STRING_LITERAL, "STRING_LITERAL"},
     {BOOL_NUMBER, "BOOL_NUMBER"},

@@ -89,7 +89,6 @@ IMAG_NUMBER             ({FLOAT_NUMBER}|{DIGIT_PART})("j"|"J")
 
 NUMBER                  {INTEGER}|{FLOAT_NUMBER}|{IMAG_NUMBER}
     
-    // string and byte literals TODO: to support byte literals?
 SHORT_STRING_CHAR       [^"'\n\\]
 LONG_STRING_CHAR        [^\\]
 
