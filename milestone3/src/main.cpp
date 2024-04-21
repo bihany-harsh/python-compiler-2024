@@ -55,7 +55,7 @@ void print_help_page() {
     cout << "-t, -tac <tac_file_name>\t\t\t Redirect 3AC file to tac output file\n";
     cout << "-a, -asm <assembly_file_name>]\t\t\t Redirect assembly code to assembly output file\n";
     cout << "-s, -sym \t\t\t\t\t Outputs the entire derivation in command line\n";
-    cout << "-v, -verbose \t\t\t\t\t Outputs the entire derivation in command line\n";
+    cout << "-v, -verbose \t\t\t\t\t\n";
     return;
 }
 

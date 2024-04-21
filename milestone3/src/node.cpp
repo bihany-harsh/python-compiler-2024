@@ -2142,11 +2142,11 @@ void node::generate_3ac() {
             child->generate_3ac();
         }
     }
-    cout << "--------" << endl;
+    /*cout << "--------" << endl;
     cout << this->name << endl;
     for(auto q : IR) {
         cout << q->code << endl;
-    }
+    }*/
     string op1, op2, result, op;
     switch(this->type) {
         case FILE_INPUT:
@@ -2481,7 +2481,7 @@ void node::generate_3ac() {
             }
             else {
                 op1 = this->get_lhs_operand();
-                cout << "here before seg fault" << endl;
+                // cout << "here before seg fault" << endl;
                 op2 = this->get_rhs_operand();
                 this->_3acode = new Quadruple(this->name, op2, "", op1, Q_ASSIGN);
                 IR.push_back(this->_3acode);

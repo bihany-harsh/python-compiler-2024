@@ -8,6 +8,7 @@ lex.yy.c
 *.dot
 *.exe
 *.o
+*.s
 # *.h
 .vscode
 # *.py
@@ -15,3 +16,7 @@ lex.yy.c
 *.csv
 *.txt
 !*report.pdf
+!milestone3/src/allocmem.s
+!milestone3/src/printstr.s
+!milestone3/src/print.s
+personal_docs/
