@@ -78,4 +78,4 @@ The project is divided into 3 milestones, the first of which developed the front
 
 
 
-~*In small deeds to we live, in lesser we die...*
+~*In small deeds do we live, in lesser we die...*
