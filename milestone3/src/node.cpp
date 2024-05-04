@@ -683,6 +683,7 @@ void node::create_func_st() {
     this->st = SYMBOL_TABLE;
     // for functions, we create the st_entry before executing the body so that we can add arguments
     this->st_entry = new symbol_table_entry(this->name, D_FUNCTION, OFFSET, this->line_no, SYMBOL_TABLE->scope);
+    SYMBOL_TABLE->add_entry(this->st_entry);
     // create a symbol table for the function scope
         // first store the current symbol table and offset
     ST_STACK.push(SYMBOL_TABLE);
@@ -727,7 +728,6 @@ void node::exit_from_func() {
 
     SYMBOL_TABLE = ST_STACK.top();
     OFFSET = OFFSET_STACK.top();
-    SYMBOL_TABLE->add_entry(this->st_entry);
     OFFSET += this->st_entry->size;
     ST_STACK.pop();
     OFFSET_STACK.pop();
@@ -1541,6 +1541,8 @@ void check_type_and_gen_3ac_return_stmt(node* funcdef, node* return_stmt) {
                 yylineno = return_stmt->line_no;
                 yyerror("TypeError: argument does not match return type.");
             }
+            funcdef->_3acode = new Quadruple("return", "", "", "", Q_JUMP);
+            IR.push_back(funcdef->_3acode);
             break;
         case D_LIST:
             if (return_type_actual != D_LIST) {
@@ -2142,11 +2144,11 @@ void node::generate_3ac() {
             child->generate_3ac();
         }
     }
-    /*cout << "--------" << endl;
-    cout << this->name << endl;
-    for(auto q : IR) {
-        cout << q->code << endl;
-    }*/
+    // cout << "--------" << endl;
+    // cout << this->name << endl;
+    // for(auto q : IR) {
+    //     cout << q->code << endl;
+    // }
     string op1, op2, result, op;
     switch(this->type) {
         case FILE_INPUT:
@@ -2481,7 +2483,6 @@ void node::generate_3ac() {
             }
             else {
                 op1 = this->get_lhs_operand();
-                // cout << "here before seg fault" << endl;
                 op2 = this->get_rhs_operand();
                 this->_3acode = new Quadruple(this->name, op2, "", op1, Q_ASSIGN);
                 IR.push_back(this->_3acode);
