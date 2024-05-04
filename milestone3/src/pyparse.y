@@ -1055,6 +1055,7 @@ funcdef                     :   TOK_DEF TOK_IDENTIFIER {
                                             set_return_list_attr($2->st_entry, get_base_type_of_list($6->children[1]));
                                         }
                                     }
+                                    $2->set_function_attr_and_return();
                                 } TOK_COLON suite {
                                     $$ = new node(FUNCDEF, "FUNCDEF", false, NULL);
                                     $8 = new node(DELIMITER, ":", true, NULL);

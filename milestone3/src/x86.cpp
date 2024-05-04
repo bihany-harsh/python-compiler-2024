@@ -15,6 +15,7 @@ extern void yyerror(const char*);
 
 map<string, string> func_name_map;
 int func_count = 0;
+bool allocmem_present = false, print_present = false, print_str_present = false;
 
 bool is_variable(string s) {
     return !(s[0] >= '0' && s[0] <= '9') && (s[0] != '-') && (s[0] != '+');
@@ -35,6 +36,7 @@ string Instruction_Wrapper::get_func_name(string s) {
 
 void output_x86(const string& filename, Instruction_Wrapper* x86) {
     ofstream txtFile(filename);
+    string line;
     if (!txtFile.is_open()) {
         std::cerr << "Failed to open file for writing.\n";
         exit(1);
@@ -46,22 +48,25 @@ void output_x86(const string& filename, Instruction_Wrapper* x86) {
         txtFile << instr->code << endl;
     }
 
-    ifstream print_func("print.s");
-    string line;
-
-    while(getline(print_func, line)){
-        txtFile << line << '\n';
+    if (allocmem_present) {
+        ifstream alloc_mem("allocmem.s");
+        while(getline(alloc_mem, line)) {
+            txtFile << line << '\n';
+        }
     }
 
-
-    ifstream alloc_mem("allocmem.s");
-    while(getline(alloc_mem, line)) {
-        txtFile << line << '\n';
+    if (print_present) {
+        ifstream print_func("print.s");
+        while(getline(print_func, line)){
+            txtFile << line << '\n';
+        }
     }
 
-    ifstream print_func_str("printstr.s");
-    while(getline(print_func_str, line)) {
-        txtFile << line << '\n';
+    if (print_str_present) {
+        ifstream print_func_str("printstr.s");
+        while(getline(print_func_str, line)) {
+            txtFile << line << '\n';
+        }
     }
 }
 
@@ -1261,6 +1266,7 @@ void Instruction_Wrapper::gen_x86_basic_block(vector<Quadruple*> basic_block, Fu
         } else if (quad->q_type == Q_POP_PARAM) {
             gen_instruction = this->generator(quad, -1, -1, -1);
         } else if (quad->q_type == Q_PRINT) {
+            print_present = true;
             if (func_wrapper->variable_offset_map.find(quad->arg1) == func_wrapper->variable_offset_map.end()) {
                 x = -1;
             } else {
@@ -1268,6 +1274,7 @@ void Instruction_Wrapper::gen_x86_basic_block(vector<Quadruple*> basic_block, Fu
             }
             gen_instruction = this->generator(quad, x, -1, -1);
         } else if (quad->q_type == Q_PRINT_STR) {
+            print_str_present = true;
             if (func_wrapper->variable_offset_map.find(quad->arg1) == func_wrapper->variable_offset_map.end()) {
                 x = -1;
             } else {
@@ -1275,6 +1282,7 @@ void Instruction_Wrapper::gen_x86_basic_block(vector<Quadruple*> basic_block, Fu
             }
             gen_instruction = this->generator(quad, x, -1, -1);
         } else if (quad->q_type == Q_ALLOC) {
+            allocmem_present = true;
             if (func_wrapper->variable_offset_map.find(quad->arg1) == func_wrapper->variable_offset_map.end()) {
                 x = -1;
             } else {

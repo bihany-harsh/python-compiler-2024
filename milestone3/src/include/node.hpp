@@ -230,6 +230,7 @@ typedef struct node {
     void create_block_st(const char* block_name);   // to create symbol_table for a block scope
                                                     // only called when a block has a declaration within it
     void create_func_st();     // to create symbol_table for a function scope
+    void set_function_attr_and_return();    // to set fattr of args and return and also to add st_entry to the parent symbol table
     void exit_from_func(); // sets the arguments and return type. Also, restores SYMBOL_TABLE and OFFSET
 
     void create_class_st();

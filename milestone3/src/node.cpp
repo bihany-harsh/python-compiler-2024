@@ -683,7 +683,6 @@ void node::create_func_st() {
     this->st = SYMBOL_TABLE;
     // for functions, we create the st_entry before executing the body so that we can add arguments
     this->st_entry = new symbol_table_entry(this->name, D_FUNCTION, OFFSET, this->line_no, SYMBOL_TABLE->scope);
-    SYMBOL_TABLE->add_entry(this->st_entry);
     // create a symbol table for the function scope
         // first store the current symbol table and offset
     ST_STACK.push(SYMBOL_TABLE);
@@ -694,14 +693,13 @@ void node::create_func_st() {
     return;
 }
 
-void node::exit_from_func() {
+void node::set_function_attr_and_return() {
     // if TFPDEF has a single child, it can only be self and the current environment must be a class environment
     // in all other cases, TFPDEF has > 1 children. The type is specified by the descendent of TFPDEP->children[2] and the name is specified by TFPDEF->children[0]
     for(int i = 0; i < this->st_entry->f_attr.num_args; i++) {
         symbol_table_entry* arg = SYMBOL_TABLE->entries[i];
         this->st_entry->f_attr.args.push_back(arg->b_type);
         if (arg->b_type == D_LIST) {
-            // cout << arg->l_attr.list_elem_type << endl;
             if(arg->l_attr.list_elem_type == D_BOOL) {
                 this->st_entry->f_attr.list_types.push_back("bool");
             } else if(arg->l_attr.list_elem_type == D_INT) {
@@ -719,10 +717,13 @@ void node::exit_from_func() {
             this->st_entry->f_attr.list_types.push_back("void");
         }
     }
+    SYMBOL_TABLE->parent->add_entry(this->st_entry);
+}
+
+void node::exit_from_func() {
     if (this->st_entry->f_attr.return_type == D_LIST) {
         find_return_stmts_and_set_return_list_attr(this->parent->children[this->parent->children.size() - 1], this->st_entry);
     }
-
     this->st_entry->set_size(OFFSET);
     this->st_entry->child_symbol_table = SYMBOL_TABLE;
 
